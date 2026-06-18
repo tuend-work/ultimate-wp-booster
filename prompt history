@@ -1,56 +1,55 @@
-# Nhật ký yêu cầu & Prompt History
+# Requirements & Prompt History
 
-Tài liệu này lưu trữ các yêu cầu tính năng ban đầu và các điều chỉnh mã nguồn cho plugin Ultimate WordPress Booster để phục vụ các phiên làm việc tiếp theo.
+This document preserves original requirements, specifications, and prompt edits for the Ultimate WordPress Booster plugin to assist future sessions.
 
-## 📌 Nhật ký yêu cầu ban đầu (19/06/2026)
+## 📌 Requirements Log
 
-- **Tên plugin**: Ultimate WordPress Booster (Plugin tăng tốc WordPress).
-- **Tính năng chính**:
+- **Plugin Name**: Ultimate WordPress Booster
+- **Main Features**:
   - **Preload Cache**:
-    - Tự động lấy và thêm toàn bộ liên kết trong sitemap của website vào hàng đợi (tạo bảng SQL tạm: `{wp_prefix}ultimate_wp_booster_queue`).
-    - Có trường nhập các đường dẫn ưu tiên (Priority URLs) để nạp trước.
-    - Có trường nhập các đường dẫn loại trừ (Exclude URLs) không lưu cache.
-    - Có trường chỉnh thời gian lưu cache (Cache Lifespan).
-    - Cache được lưu trữ giống hệt WP Rocket nhằm tương thích hoàn toàn với [Rocket-Nginx](https://github.com/satellitewp/rocket-nginx) (`wp-content/cache/wp-rocket/...`).
+    - Automatically parses the website's XML sitemap, adding all extracted links to a preloading database queue table (`{wp_prefix}ultimate_wp_booster_queue`).
+    - Excluded URLs: URLs or RegEx patterns excluded from caching and preloading.
+    - Priority URLs: URL patterns crawled first in the queue.
+    - Cache Lifespan: Duration for which cached static files remain valid.
+    - Compatible with [Rocket-Nginx](https://github.com/satellitewp/rocket-nginx) caching folder structure (`wp-content/cache/wp-rocket/...`).
+  - **Cache for Logged-in Users**:
+    - Optional setting to enable/disable static caching for logged-in user sessions.
+  - **WordPress Toolbar Shortcuts**:
+    - A dedicated "WP Booster" menu node on the admin bar with quick links to:
+      - `Purge This URL` (on the frontend).
+      - `Clear & Preload Cache`.
+      - `Settings`.
   - **GitHub Updater**:
-    - Tích hợp tính năng cập nhật tự động trực tiếp từ repo public GitHub: `https://github.com/tuend-work/ultimate-wp-booster`.
-    - Cho phép nhấn nút kiểm tra & cập nhật thủ công ngay tại tab cấu hình của plugin.
+    - Auto-update functionality directly from the public GitHub repository: `https://github.com/tuend-work/ultimate-wp-booster`.
+  - **Language**:
+    - The entire user interface, labels, instructions, messages, and notices must be in English.
 
 ---
 
-## 💻 Kiến trúc triển khai chi tiết
+## 💻 Architecture Overview
 
-1. **advanced-cache.php** (Drop-in file):
-   - Chạy rất sớm trước khi WordPress boot database/theme/plugin.
-   - Kiểm tra xem trang yêu cầu đã có file cache tĩnh (`index-https.html` hoặc `index-https.html_gzip`) chưa và phục vụ luôn nếu còn hạn, bỏ qua database giúp tối ưu hóa hiệu suất tối đa.
-   - Đọc cài đặt qua tệp cấu hình JSON `wp-content/cache/ultimate-wp-booster-config.json` để tránh truy vấn cơ sở dữ liệu khi WordPress chưa chạy.
+1. **advanced-cache.php** (Drop-in):
+   - Injected into `wp-content/advanced-cache.php`.
+   - Intercepts page requests early (pre-bootstrap) and serves Gzipped or raw cached HTML if available and valid.
+   - Evaluates cookie criteria, query strings, and custom exclusions via a local JSON config `wp-content/cache/ultimate-wp-booster-config.json` to prevent DB connection overhead.
 
 2. **includes/class-uwb-activator.php**:
-   - Chạy khi kích hoạt plugin.
-   - Tạo bảng `{wp_prefix}ultimate_wp_booster_queue` trong MySQL.
-   - Thêm `define('WP_CACHE', true);` vào `wp-config.php`.
-   - Copy file `advanced-cache.php` vào thư mục `wp-content/`.
+   - Creates queue table on activation.
+   - Copies `advanced-cache.php` drop-in and inserts `define('WP_CACHE', true);` to `wp-config.php`.
 
 3. **includes/class-uwb-deactivator.php**:
-   - Chạy khi hủy kích hoạt plugin.
-   - Xóa file `wp-content/advanced-cache.php`.
-   - Vô hiệu hóa `WP_CACHE` trong `wp-config.php`.
-   - Xóa cron jobs.
+   - Removes drop-in and disables `WP_CACHE` in `wp-config.php` on deactivation.
 
 4. **includes/class-uwb-cache.php**:
-   - Quản lý ghi và dọn dẹp các tệp tin cache tĩnh.
-   - Tự động xóa cache của một bài viết cụ thể (và các trang liên quan như trang chủ, chuyên mục, thẻ...) khi bài viết đó được cập nhật/chỉnh sửa.
-   - Cung cấp tính năng xóa toàn bộ cache.
+   - Static HTML and Gzip compression writer.
+   - Automated cache purges for posts, terms, author archives, and home page upon post updates.
+   - Triggers JSON config sync when plugin settings change.
 
 5. **includes/class-uwb-preloader.php**:
-   - Phân tích cú pháp của tệp tin XML Sitemap (hỗ trợ cả sitemap lồng nhau).
-   - Quản lý hàng đợi SQL và cào ngầm theo gói nhỏ (batch) qua WP-Cron hoặc AJAX kích hoạt từ giao diện.
+   - XML parser supporting nested sitemaps.
+   - DB preloading queue batch crawler running via WP-Cron.
 
 6. **includes/class-uwb-admin.php**:
-   - Tạo trang quản trị đẹp mắt, thiết kế premium bằng Vanilla CSS với các tab chuyên nghiệp.
-   - Hiển thị thanh tiến trình preloading real-time, số lượng URL hoàn thành/chờ xử lý/lỗi.
-   - Tích hợp bảng kiểm tra và chạy cập nhật trực tiếp từ GitHub.
-
-7. **github-updater.php**:
-   - Kết nối với API GitHub Raw để kiểm tra phiên bản mới của plugin từ nhánh `main`.
-   - Lọc và tải về tệp zip nâng cấp tự động khi có phiên bản mới hơn phiên bản cục bộ.
+   - Premium dashboard styling with Vanilla CSS.
+   - Live queue statistics tracker using jQuery AJAX.
+   - Integrates the GitHub Updater button panel.

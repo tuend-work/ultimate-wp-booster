@@ -16,6 +16,8 @@ class Uwb_Admin {
         add_action( 'add_option_uwb_cache_lifespan', array( 'Uwb_Cache', 'write_config_file' ) );
         add_action( 'update_option_uwb_excluded_urls', array( 'Uwb_Cache', 'write_config_file' ) );
         add_action( 'add_option_uwb_excluded_urls', array( 'Uwb_Cache', 'write_config_file' ) );
+        add_action( 'update_option_uwb_cache_logged_in', array( 'Uwb_Cache', 'write_config_file' ) );
+        add_action( 'add_option_uwb_cache_logged_in', array( 'Uwb_Cache', 'write_config_file' ) );
     }
 
     public function add_plugin_menu() {
@@ -30,6 +32,7 @@ class Uwb_Admin {
 
     public function register_settings() {
         register_setting( 'uwb_settings_group', 'uwb_cache_lifespan', 'floatval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_logged_in', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_excluded_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', 'esc_url_raw' );
@@ -328,12 +331,12 @@ class Uwb_Admin {
             <div class="uwb-header">
                 <div class="uwb-header-title">
                     <h1>Ultimate WordPress Booster</h1>
-                    <p>Hệ thống tối ưu hóa tốc độ tải trang bằng phương thức Static Cache siêu tốc.</p>
+                    <p>Optimize website loading speed with ultra-fast Static Page Caching.</p>
                 </div>
                 <div class="uwb-header-actions">
                     <a href="<?php echo esc_url( $purge_url ); ?>" class="uwb-btn-purge">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-                        Xóa toàn bộ Cache
+                        Purge All Cache
                     </a>
                 </div>
             </div>
@@ -350,7 +353,7 @@ class Uwb_Admin {
                         Rocket-Nginx
                     </div>
                     <div class="uwb-nav-item" data-tab="updater_settings">
-                        Cập nhật
+                        Updates
                     </div>
                 </div>
 
@@ -360,78 +363,90 @@ class Uwb_Admin {
 
                         <!-- TAB 1: Cache Settings -->
                         <div id="tab-cache_settings" class="uwb-tab-content active">
-                            <h2 style="margin-top:0;">Cấu hình bộ nhớ đệm (Cache)</h2>
-                            <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Thiết lập các tham số thời gian và loại trừ cho tệp tĩnh.</p>
+                            <h2 style="margin-top:0;">Cache Configuration</h2>
+                            <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Configure cache lifespan, bypass conditions, and exclusions for static files.</p>
 
                             <div class="uwb-form-group">
-                                <label for="uwb_cache_lifespan">Thời gian lưu Cache (Giờ)</label>
+                                <label for="uwb_cache_lifespan">Cache Lifespan (Hours)</label>
                                 <input type="number" step="0.1" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 10 ) ); ?>" />
-                                <p class="description">Thời gian tệp tin Cache tĩnh được lưu trữ trước khi tự động dọn dẹp và tạo lại. Nhập <code>0</code> nếu muốn lưu trữ vô hạn.</p>
+                                <p class="description">The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.</p>
                             </div>
 
                             <div class="uwb-form-group">
-                                <label for="uwb_excluded_urls">Danh sách URL loại trừ khỏi Cache</label>
+                                <label for="uwb_cache_logged_in">Cache for Logged-in Users</label>
+                                <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                    <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
+                                    <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
+                                </select>
+                                <p class="description">
+                                    Enable this to serve static cached pages to logged-in users. <br>
+                                    <strong>Warning:</strong> Personalized content (like user profile names or WooCommerce carts) may be cached and incorrectly displayed to other users if not configured carefully.
+                                </p>
+                            </div>
+
+                            <div class="uwb-form-group">
+                                <label for="uwb_excluded_urls">Excluded URLs</label>
                                 <textarea name="uwb_excluded_urls" id="uwb_excluded_urls" rows="6"><?php echo esc_textarea( get_option( 'uwb_excluded_urls', '' ) ); ?></textarea>
                                 <p class="description">
-                                    Các đường dẫn hoặc biểu thức RegEx sẽ KHÔNG được tạo cache (mỗi liên kết một dòng).<br>
-                                    Ví dụ:<br>
-                                    <code>/cart(.*)</code> để loại bỏ giỏ hàng<br>
-                                    <code>/checkout(.*)</code> để loại bỏ thanh toán
+                                    URLs or RegEx patterns that should NEVER be cached (one per line).<br>
+                                    Examples:<br>
+                                    <code>/cart(.*)</code> to exclude the shopping cart pages<br>
+                                    <code>/checkout(.*)</code> to exclude checkout pages
                                 </p>
                             </div>
                         </div>
 
                         <!-- TAB 2: Preload Cache -->
                         <div id="tab-preload_settings" class="uwb-tab-content">
-                            <h2 style="margin-top:0;">Preload Cache (Tự động cào trang)</h2>
-                            <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Hệ thống tự động tải các trang trong Sitemap để kích hoạt và tạo cache tĩnh trước khi có người truy cập.</p>
+                            <h2 style="margin-top:0;">Preload Cache (Automatic Crawler)</h2>
+                            <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Automatically crawl URLs in your sitemap to pre-generate static cache files before visitors arrive.</p>
 
                             <div class="uwb-form-group">
-                                <label for="uwb_preload_enabled">Bật tính năng Preload tự động</label>
+                                <label for="uwb_preload_enabled">Enable Automatic Preloading</label>
                                 <select name="uwb_preload_enabled" id="uwb_preload_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                    <option value="0" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 0 ); ?>>Tắt (Disabled)</option>
-                                    <option value="1" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 1 ); ?>>Bật qua WP-Cron (Enabled)</option>
+                                    <option value="0" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 0 ); ?>>Disabled</option>
+                                    <option value="1" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 1 ); ?>>Enabled (via WP-Cron)</option>
                                 </select>
-                                <p class="description">Khi được kích hoạt, hệ thống sẽ chạy ẩn để tải các liên kết trong hàng đợi theo từng đợt.</p>
+                                <p class="description">When enabled, the crawler runs in the background to fetch URLs in the preloading queue in small batches.</p>
                             </div>
 
                             <div class="uwb-form-group">
-                                <label for="uwb_preload_sitemap">Đường dẫn Sitemap XML của website</label>
+                                <label for="uwb_preload_sitemap">Sitemap XML URL</label>
                                 <input type="text" name="uwb_preload_sitemap" id="uwb_preload_sitemap" placeholder="<?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?>" value="<?php echo esc_attr( get_option( 'uwb_preload_sitemap', '' ) ); ?>" />
-                                <p class="description">Hệ thống sẽ lấy danh sách liên kết từ sitemap này để nạp vào hàng đợi. Nếu để trống, hệ thống sẽ tự phát hiện tại <code><?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?></code>.</p>
+                                <p class="description">The preloader will extract URLs from this sitemap. If left empty, it defaults to: <code><?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?></code>.</p>
                             </div>
 
                             <div class="uwb-form-group">
-                                <label for="uwb_priority_urls">Danh sách URL ưu tiên (Preload trước)</label>
+                                <label for="uwb_priority_urls">Priority URLs (Preloaded first)</label>
                                 <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( get_option( 'uwb_priority_urls', '' ) ); ?></textarea>
-                                <p class="description">Những URL hoặc từ khóa trùng khớp (mỗi dòng một mục) sẽ được đánh dấu ưu tiên và tải trước trong hàng đợi.</p>
+                                <p class="description">URLs or matching keywords (one per line) that should be crawled first in the queue.</p>
                             </div>
 
                             <div class="uwb-form-group">
-                                <label for="uwb_preload_batch_size">Kích thước gói cào mỗi đợt (URLs)</label>
+                                <label for="uwb_preload_batch_size">Preload Batch Size</label>
                                 <input type="number" min="1" max="50" name="uwb_preload_batch_size" id="uwb_preload_batch_size" value="<?php echo esc_attr( get_option( 'uwb_preload_batch_size', 5 ) ); ?>" />
-                                <p class="description">Số lượng URL sẽ được xử lý trong mỗi phút để giảm tải CPU cho máy chủ.</p>
+                                <p class="description">The number of URLs to crawl per batch to minimize CPU and server overhead.</p>
                             </div>
 
                             <div class="uwb-preload-status-box">
-                                <h3 style="margin-top:0; color:var(--uwb-text);">Trạng thái hàng đợi (Queue Status)</h3>
+                                <h3 style="margin-top:0; color:var(--uwb-text);">Preloading Queue Status</h3>
                                 
                                 <div class="uwb-stats-grid">
                                     <div class="uwb-stat-card uwb-stat-pending">
                                         <div class="num" id="queue-pending">-</div>
-                                        <div class="label">Chờ xử lý</div>
+                                        <div class="label">Pending</div>
                                     </div>
                                     <div class="uwb-stat-card uwb-stat-processing">
                                         <div class="num" id="queue-processing">-</div>
-                                        <div class="label">Đang nạp</div>
+                                        <div class="label">Processing</div>
                                     </div>
                                     <div class="uwb-stat-card uwb-stat-completed">
                                         <div class="num" id="queue-completed">-</div>
-                                        <div class="label">Hoàn tất</div>
+                                        <div class="label">Completed</div>
                                     </div>
                                     <div class="uwb-stat-card uwb-stat-failed">
                                         <div class="num" id="queue-failed">-</div>
-                                        <div class="label">Lỗi</div>
+                                        <div class="label">Failed</div>
                                     </div>
                                 </div>
 
@@ -440,21 +455,21 @@ class Uwb_Admin {
                                 </div>
                                 
                                 <div class="uwb-progress-text">
-                                    <span id="preload-progress-pct">Tiến trình: 0%</span>
+                                    <span id="preload-progress-pct">Progress: 0%</span>
                                     <span id="preload-progress-nums">0 / 0 URLs</span>
                                 </div>
 
                                 <div class="uwb-preload-actions" style="margin-top:20px;">
                                     <button type="button" id="btn-start-preload" class="uwb-btn-action uwb-btn-start">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                        Bắt đầu Preload mới
+                                        Start Preloading
                                     </button>
                                     <button type="button" id="btn-stop-preload" class="uwb-btn-action uwb-btn-stop" style="display:none;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                                        Tạm dừng Preload
+                                        Pause Preloading
                                     </button>
                                     <button type="button" id="btn-clear-preload" class="uwb-btn-action uwb-btn-clear">
-                                        Xóa hàng đợi
+                                        Clear Queue
                                     </button>
                                 </div>
                             </div>
@@ -462,23 +477,23 @@ class Uwb_Admin {
 
                         <!-- TAB 3: Rocket-Nginx Compatibility -->
                         <div id="tab-nginx_settings" class="uwb-tab-content">
-                            <h2 style="margin-top:0;">Tương thích Rocket-Nginx</h2>
+                            <h2 style="margin-top:0;">Rocket-Nginx Compatibility</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 20px;">
-                                Cấu trúc tệp tin tĩnh được tạo ra bởi plugin này giống hệt WP Rocket. Điều này cho phép bạn cấu hình Nginx để bỏ qua PHP/WordPress và phục vụ các tệp HTML trực tiếp từ đĩa cứng.
+                                The static cache files generated by this plugin match WP Rocket's structure. This allows you to configure Nginx to serve static files directly, bypassing PHP and WordPress entirely for maximum performance.
                             </p>
                             <p style="font-size:14px; line-height:1.5;">
-                                Hãy tham khảo dự án cấu hình <a href="https://github.com/satellitewp/rocket-nginx" target="_blank">Rocket-Nginx</a> để tối ưu hiệu suất máy chủ tối đa.
+                                For optimal server performance, refer to the official Nginx configuration guidelines from the <a href="https://github.com/satellitewp/rocket-nginx" target="_blank">SatelliteWP Rocket-Nginx</a> project.
                             </p>
-                            <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Vị trí thư mục cache của hệ thống:</p>
+                            <p style="font-size:14px; font-weight:600; margin-bottom:8px;">System cache directory path:</p>
                             <div class="uwb-nginx-instructions">
                                 <?php echo esc_html( WP_CONTENT_DIR . '/cache/wp-rocket/' ); ?>
                             </div>
-                            <p style="font-size:14px; font-weight:600; margin-top:20px; margin-bottom:8px;">Cấu trúc file cho mỗi trang:</p>
+                            <p style="font-size:14px; font-weight:600; margin-top:20px; margin-bottom:8px;">Cache directory structure per page:</p>
                             <div class="uwb-nginx-instructions">
-                                Thư mục: wp-content/cache/wp-rocket/[domain]/[url]/<br>
-                                - index-https.html (Cache của trang HTTPS)<br>
-                                - index-https.html_gzip (Bản nén Gzipped phục vụ tức thì)<br>
-                                - index.html (Cache của trang HTTP - nếu có)
+                                Folder: wp-content/cache/wp-rocket/[domain]/[request_uri]/<br>
+                                - index-https.html (Cache file for secure requests)<br>
+                                - index-https.html_gzip (Pre-compressed version served to clients supporting gzip)<br>
+                                - index.html (Cache file for HTTP requests)
                             </div>
                         </div>
 
@@ -488,14 +503,14 @@ class Uwb_Admin {
                             if ( class_exists( 'Uwb_Github_Updater' ) ) {
                                 Uwb_Github_Updater::render_update_button();
                             } else {
-                                echo '<p>Lỗi: Không tìm thấy lớp Uwb_Github_Updater để thực hiện tính năng cập nhật.</p>';
+                                echo '<p>Error: Uwb_Github_Updater class not found.</p>';
                             }
                             ?>
                         </div>
 
                         <!-- Form Submit (Floating Panel) -->
                         <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--uwb-border); display: flex; gap: 12px;" id="uwb-submit-row">
-                            <input type="submit" name="submit" id="submit" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:8px 20px; height:auto; font-weight:600; border-radius:6px; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);" value="Lưu thay đổi" />
+                            <input type="submit" name="submit" id="submit" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:8px 20px; height:auto; font-weight:600; border-radius:6px; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);" value="Save Changes" />
                         </div>
                     </form>
                 </div>
@@ -553,7 +568,7 @@ class Uwb_Admin {
                                 pct = Math.round((processed / total) * 100);
                             }
                             
-                            $('#preload-progress-pct').text('Tiến trình: ' + pct + '%');
+                            $('#preload-progress-pct').text('Progress: ' + pct + '%');
                             $('#preload-progress-fill').css('width', pct + '%');
 
                             if (data.running === 1) {
@@ -608,7 +623,7 @@ class Uwb_Admin {
             // Start Preload Click
             $('#btn-start-preload').on('click', function() {
                 var btn = $(this);
-                btn.prop('disabled', true).text('Đang phân tích Sitemap...');
+                btn.prop('disabled', true).text('Parsing Sitemap...');
                 
                 $.ajax({
                     url: ajaxurl,
@@ -618,7 +633,7 @@ class Uwb_Admin {
                         nonce: nonce
                     },
                     success: function(res) {
-                        btn.prop('disabled', false).html('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Bắt đầu Preload mới');
+                        btn.prop('disabled', false).html('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Preloading');
                         if (res.success) {
                             updatePreloadStatus();
                             if (!checkInterval) {
@@ -629,8 +644,8 @@ class Uwb_Admin {
                         }
                     },
                     error: function() {
-                        btn.prop('disabled', false).html('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Bắt đầu Preload mới');
-                        alert('Lỗi kết nối máy chủ.');
+                        btn.prop('disabled', false).html('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Preloading');
+                        alert('Server connection error.');
                     }
                 });
             });
@@ -656,7 +671,7 @@ class Uwb_Admin {
 
             // Clear Preload Click
             $('#btn-clear-preload').on('click', function() {
-                if (confirm('Bạn có chắc chắn muốn xóa hàng đợi preloading không?')) {
+                if (confirm('Are you sure you want to clear the preloading queue?')) {
                     $.ajax({
                         url: ajaxurl,
                         type: 'POST',

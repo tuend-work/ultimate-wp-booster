@@ -213,21 +213,15 @@ class Uwb_Preloader {
     }
 
     /**
-     * AJAX action: populate queue and start preloading
+     * Start the preloading process by parsing sitemap and populating queue
+     * @return int|WP_Error Number of URLs added, or WP_Error on failure
      */
-    public function ajax_start_preload() {
-        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
-
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error( array( 'message' => 'Bạn không có quyền thực hiện hành động này.' ) );
-        }
-
+    public function start_preload() {
         global $wpdb;
 
         // Retrieve settings
         $sitemap_url = get_option( 'uwb_preload_sitemap', '' );
         if ( empty( $sitemap_url ) ) {
-            // Auto detect
             $sitemap_url = home_url( '/wp-sitemap.xml' );
         }
 
@@ -246,7 +240,7 @@ class Uwb_Preloader {
         $urls = $this->parse_sitemap( $sitemap_url );
 
         if ( empty( $urls ) ) {
-            wp_send_json_error( array( 'message' => 'Không tìm thấy URL nào trong sitemap: ' . esc_url( $sitemap_url ) ) );
+            return new WP_Error( 'no_urls', 'No URLs found in the sitemap: ' . esc_url( $sitemap_url ) );
         }
 
         // 3. Filter and insert into the database queue in batches
@@ -295,8 +289,27 @@ class Uwb_Preloader {
             wp_schedule_event( time(), 'every_minute', 'uwb_preload_cron_job' );
         }
 
+        return count( $urls );
+    }
+
+    /**
+     * AJAX action: populate queue and start preloading
+     */
+    public function ajax_start_preload() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
+        }
+
+        $result = $this->start_preload();
+
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+        }
+
         wp_send_json_success( array(
-            'message' => 'Đã phân tích sitemap thành công và thêm ' . count( $urls ) . ' liên kết vào hàng đợi preloading!'
+            'message' => 'Sitemap parsed successfully. Added ' . $result . ' links to the preloading queue!'
         ) );
     }
 
@@ -307,13 +320,13 @@ class Uwb_Preloader {
         check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
 
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error( array( 'message' => 'Vô hiệu.' ) );
+            wp_send_json_error( array( 'message' => 'Invalid request.' ) );
         }
 
         wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
         update_option( 'uwb_preload_running', 0 );
 
-        wp_send_json_success( array( 'message' => 'Đã tạm dừng tiến trình preloading!' ) );
+        wp_send_json_success( array( 'message' => 'Preloading process paused!' ) );
     }
 
     /**
@@ -323,7 +336,7 @@ class Uwb_Preloader {
         check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
 
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error( array( 'message' => 'Vô hiệu.' ) );
+            wp_send_json_error( array( 'message' => 'Invalid request.' ) );
         }
 
         global $wpdb;
@@ -331,7 +344,7 @@ class Uwb_Preloader {
         wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
         update_option( 'uwb_preload_running', 0 );
 
-        wp_send_json_success( array( 'message' => 'Đã xóa hàng đợi preloading!' ) );
+        wp_send_json_success( array( 'message' => 'Preloading queue cleared!' ) );
     }
 
     /**
@@ -373,7 +386,7 @@ class Uwb_Preloader {
         check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
 
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error( array( 'message' => 'Vô hiệu.' ) );
+            wp_send_json_error( array( 'message' => 'Invalid request.' ) );
         }
 
         $processed = $this->run_preload_batch( 5 ); // Fast execution of 5 links

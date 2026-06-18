@@ -61,7 +61,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             $message = wp_remote_retrieve_response_message( $request );
 
             if ( $code !== 200 ) {
-                return new WP_Error( 'github_error', 'Không thể kết nối đến GitHub Raw (Mã lỗi: ' . $code . ' - ' . $message . '). Hãy đảm bảo kho lưu trữ ở chế độ Public.' );
+                return new WP_Error( 'github_error', 'Cannot connect to GitHub Raw (Error: ' . $code . ' - ' . $message . '). Please verify the repository is public.' );
             }
 
             $body = wp_remote_retrieve_body( $request );
@@ -74,13 +74,13 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                 $response = new stdClass();
                 $response->tag_name = $version;
                 $response->zipball_url = "https://github.com/{$this->username}/{$this->repository}/archive/refs/heads/main.zip";
-                $response->body = "Cập nhật trực tiếp từ nhánh main trên GitHub.";
+                $response->body = "Direct update from GitHub main branch.";
                 
                 $this->github_response = $response;
                 return $response;
             }
 
-            return new WP_Error( 'github_parse_error', 'Không thể đọc được phiên bản của plugin từ tệp tin trên GitHub.' );
+            return new WP_Error( 'github_parse_error', 'Cannot parse plugin version from GitHub source file.' );
         }
 
         /**
@@ -175,7 +175,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
         public function ajax_manual_update() {
             // Check permission
             if ( ! current_user_can( 'update_plugins' ) ) {
-                wp_send_json_error( array( 'message' => 'Bạn không có quyền thực hiện hành động này.' ) );
+                wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
             }
 
             // Verify nonce
@@ -184,7 +184,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             $release = $this->get_latest_github_release();
 
             if ( is_wp_error( $release ) ) {
-                wp_send_json_error( array( 'message' => 'Lỗi kết nối GitHub: ' . $release->get_error_message() ) );
+                wp_send_json_error( array( 'message' => 'GitHub connection error: ' . $release->get_error_message() ) );
             }
 
             $github_version = ltrim( $release->tag_name, 'v' );
@@ -193,7 +193,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             if ( version_compare( $local_version, $github_version, '>=' ) ) {
                 wp_send_json_success( array(
                     'updated' => false,
-                    'message' => 'Plugin đã ở phiên bản mới nhất (' . $local_version . '). Không cần cập nhật.'
+                    'message' => 'Plugin is already at the latest version (' . $local_version . ').'
                 ) );
             }
 
@@ -227,12 +227,12 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             if ( is_wp_error( $result ) ) {
                 wp_send_json_error( array( 'message' => $result->get_error_message() ) );
             } elseif ( $result === false ) {
-                wp_send_json_error( array( 'message' => 'Cập nhật thất bại. Vui lòng thử lại sau.' ) );
+                wp_send_json_error( array( 'message' => 'Update failed. Please try again later.' ) );
             }
 
             wp_send_json_success( array(
                 'updated' => true,
-                'message' => 'Cập nhật thành công lên phiên bản mới nhất ' . $github_version . ' từ GitHub!'
+                'message' => 'Plugin updated successfully to v' . $github_version . ' from GitHub!'
             ) );
         }
 
@@ -252,14 +252,14 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             <div class="uwb-updater-card">
                 <div class="uwb-updater-header">
                     <svg class="uwb-git-icon" viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-                    <h4>Cập nhật từ GitHub</h4>
+                    <h4>GitHub Updates</h4>
                 </div>
                 <div class="uwb-updater-body">
-                    <p>Phiên bản hiện tại: <span class="uwb-badge">v<?php echo esc_html( $version ); ?></span></p>
-                    <p class="uwb-help-text">Nhấp vào nút dưới đây để kiểm tra và cập nhật trực tiếp phiên bản mới nhất từ kho lưu trữ GitHub chính thức (nhánh <code>main</code>).</p>
+                    <p>Current Version: <span class="uwb-badge">v<?php echo esc_html( $version ); ?></span></p>
+                    <p class="uwb-help-text">Click the button below to check and update directly to the latest version from the official GitHub repository (<code>main</code> branch).</p>
                     <div class="uwb-action-row">
                         <button type="button" id="uwb-github-update-btn" class="uwb-btn uwb-btn-primary">
-                            <span class="uwb-btn-text">Kiểm tra & Cập nhật</span>
+                            <span class="uwb-btn-text">Check & Update</span>
                             <span class="uwb-spinner" style="display: none;"></span>
                         </button>
                         <span id="uwb-github-update-status"></span>
@@ -374,9 +374,9 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                     var btnText = btn.find('.uwb-btn-text');
                     
                     btn.prop('disabled', true);
-                    btnText.text('Đang xử lý...');
+                    btnText.text('Processing...');
                     spinner.show();
-                    status.css('color', '#475569').text('Đang kết nối GitHub...');
+                    status.css('color', '#475569').text('Connecting to GitHub...');
                     
                     $.ajax({
                         url: ajaxurl,
@@ -395,19 +395,19 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                                     }, 2000);
                                 } else {
                                     btn.prop('disabled', false);
-                                    btnText.text('Kiểm tra & Cập nhật');
+                                    btnText.text('Check & Update');
                                 }
                             } else {
-                                status.css('color', '#ef4444').text(res.data.message || 'Lỗi không xác định.');
+                                status.css('color', '#ef4444').text(res.data.message || 'Unknown error.');
                                 btn.prop('disabled', false);
-                                btnText.text('Kiểm tra & Cập nhật');
+                                btnText.text('Check & Update');
                             }
                         },
                         error: function() {
                             spinner.hide();
-                            status.css('color', '#ef4444').text('Lỗi kết nối máy chủ.');
+                            status.css('color', '#ef4444').text('Server connection error.');
                             btn.prop('disabled', false);
-                            btnText.text('Kiểm tra & Cập nhật');
+                            btnText.text('Check & Update');
                         }
                     });
                 });

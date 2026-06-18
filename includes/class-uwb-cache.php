@@ -44,9 +44,10 @@ class Uwb_Cache {
         $exclusions = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclusions_raw ) ) ) );
 
         $config = array(
-            'cache_lifespan' => $lifespan_seconds,
-            'excluded_urls'  => array_values( $exclusions ),
-            'ignored_query'  => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' )
+            'cache_lifespan'  => $lifespan_seconds,
+            'cache_logged_in' => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
+            'excluded_urls'   => array_values( $exclusions ),
+            'ignored_query'   => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' )
         );
 
         @file_put_contents( $config_path, json_encode( $config, JSON_PRETTY_PRINT ) );
@@ -175,7 +176,7 @@ class Uwb_Cache {
             $this->purge_all();
             
             add_action( 'admin_notices', function() {
-                echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Đã xóa toàn bộ bộ nhớ đệm (cache) thành công!</p></div>';
+                echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> All cache cleared successfully!</p></div>';
             } );
         }
     }

@@ -43,6 +43,10 @@ class Uwb_Activator {
             update_option( 'uwb_preload_batch_size', 5 ); // 5 URLs per batch
         }
 
+        if ( get_option( 'uwb_cache_logged_in' ) === false ) {
+            update_option( 'uwb_cache_logged_in', 0 ); // Disabled by default
+        }
+
         // 3. Copy advanced-cache.php drop-in
         self::copy_advanced_cache_dropin();
 

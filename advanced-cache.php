@@ -54,10 +54,14 @@ function uwb_advanced_cache_run() {
         }
     }
 
-    // 5. Bypass for logged-in users and special cookies
+    // 5. Bypass for logged-in users (if configured) and special cookies
+    $cache_logged_in = isset( $config['cache_logged_in'] ) ? (bool) $config['cache_logged_in'] : false;
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
-            if ( preg_match( '/^(wordpress_logged_in_|wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products)/', $key ) ) {
+            if ( ! $cache_logged_in && strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
+                return;
+            }
+            if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products)/', $key ) ) {
                 return;
             }
         }
@@ -200,7 +204,18 @@ function uwb_advanced_cache_shutdown() {
     }
 
     // 4. Do not cache if user is logged in (double check via WordPress functions)
-    if ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
+    $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
+    $cache_logged_in = false;
+    if ( file_exists( $config_path ) ) {
+        $json_data = @file_get_contents( $config_path );
+        if ( $json_data ) {
+            $parsed_config = @json_decode( $json_data, true );
+            if ( isset( $parsed_config['cache_logged_in'] ) ) {
+                $cache_logged_in = (bool) $parsed_config['cache_logged_in'];
+            }
+        }
+    }
+    if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
         return;
     }
 
