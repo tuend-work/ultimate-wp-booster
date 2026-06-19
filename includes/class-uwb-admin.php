@@ -71,6 +71,14 @@ class Uwb_Admin {
     }
 
     public function admin_init_sync() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
+        // Auto-migrate column from tinyint(1) to int(11) in case database has already been created
+        $row = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM {$table_name} LIKE %s", 'priority' ) );
+        if ( $row && strpos( strtolower( $row->Type ), 'tinyint' ) !== false ) {
+            $wpdb->query( "ALTER TABLE {$table_name} MODIFY COLUMN priority int(11) NOT NULL DEFAULT 0" );
+        }
+
         require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
         Uwb_Activator::copy_advanced_cache_dropin();
         if ( get_option( 'uwb_redis_enabled' ) ) {
