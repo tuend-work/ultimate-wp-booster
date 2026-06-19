@@ -290,6 +290,28 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
         }
 
         /**
+         * Recursively delete a directory and all its contents.
+         *
+         * @param string $dir Absolute path to directory.
+         * @return bool
+         */
+        private function delete_directory( $dir ) {
+            if ( ! is_dir( $dir ) ) {
+                return false;
+            }
+            $items = array_diff( scandir( $dir ), array( '.', '..' ) );
+            foreach ( $items as $item ) {
+                $path = $dir . DIRECTORY_SEPARATOR . $item;
+                if ( is_dir( $path ) ) {
+                    $this->delete_directory( $path );
+                } else {
+                    @unlink( $path );
+                }
+            }
+            return @rmdir( $dir );
+        }
+
+        /**
          * Render Update Button HTML in Settings Page
          */
         public static function render_update_button() {
