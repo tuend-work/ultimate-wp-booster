@@ -43,14 +43,24 @@ class Uwb_Cache {
         $exclusions_raw = get_option( 'uwb_excluded_urls', '' );
         $exclusions = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclusions_raw ) ) ) );
 
+        $timezone = get_option( 'timezone_string' );
+        if ( empty( $timezone ) ) {
+            $timezone = get_option( 'gmt_offset', 0 );
+        }
+
         $config = array(
             'cache_lifespan'  => $lifespan_seconds,
             'cache_logged_in' => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
             'excluded_urls'   => array_values( $exclusions ),
-            'ignored_query'   => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' )
+            'ignored_query'   => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
+            'timezone'        => $timezone
         );
 
         @file_put_contents( $config_path, json_encode( $config, JSON_PRETTY_PRINT ) );
+
+        // Auto-sync advanced-cache.php drop-in file to wp-content/
+        require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
+        Uwb_Activator::copy_advanced_cache_dropin();
     }
 
     /**

@@ -230,6 +230,33 @@ function uwb_advanced_cache_shutdown() {
         }
 
         if ( is_dir( $cache_dir ) && is_writable( $cache_dir ) ) {
+            // Append cache info comment
+            $timezone_offset = 0;
+            $timezone_str = 'UTC';
+            if ( file_exists( $config_path ) ) {
+                $json_data = @file_get_contents( $config_path );
+                if ( $json_data ) {
+                    $parsed_config = @json_decode( $json_data, true );
+                    if ( isset( $parsed_config['timezone'] ) ) {
+                        if ( is_numeric( $parsed_config['timezone'] ) ) {
+                            $timezone_offset = floatval( $parsed_config['timezone'] ) * 3600;
+                            $timezone_str = '';
+                        } else {
+                            $timezone_str = $parsed_config['timezone'];
+                        }
+                    }
+                }
+            }
+
+            if ( $timezone_str ) {
+                @date_default_timezone_set( $timezone_str );
+                $time_str = date( 'H:i d/m/Y' );
+            } else {
+                $time_str = gmdate( 'H:i d/m/Y', time() + $timezone_offset );
+            }
+
+            $html .= "\n<!-- Cached by WP Booster at " . $time_str . " -->";
+
             // Write normal HTML cache file
             @file_put_contents( $cache_file, $html );
 
