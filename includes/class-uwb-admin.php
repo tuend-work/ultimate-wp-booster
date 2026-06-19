@@ -347,7 +347,10 @@ class Uwb_Admin {
 
             <div class="uwb-layout">
                 <div class="uwb-sidebar-nav">
-                    <div class="uwb-nav-item active" data-tab="cache_settings">
+                    <div class="uwb-nav-item active" data-tab="url_status">
+                        Dashboard
+                    </div>
+                    <div class="uwb-nav-item" data-tab="cache_settings">
                         Cache Settings
                     </div>
                     <div class="uwb-nav-item" data-tab="preload_settings">
@@ -355,9 +358,6 @@ class Uwb_Admin {
                     </div>
                     <div class="uwb-nav-item" data-tab="object_cache">
                         Redis Object Cache
-                    </div>
-                    <div class="uwb-nav-item" data-tab="url_status">
-                        URL Status
                     </div>
                     <div class="uwb-nav-item" data-tab="updater_settings">
                         Updates
@@ -369,7 +369,7 @@ class Uwb_Admin {
                         <?php settings_fields( 'uwb_settings_group' ); ?>
 
                         <!-- TAB 1: Cache Settings -->
-                        <div id="tab-cache_settings" class="uwb-tab-content active">
+                        <div id="tab-cache_settings" class="uwb-tab-content">
                             <h2 style="margin-top:0;">Cache Configuration</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Configure cache lifespan, bypass conditions, and exclusions for static files.</p>
 
@@ -595,9 +595,9 @@ class Uwb_Admin {
                             ?>
                         </div>
 
-                        <!-- TAB 5: URL Status Table -->
-                        <div id="tab-url_status" class="uwb-tab-content">
-                            <h2 style="margin-top:0;">URL Status</h2>
+                        <!-- TAB 5: Dashboard -->
+                        <div id="tab-url_status" class="uwb-tab-content active">
+                            <h2 style="margin-top:0;">Dashboard</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter by status, search, sort columns, and take actions on individual URLs.</p>
 
                             <!-- Toolbar -->
@@ -640,7 +640,7 @@ class Uwb_Admin {
                         </div>
 
                         <!-- Form Submit (Floating Panel) -->
-                        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--uwb-border); display: flex; gap: 12px;" id="uwb-submit-row">
+                        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--uwb-border); display: none; gap: 12px;" id="uwb-submit-row">
                             <input type="submit" name="submit" id="submit" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:8px 20px; height:auto; font-weight:600; border-radius:6px; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);" value="Save Changes" />
                         </div>
                     </form>
@@ -1111,6 +1111,10 @@ class Uwb_Admin {
                     error: function() { $btn.prop('disabled', false).text('★ Priority'); showToast('Error.', true); }
                 });
             });
+
+            // Load URL table on load since it is the default tab (Dashboard)
+            uwbUrlTableLoaded = true;
+            loadUrlTable();
 
         });
         </script>
