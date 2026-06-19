@@ -114,10 +114,26 @@ class Uwb_Cache {
                 'index.html_gzip'
             );
 
+            // 1. Delete files in the main directory
             foreach ( $files as $file ) {
                 $file_path = $dir_path . '/' . $file;
                 if ( file_exists( $file_path ) ) {
                     @unlink( $file_path );
+                }
+            }
+
+            // 2. Delete files in user-specific subdirectories (e.g. user-*)
+            $subdirs = glob( $dir_path . '/user-*', GLOB_ONLYDIR );
+            if ( is_array( $subdirs ) ) {
+                foreach ( $subdirs as $subdir ) {
+                    foreach ( $files as $file ) {
+                        $file_path = $subdir . '/' . $file;
+                        if ( file_exists( $file_path ) ) {
+                            @unlink( $file_path );
+                        }
+                    }
+                    // Remove empty user directory
+                    $this->remove_empty_dirs( $subdir );
                 }
             }
 
