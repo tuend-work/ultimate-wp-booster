@@ -65,8 +65,9 @@ class Uwb_Admin {
     }
 
     public function admin_init_sync() {
+        require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
+        Uwb_Activator::copy_advanced_cache_dropin();
         if ( get_option( 'uwb_redis_enabled' ) ) {
-            require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
             Uwb_Activator::copy_object_cache_dropin();
         }
     }

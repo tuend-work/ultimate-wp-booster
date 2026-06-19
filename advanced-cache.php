@@ -222,6 +222,13 @@ function uwb_advanced_cache_shutdown() {
         $refresh_comment = ' | Cache: unlimited lifespan';
     }
 
+    // Strip admin bar from cached HTML to prevent it from being served from cache
+    $html = preg_replace( '~<div\s+id="wpadminbar"[^>]*>(?:[^<]+|<(?!/?div\b)|(?R))*</div>~s', '', $html );
+    $html = preg_replace( '~<style[^>]*id=["\']wpadminbar-inline-css["\'][^>]*>.*?</style>~s', '', $html );
+    $html = preg_replace( '~<link[^>]*id=["\']admin-bar-css["\'][^>]*>~s', '', $html );
+    $html = preg_replace( '~<script[^>]*id=["\']admin-bar-js["\'][^>]*>.*?</script>~s', '', $html );
+    $html = preg_replace( '~<body([^>]*)class=["\']([^"\']*)admin-bar\s*([^"\']*)["\']~s', '<body$1class="$2$3"', $html );
+
     $html .= "\n<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment} -->";
 
     @file_put_contents( $cache_file, $html );
