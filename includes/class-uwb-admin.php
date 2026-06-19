@@ -887,7 +887,6 @@ class Uwb_Admin {
 
             // Preloader Live Tracker
             var checkInterval;
-            var triggerInterval;
             var nonce = '<?php echo esc_js( wp_create_nonce( "uwb_admin_nonce" ) ); ?>';
             var uwbUrlTableLoaded = false;
             var uwbUrlPage = 1;
@@ -928,18 +927,9 @@ class Uwb_Admin {
                             if (data.running === 1) {
                                 $('#btn-start-preload').hide();
                                 $('#btn-stop-preload').show();
-                                
-                                // Auto trigger batch in background to speed up UI preloading
-                                if (!triggerInterval) {
-                                    triggerInterval = setInterval(triggerPreloadBatch, 3000);
-                                }
                             } else {
                                 $('#btn-start-preload').show();
                                 $('#btn-stop-preload').hide();
-                                if (triggerInterval) {
-                                    clearInterval(triggerInterval);
-                                    triggerInterval = null;
-                                }
                             }
 
                             if (total > 0 && processed >= total && data.pending === 0 && data.processing === 0) {
@@ -948,28 +938,10 @@ class Uwb_Admin {
                                     clearInterval(checkInterval);
                                     checkInterval = null;
                                 }
-                                if (triggerInterval) {
-                                    clearInterval(triggerInterval);
-                                    triggerInterval = null;
-                                }
                                 $('#btn-start-preload').show();
                                 $('#btn-stop-preload').hide();
                             }
                         }
-                    }
-                });
-            }
-
-            function triggerPreloadBatch() {
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'uwb_trigger_preload_batch',
-                        nonce: nonce
-                    },
-                    success: function(res) {
-                        updatePreloadStatus();
                     }
                 });
             }

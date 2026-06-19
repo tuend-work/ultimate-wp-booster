@@ -148,6 +148,7 @@ class Uwb_Preloader {
         if ( $batch_size <= 0 ) {
             $batch_size = intval( get_option( 'uwb_preload_batch_size', 5 ) );
         }
+        $batch_size = max( 1, min( 50, intval( $batch_size ) ) );
 
         // Get pending or failed URLs (retried up to 3 times)
         $query = $wpdb->prepare(
@@ -412,7 +413,7 @@ class Uwb_Preloader {
             wp_send_json_error( array( 'message' => 'Invalid request.' ) );
         }
 
-        $processed = $this->run_preload_batch( 5 ); // Fast execution of 5 links
+        $processed = $this->run_preload_batch();
 
         wp_send_json_success( array(
             'processed' => $processed
