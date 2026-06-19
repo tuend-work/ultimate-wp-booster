@@ -214,6 +214,13 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             }
 
             // Include required WP file functions
+            // Add temporary filter to disable SSL verification for GitHub URLs only
+            add_filter( 'http_request_args', function( $args, $url ) {
+                if ( strpos( $url, 'github.com' ) !== false ) {
+                    $args['sslverify'] = false;
+                }
+                return $args;
+            }, 10, 2 );
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/misc.php';
             require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
@@ -221,8 +228,9 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             // Download the latest zip from GitHub main branch
             $zip_url   = "https://github.com/{$this->username}/{$this->repository}/archive/refs/heads/main.zip";
             $temp_file = download_url( $zip_url );
+            // Remove the temporary SSL filter
+            remove_filter( 'http_request_args', '__return_false' );
             if ( is_wp_error( $temp_file ) ) {
-                // Reactivate if needed before returning error
                 if ( $was_active ) {
                     activate_plugin( $this->basename );
                 }
@@ -231,7 +239,6 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
 
             // Unzip the package to a temporary directory
             $result = unzip_file( $temp_file, WP_CONTENT_DIR . '/upgrade-temp' );
-            // Clean up the downloaded zip file
             @unlink( $temp_file );
             if ( is_wp_error( $result ) ) {
                 if ( $was_active ) {
@@ -264,7 +271,6 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
 
             // Move new folder into plugins directory
             $move_result = rename( $new_folder, $plugin_dir );
-            // Clean temporary extract directory
             $this->delete_directory( $extracted_dir );
 
             if ( ! $move_result ) {
@@ -421,40 +427,39 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                     var btnText = btn.find('.uwb-btn-text');
                     
                     btn.prop('disabled', true);
-                    btnText.text('Checking...');
+                    btnText.text('Updating...');
                     spinner.show();
-                    status.css('color', '#475569').text('Checking GitHub...');
+                    status.css('color', '#475569').text('Downloading latest version from GitHub...');
                     
                     $.ajax({
                         url: ajaxurl,
                         type: 'POST',
+                        timeout: 120000,
                         data: {
                             action: 'uwb_github_manual_update',
                             nonce: '<?php echo esc_js( $nonce ); ?>'
                         },
                         success: function(res) {
                             spinner.hide();
-                            if (res.success) {
-                                status.css('color', '#16a34a').text(res.data.message);
-                                if (res.data.update_available) {
-                                    setTimeout(function() {
-                                        window.location.href = res.data.upgrade_url;
-                                    }, 1500);
-                                } else {
-                                    btn.prop('disabled', false);
-                                    btnText.text('Check & Update');
-                                }
-                            } else {
-                                status.css('color', '#ef4444').text(res.data.message || 'Unknown error.');
-                                btn.prop('disabled', false);
-                                btnText.text('Check & Update');
-                            }
-                        },
-                        error: function() {
-                            spinner.hide();
-                            status.css('color', '#ef4444').text('Server connection error.');
                             btn.prop('disabled', false);
                             btnText.text('Check & Update');
+                            if (res.success) {
+                                status.css('color', '#16a34a').text('✓ ' + res.data.message + ' — Please reload the page.');
+                            } else {
+                                status.css('color', '#ef4444').text('✗ Error: ' + (res.data.message || 'Unknown error.'));
+                            }
+                        },
+                        error: function(xhr, textStatus, errorThrown) {
+                            spinner.hide();
+                            btn.prop('disabled', false);
+                            btnText.text('Check & Update');
+                            var detail = errorThrown || textStatus;
+                            // Try to parse response body for PHP errors
+                            if (xhr.responseText) {
+                                var preview = xhr.responseText.replace(/<[^>]+>/g, '').trim().substring(0, 300);
+                                detail = '(HTTP ' + xhr.status + ') ' + preview;
+                            }
+                            status.css('color', '#ef4444').html('✗ Server error: <br><small style="font-family:monospace;white-space:pre-wrap">' + detail + '</small>');
                         }
                     });
                 });
