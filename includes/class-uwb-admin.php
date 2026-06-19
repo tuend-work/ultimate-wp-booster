@@ -355,6 +355,9 @@ class Uwb_Admin {
                     <div class="uwb-nav-item" data-tab="updater_settings">
                         Updates
                     </div>
+                    <div class="uwb-nav-item" data-tab="url_status">
+                        URL Status
+                    </div>
                 </div>
 
                 <div class="uwb-content-panel">
@@ -508,6 +511,50 @@ class Uwb_Admin {
                             ?>
                         </div>
 
+                        <!-- TAB 5: URL Status Table -->
+                        <div id="tab-url_status" class="uwb-tab-content">
+                            <h2 style="margin-top:0;">URL Status</h2>
+                            <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter by status, search, sort columns, and take actions on individual URLs.</p>
+
+                            <!-- Toolbar -->
+                            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+                                <input type="text" id="uwb-url-search" placeholder="Search URL..." style="border:1px solid var(--uwb-border); border-radius:8px; padding:9px 12px; font-size:13px; flex:1; min-width:180px; max-width:320px;" />
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <button class="uwb-filter-btn active" data-status="" style="border:1px solid var(--uwb-border); background:#f1f5f9; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">All</button>
+                                    <button class="uwb-filter-btn" data-status="pending" style="border:1px solid #fcd34d; background:#fef9c3; color:#92400e; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Pending</button>
+                                    <button class="uwb-filter-btn" data-status="processing" style="border:1px solid #93c5fd; background:#dbeafe; color:#1e40af; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Processing</button>
+                                    <button class="uwb-filter-btn" data-status="completed" style="border:1px solid #6ee7b7; background:#d1fae5; color:#065f46; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Completed</button>
+                                    <button class="uwb-filter-btn" data-status="failed" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Failed</button>
+                                </div>
+                                <button id="uwb-url-refresh" style="margin-left:auto; border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">⟳ Refresh</button>
+                            </div>
+
+                            <!-- Table -->
+                            <div style="overflow-x:auto; border:1px solid var(--uwb-border); border-radius:10px;">
+                                <table id="uwb-url-table" style="width:100%; border-collapse:collapse; font-size:13px;">
+                                    <thead>
+                                        <tr style="background:#f8fafc; border-bottom:1px solid var(--uwb-border);">
+                                            <th class="uwb-sortable" data-col="url" style="padding:12px 14px; text-align:left; font-weight:700; cursor:pointer; user-select:none;">URL <span class="uwb-sort-icon">↕</span></th>
+                                            <th class="uwb-sortable" data-col="status" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Status <span class="uwb-sort-icon">↕</span></th>
+                                            <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none;">Priority <span class="uwb-sort-icon">↕</span></th>
+                                            <th class="uwb-sortable" data-col="attempts" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none;">Tries <span class="uwb-sort-icon">↕</span></th>
+                                            <th class="uwb-sortable" data-col="last_attempt" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Last Attempt <span class="uwb-sort-icon">↕</span></th>
+                                            <th style="padding:12px 14px; text-align:center; font-weight:700;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="uwb-url-tbody">
+                                        <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div id="uwb-url-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:13px; color:var(--uwb-text-muted);"></div>
+
+                            <!-- Toast notification -->
+                            <div id="uwb-url-toast" style="display:none; position:fixed; bottom:24px; right:24px; background:#1e293b; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.2);"></div>
+                        </div>
+
                         <!-- Form Submit (Floating Panel) -->
                         <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--uwb-border); display: flex; gap: 12px;" id="uwb-submit-row">
                             <input type="submit" name="submit" id="submit" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:8px 20px; height:auto; font-weight:600; border-radius:6px; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);" value="Save Changes" />
@@ -529,11 +576,17 @@ class Uwb_Admin {
                 $('.uwb-tab-content').removeClass('active');
                 $('#tab-' + tabId).addClass('active');
 
-                // Hide submit row on updater tab
-                if (tabId === 'updater_settings' || tabId === 'nginx_settings') {
+                // Hide submit row on non-settings tabs
+                if (['updater_settings', 'nginx_settings', 'url_status'].indexOf(tabId) !== -1) {
                     $('#uwb-submit-row').hide();
                 } else {
                     $('#uwb-submit-row').show();
+                }
+
+                // Load URL table on first visit
+                if (tabId === 'url_status' && !uwbUrlTableLoaded) {
+                    uwbUrlTableLoaded = true;
+                    loadUrlTable();
                 }
             });
 
@@ -541,6 +594,12 @@ class Uwb_Admin {
             var checkInterval;
             var triggerInterval;
             var nonce = '<?php echo esc_js( wp_create_nonce( "uwb_admin_nonce" ) ); ?>';
+            var uwbUrlTableLoaded = false;
+            var uwbUrlPage = 1;
+            var uwbUrlStatus = '';
+            var uwbUrlSearch = '';
+            var uwbUrlOrderby = 'id';
+            var uwbUrlOrder = 'ASC';
 
             function updatePreloadStatus() {
                 $.ajax({
@@ -694,8 +753,197 @@ class Uwb_Admin {
             updatePreloadStatus();
             // Start polling if preloader running
             checkInterval = setInterval(updatePreloadStatus, 4000);
+
+            /* =====================================================
+               URL STATUS TABLE
+            ===================================================== */
+
+            var uwbSearchTimer = null;
+
+            function showToast(msg, isError) {
+                var $t = $('#uwb-url-toast');
+                $t.text(msg).css('background', isError ? '#dc2626' : '#1e293b').fadeIn(200);
+                setTimeout(function() { $t.fadeOut(400); }, 3000);
+            }
+
+            function statusBadge(s) {
+                var colors = {
+                    pending:    'background:#fef9c3; color:#92400e; border:1px solid #fcd34d;',
+                    processing: 'background:#dbeafe; color:#1e40af; border:1px solid #93c5fd;',
+                    completed:  'background:#d1fae5; color:#065f46; border:1px solid #6ee7b7;',
+                    failed:     'background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;'
+                };
+                var style = colors[s] || '';
+                return '<span style="' + style + ' padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap;">' + s + '</span>';
+            }
+
+            function loadUrlTable() {
+                $('#uwb-url-tbody').html('<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">Loading...</td></tr>');
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action:  'uwb_get_url_table',
+                        nonce:   nonce,
+                        status:  uwbUrlStatus,
+                        search:  uwbUrlSearch,
+                        orderby: uwbUrlOrderby,
+                        order:   uwbUrlOrder,
+                        page:    uwbUrlPage
+                    },
+                    success: function(res) {
+                        if (!res.success) { showToast('Failed to load table.', true); return; }
+                        renderUrlTable(res.data);
+                    },
+                    error: function() { showToast('Server error loading table.', true); }
+                });
+            }
+
+            function renderUrlTable(data) {
+                var rows = data.rows;
+                var $tbody = $('#uwb-url-tbody');
+                if (!rows || rows.length === 0) {
+                    $tbody.html('<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">No URLs found.</td></tr>');
+                } else {
+                    var html = '';
+                    $.each(rows, function(i, r) {
+                        var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
+                        var priorityLabel = r.priority == 1 ? '<span style="color:#f59e0b; font-weight:700;">★ High</span>' : '<span style="color:#cbd5e1;">Normal</span>';
+                        var lastAttempt = r.last_attempt ? r.last_attempt : '—';
+                        html += '<tr style="background:' + rowBg + '; border-bottom:1px solid #f1f5f9; transition:background 0.15s;" onmouseover="this.style.background=\'#eef2ff\'" onmouseout="this.style.background=\'' + rowBg + '\'">';
+                        html += '<td style="padding:10px 14px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + $('<div>').text(r.url).html() + '"><a href="' + $('<div>').text(r.url).html() + '" target="_blank" style="color:var(--uwb-primary); text-decoration:none; font-size:12.5px;">' + $('<div>').text(r.url).html() + '</a></td>';
+                        html += '<td style="padding:10px 14px; text-align:center;">' + statusBadge(r.status) + '</td>';
+                        html += '<td style="padding:10px 14px; text-align:center;">' + priorityLabel + '</td>';
+                        html += '<td style="padding:10px 14px; text-align:center; color:var(--uwb-text-muted);">' + r.attempts + '</td>';
+                        html += '<td style="padding:10px 14px; text-align:center; color:var(--uwb-text-muted); font-size:12px;">' + lastAttempt + '</td>';
+                        html += '<td style="padding:10px 14px; text-align:center; white-space:nowrap;">';
+                        html += '<button class="uwb-act-process" data-id="' + r.id + '" style="background:#6366f1; color:#fff; border:none; border-radius:5px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; margin:2px;" title="Process this URL now">▶ Now</button>';
+                        html += '<button class="uwb-act-exclude" data-id="' + r.id + '" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:5px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; margin:2px;" title="Add to Exclude list">✕ Exclude</button>';
+                        html += '<button class="uwb-act-priority" data-id="' + r.id + '" style="background:#fef9c3; border:1px solid #fcd34d; color:#92400e; border-radius:5px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; margin:2px;" title="Add to Priority URLs">★ Priority</button>';
+                        html += '</td></tr>';
+                    });
+                    $tbody.html(html);
+                }
+
+                // Pagination
+                var totalPages = data.total_pages;
+                var currentPage = data.page;
+                var from = (currentPage - 1) * data.per_page + 1;
+                var to = Math.min(currentPage * data.per_page, data.total);
+                var paginHtml = '<span>Showing ' + from + '–' + to + ' of ' + data.total + ' URLs</span>';
+                paginHtml += '<div style="display:flex; gap:6px;">';
+                if (currentPage > 1) {
+                    paginHtml += '<button id="uwb-page-prev" style="border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">‹ Prev</button>';
+                }
+                for (var p = Math.max(1, currentPage - 2); p <= Math.min(totalPages, currentPage + 2); p++) {
+                    var active = (p === currentPage) ? 'background:var(--uwb-primary);color:#fff;' : 'background:#fff;';
+                    paginHtml += '<button class="uwb-page-btn" data-page="' + p + '" style="border:1px solid var(--uwb-border);' + active + 'border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">' + p + '</button>';
+                }
+                if (currentPage < totalPages) {
+                    paginHtml += '<button id="uwb-page-next" style="border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">Next ›</button>';
+                }
+                paginHtml += '</div>';
+                $('#uwb-url-pagination').html(paginHtml);
+            }
+
+            // Sort headers
+            $(document).on('click', '.uwb-sortable', function() {
+                var col = $(this).data('col');
+                if (uwbUrlOrderby === col) {
+                    uwbUrlOrder = (uwbUrlOrder === 'ASC') ? 'DESC' : 'ASC';
+                } else {
+                    uwbUrlOrderby = col;
+                    uwbUrlOrder = 'ASC';
+                }
+                $('.uwb-sort-icon').text('↕');
+                $(this).find('.uwb-sort-icon').text(uwbUrlOrder === 'ASC' ? '↑' : '↓');
+                uwbUrlPage = 1;
+                loadUrlTable();
+            });
+
+            // Filter buttons
+            $(document).on('click', '.uwb-filter-btn', function() {
+                $('.uwb-filter-btn').css('outline', '').removeClass('active');
+                $(this).css('outline', '2px solid var(--uwb-primary)').addClass('active');
+                uwbUrlStatus = $(this).data('status');
+                uwbUrlPage = 1;
+                loadUrlTable();
+            });
+
+            // Search
+            $('#uwb-url-search').on('input', function() {
+                clearTimeout(uwbSearchTimer);
+                var val = $(this).val();
+                uwbSearchTimer = setTimeout(function() {
+                    uwbUrlSearch = val;
+                    uwbUrlPage = 1;
+                    loadUrlTable();
+                }, 400);
+            });
+
+            // Refresh button
+            $('#uwb-url-refresh').on('click', function() { loadUrlTable(); });
+
+            // Pagination
+            $(document).on('click', '#uwb-page-prev', function() { uwbUrlPage--; loadUrlTable(); });
+            $(document).on('click', '#uwb-page-next', function() { uwbUrlPage++; loadUrlTable(); });
+            $(document).on('click', '.uwb-page-btn', function() { uwbUrlPage = parseInt($(this).data('page')); loadUrlTable(); });
+
+            // Row action: Process Now
+            $(document).on('click', '.uwb-act-process', function() {
+                var id = $(this).data('id');
+                var $btn = $(this).prop('disabled', true).text('...');
+                $.ajax({
+                    url: ajaxurl, type: 'POST',
+                    data: { action: 'uwb_process_url_now', nonce: nonce, id: id },
+                    success: function(res) {
+                        $btn.prop('disabled', false).text('▶ Now');
+                        if (res.success) {
+                            showToast('Done! Status: ' + res.data.status);
+                            loadUrlTable();
+                        } else {
+                            showToast(res.data.message, true);
+                        }
+                    },
+                    error: function() { $btn.prop('disabled', false).text('▶ Now'); showToast('Error.', true); }
+                });
+            });
+
+            // Row action: Add to Exclude
+            $(document).on('click', '.uwb-act-exclude', function() {
+                var id = $(this).data('id');
+                var $btn = $(this).prop('disabled', true).text('...');
+                $.ajax({
+                    url: ajaxurl, type: 'POST',
+                    data: { action: 'uwb_add_to_exclude', nonce: nonce, id: id },
+                    success: function(res) {
+                        $btn.prop('disabled', false).text('✕ Exclude');
+                        if (res.success) { showToast(res.data.message); }
+                        else { showToast(res.data.message, true); }
+                    },
+                    error: function() { $btn.prop('disabled', false).text('✕ Exclude'); showToast('Error.', true); }
+                });
+            });
+
+            // Row action: Add to Priority
+            $(document).on('click', '.uwb-act-priority', function() {
+                var id = $(this).data('id');
+                var $btn = $(this).prop('disabled', true).text('...');
+                $.ajax({
+                    url: ajaxurl, type: 'POST',
+                    data: { action: 'uwb_add_to_priority', nonce: nonce, id: id },
+                    success: function(res) {
+                        $btn.prop('disabled', false).text('★ Priority');
+                        if (res.success) { showToast(res.data.message); loadUrlTable(); }
+                        else { showToast(res.data.message, true); }
+                    },
+                    error: function() { $btn.prop('disabled', false).text('★ Priority'); showToast('Error.', true); }
+                });
+            });
+
         });
         </script>
         <?php
+
     }
 }

@@ -22,6 +22,12 @@ class Uwb_Preloader {
         add_action( 'wp_ajax_uwb_clear_preload', array( $this, 'ajax_clear_preload' ) );
         add_action( 'wp_ajax_uwb_get_preload_status', array( $this, 'ajax_get_preload_status' ) );
         add_action( 'wp_ajax_uwb_trigger_preload_batch', array( $this, 'ajax_trigger_preload_batch' ) );
+
+        // URL table actions
+        add_action( 'wp_ajax_uwb_get_url_table', array( $this, 'ajax_get_url_table' ) );
+        add_action( 'wp_ajax_uwb_process_url_now', array( $this, 'ajax_process_url_now' ) );
+        add_action( 'wp_ajax_uwb_add_to_exclude', array( $this, 'ajax_add_to_exclude' ) );
+        add_action( 'wp_ajax_uwb_add_to_priority', array( $this, 'ajax_add_to_priority' ) );
     }
 
     /**
@@ -394,5 +400,155 @@ class Uwb_Preloader {
         wp_send_json_success( array(
             'processed' => $processed
         ) );
+    }
+
+    /**
+     * AJAX action: Get paginated URL table with filters and sorting
+     */
+    public function ajax_get_url_table() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+
+        $status   = isset( $_POST['status'] ) ? sanitize_text_field( $_POST['status'] ) : '';
+        $search   = isset( $_POST['search'] ) ? sanitize_text_field( $_POST['search'] ) : '';
+        $orderby  = in_array( $_POST['orderby'] ?? '', array( 'url', 'status', 'priority', 'attempts', 'created_at', 'last_attempt' ), true )
+                    ? $_POST['orderby'] : 'id';
+        $order    = strtoupper( $_POST['order'] ?? 'ASC' ) === 'DESC' ? 'DESC' : 'ASC';
+        $page     = max( 1, intval( $_POST['page'] ?? 1 ) );
+        $per_page = 20;
+        $offset   = ( $page - 1 ) * $per_page;
+
+        $where = array( '1=1' );
+        $params = array();
+
+        if ( $status && in_array( $status, array( 'pending', 'processing', 'completed', 'failed' ), true ) ) {
+            $where[]  = 'status = %s';
+            $params[] = $status;
+        }
+        if ( $search ) {
+            $where[]  = 'url LIKE %s';
+            $params[] = '%' . $wpdb->esc_like( $search ) . '%';
+        }
+
+        $where_sql = implode( ' AND ', $where );
+
+        $total = $params
+            ? $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->table_name} WHERE {$where_sql}", $params ) )
+            : $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name} WHERE {$where_sql}" );
+
+        $query_sql = "SELECT id, url, status, priority, attempts, created_at, last_attempt FROM {$this->table_name} WHERE {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d";
+        $query_params = array_merge( $params, array( $per_page, $offset ) );
+        $rows = $wpdb->get_results( $wpdb->prepare( $query_sql, $query_params ) );
+
+        wp_send_json_success( array(
+            'rows'       => $rows,
+            'total'      => intval( $total ),
+            'page'       => $page,
+            'per_page'   => $per_page,
+            'total_pages'=> ceil( $total / $per_page ),
+        ) );
+    }
+
+    /**
+     * AJAX action: Immediately process a single URL
+     */
+    public function ajax_process_url_now() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+        $id = intval( $_POST['id'] ?? 0 );
+        if ( ! $id ) {
+            wp_send_json_error( array( 'message' => 'Invalid ID.' ) );
+        }
+
+        $item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE id = %d", $id ) );
+        if ( ! $item ) {
+            wp_send_json_error( array( 'message' => 'URL not found.' ) );
+        }
+
+        // Mark as processing
+        $wpdb->update( $this->table_name, array( 'status' => 'processing', 'attempts' => $item->attempts + 1, 'last_attempt' => current_time( 'mysql' ) ), array( 'id' => $id ), array( '%s', '%d', '%s' ), array( '%d' ) );
+
+        $response = wp_remote_get( $item->url, array(
+            'timeout'   => 20,
+            'sslverify' => false,
+            'user-agent'=> 'Ultimate-WP-Booster-Preloader',
+            'headers'   => array( 'X-Ultimate-WP-Booster-Preload' => '1' ),
+        ) );
+
+        $status = ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 ) ? 'completed' : 'failed';
+        $wpdb->update( $this->table_name, array( 'status' => $status ), array( 'id' => $id ), array( '%s' ), array( '%d' ) );
+
+        wp_send_json_success( array( 'status' => $status, 'id' => $id ) );
+    }
+
+    /**
+     * AJAX action: Add URL to excluded list
+     */
+    public function ajax_add_to_exclude() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+        $id = intval( $_POST['id'] ?? 0 );
+        if ( ! $id ) wp_send_json_error( array( 'message' => 'Invalid ID.' ) );
+
+        $item = $wpdb->get_row( $wpdb->prepare( "SELECT url FROM {$this->table_name} WHERE id = %d", $id ) );
+        if ( ! $item ) wp_send_json_error( array( 'message' => 'Not found.' ) );
+
+        $path = wp_parse_url( $item->url, PHP_URL_PATH );
+        $path = '/' . trim( $path, '/' );
+
+        $existing = get_option( 'uwb_excluded_urls', '' );
+        $lines    = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $existing ) ) ) );
+
+        if ( ! in_array( $path, $lines, true ) ) {
+            $lines[]   = $path;
+            update_option( 'uwb_excluded_urls', implode( "\n", $lines ) );
+            Uwb_Cache::write_config_file();
+        }
+
+        wp_send_json_success( array( 'message' => "Added {$path} to excluded URLs.", 'path' => $path ) );
+    }
+
+    /**
+     * AJAX action: Add URL to priority list
+     */
+    public function ajax_add_to_priority() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+        $id = intval( $_POST['id'] ?? 0 );
+        if ( ! $id ) wp_send_json_error( array( 'message' => 'Invalid ID.' ) );
+
+        $item = $wpdb->get_row( $wpdb->prepare( "SELECT url FROM {$this->table_name} WHERE id = %d", $id ) );
+        if ( ! $item ) wp_send_json_error( array( 'message' => 'Not found.' ) );
+
+        $path = wp_parse_url( $item->url, PHP_URL_PATH );
+        $path = '/' . trim( $path, '/' );
+
+        $existing = get_option( 'uwb_priority_urls', '' );
+        $lines    = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $existing ) ) ) );
+
+        if ( ! in_array( $path, $lines, true ) ) {
+            $lines[]   = $path;
+            update_option( 'uwb_priority_urls', implode( "\n", $lines ) );
+            // Also mark as priority in the queue
+            $wpdb->update( $this->table_name, array( 'priority' => 1 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
+        }
+
+        wp_send_json_success( array( 'message' => "Added {$path} to priority URLs.", 'path' => $path ) );
     }
 }

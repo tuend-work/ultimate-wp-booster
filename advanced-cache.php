@@ -25,7 +25,7 @@ function uwb_advanced_cache_run() {
     // 3. Load config file
     $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
     $config      = array(
-        'cache_lifespan'  => 36000, // 10 hours in seconds
+        'cache_lifespan'  => 36000,
         'cache_logged_in' => false,
         'excluded_urls'   => array(),
         'ignored_query'   => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
@@ -48,39 +48,33 @@ function uwb_advanced_cache_run() {
         parse_str( $_SERVER['QUERY_STRING'], $query_params );
         foreach ( $query_params as $param => $val ) {
             if ( ! in_array( $param, $config['ignored_query'], true ) ) {
-                return; // Non-ignored query param – bypass cache
+                return;
             }
         }
     }
 
     // 5. Detect logged-in state via cookies
-    //    - If cache_logged_in = false: bypass entirely for logged-in users
-    //    - If cache_logged_in = true:  use a per-user sub-directory so each
-    //      user has their own cache, isolated from guests and other users.
     $logged_in_cookie_hash = '';
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
-            // Always bypass for special transient cookies
             if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products)/', $key ) ) {
                 return;
             }
-            // Detect WordPress logged-in cookie
             if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
                 if ( ! $cache_logged_in ) {
-                    return; // Logged-in caching disabled → bypass entirely
+                    return;
                 }
-                // Build a stable, short, per-user segment from the cookie value
                 $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
             }
         }
     }
 
-    // 6. Get normalized host & URI
+    // 6. Normalize host & URI
     $host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( $_SERVER['HTTP_HOST'] ) : '';
     if ( empty( $host ) ) {
         return;
     }
-    $host = explode( ':', $host )[0]; // Strip port number
+    $host = explode( ':', $host )[0];
 
     $request_uri    = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
     $uri_parts      = explode( '?', $request_uri );
@@ -92,18 +86,16 @@ function uwb_advanced_cache_run() {
         $absolute_uri = ( $normalized_uri === '' ) ? '/' : '/' . $normalized_uri;
         foreach ( $config['excluded_urls'] as $pattern ) {
             $pattern = trim( $pattern );
-            if ( empty( $pattern ) ) {
-                continue;
-            }
+            if ( empty( $pattern ) ) continue;
             $regex = str_replace( '\*', '.*', preg_quote( $pattern, '#' ) );
             if ( preg_match( '#^' . $regex . '$#i', $absolute_uri ) ||
                  preg_match( '#^' . $regex . '$#i', $uri_path ) ) {
-                return; // Excluded URL – bypass
+                return;
             }
         }
     }
 
-    // 8. Determine cache file name (HTTPS vs HTTP)
+    // 8. Determine cache filename
     $is_https = false;
     if ( ( isset( $_SERVER['HTTPS'] ) && ( $_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1 ) ) ||
          ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' ) ||
@@ -112,27 +104,15 @@ function uwb_advanced_cache_run() {
     }
     $filename = $is_https ? 'index-https.html' : 'index.html';
 
-    // 9. Build cache directory path
-    //
-    //    Guest users  →  .../wp-rocket/{host}/{uri}/index-https.html
-    //    Logged-in    →  .../wp-rocket/{host}/{uri}/user-{hash}/index-https.html
-    //
-    //    The user-specific sub-directory ensures logged-in cache NEVER bleeds
-    //    into the guest cache and is isolated between different user accounts.
+    // 9. Build cache directory path (per-user subdirectory for logged-in users)
     $base_cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket/' . $host;
     if ( $normalized_uri !== '' ) {
         $base_cache_dir .= '/' . $normalized_uri;
     }
-
-    if ( $logged_in_cookie_hash !== '' ) {
-        $cache_dir = $base_cache_dir . '/' . $logged_in_cookie_hash;
-    } else {
-        $cache_dir = $base_cache_dir;
-    }
-
+    $cache_dir  = ( $logged_in_cookie_hash !== '' ) ? $base_cache_dir . '/' . $logged_in_cookie_hash : $base_cache_dir;
     $cache_file = $cache_dir . '/' . $filename;
 
-    // 10. Serve cached file if it exists and is still valid
+    // 10. Serve cached file if valid
     if ( file_exists( $cache_file ) ) {
         $file_time = @filemtime( $cache_file );
         $lifespan  = intval( $config['cache_lifespan'] );
@@ -156,10 +136,9 @@ function uwb_advanced_cache_run() {
             }
             exit;
         }
-        // Cache expired – fall through to regenerate
     }
 
-    // 11. Cache does not exist or is expired – capture output to write cache on shutdown
+    // 11. No valid cache – capture output to write on shutdown
     if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
         define( 'UWB_BUFFER_STARTED', true );
 
@@ -167,111 +146,86 @@ function uwb_advanced_cache_run() {
         $GLOBALS['uwb_cache_dir']         = $cache_dir;
         $GLOBALS['uwb_config_path']       = $config_path;
         $GLOBALS['uwb_logged_in_segment'] = $logged_in_cookie_hash;
+        $GLOBALS['uwb_config']            = $config;
 
         ob_start( 'uwb_advanced_cache_ob_callback' );
         register_shutdown_function( 'uwb_advanced_cache_shutdown' );
     }
 }
 
-/**
- * Output buffering callback — pass-through only
- */
 function uwb_advanced_cache_ob_callback( $buffer ) {
     return $buffer;
 }
 
-/**
- * Shutdown function: write the captured HTML output to static cache files
- */
 function uwb_advanced_cache_shutdown() {
     $html = ob_get_clean();
-    if ( empty( $html ) ) {
-        return;
-    }
+    if ( empty( $html ) ) return;
 
-    // Serve the page to the client immediately
     echo $html;
 
-    // Only cache 200 OK responses
-    if ( http_response_code() !== 200 ) {
-        return;
-    }
-
-    // Skip suspiciously short responses
-    if ( strlen( $html ) < 200 ) {
-        return;
-    }
-
-    // Skip admin, search, feed, and other special pages
-    if ( is_admin() || is_search() || is_feed() || is_trackback() || is_robots() || is_404() ) {
-        return;
-    }
+    if ( http_response_code() !== 200 ) return;
+    if ( strlen( $html ) < 200 ) return;
+    if ( is_admin() || is_search() || is_feed() || is_trackback() || is_robots() || is_404() ) return;
 
     // Re-read config
-    $config_path     = isset( $GLOBALS['uwb_config_path'] )
+    $config_path = isset( $GLOBALS['uwb_config_path'] )
         ? $GLOBALS['uwb_config_path']
         : WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
-    $cache_logged_in = false;
-    $timezone_str    = 'UTC';
-    $timezone_offset = 0;
 
-    if ( file_exists( $config_path ) ) {
-        $json_data = @file_get_contents( $config_path );
-        if ( $json_data ) {
-            $parsed_config = @json_decode( $json_data, true );
-            if ( is_array( $parsed_config ) ) {
-                $cache_logged_in = ! empty( $parsed_config['cache_logged_in'] );
-                if ( isset( $parsed_config['timezone'] ) ) {
-                    if ( is_numeric( $parsed_config['timezone'] ) ) {
-                        $timezone_offset = floatval( $parsed_config['timezone'] ) * 3600;
-                        $timezone_str    = '';
-                    } else {
-                        $timezone_str = $parsed_config['timezone'];
-                    }
-                }
-            }
-        }
+    $config          = isset( $GLOBALS['uwb_config'] ) ? $GLOBALS['uwb_config'] : array();
+    $cache_logged_in = ! empty( $config['cache_logged_in'] );
+    $timezone_str    = isset( $config['timezone'] ) && ! is_numeric( $config['timezone'] ) ? $config['timezone'] : 'UTC';
+    $timezone_offset = isset( $config['timezone'] ) && is_numeric( $config['timezone'] ) ? floatval( $config['timezone'] ) * 3600 : 0;
+    if ( is_numeric( isset( $config['timezone'] ) ? $config['timezone'] : '' ) ) {
+        $timezone_str = '';
     }
+    $lifespan = isset( $config['cache_lifespan'] ) ? intval( $config['cache_lifespan'] ) : 36000;
 
-    // Safety check: if logged-in caching is now disabled, don't write
     $logged_in_segment = isset( $GLOBALS['uwb_logged_in_segment'] ) ? $GLOBALS['uwb_logged_in_segment'] : '';
-    if ( ! $cache_logged_in && $logged_in_segment !== '' ) {
-        return;
-    }
-    if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
-        return;
-    }
+    if ( ! $cache_logged_in && $logged_in_segment !== '' ) return;
+    if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) return;
 
-    // Resolve cache paths
     $cache_file = isset( $GLOBALS['uwb_cache_file'] ) ? $GLOBALS['uwb_cache_file'] : '';
     $cache_dir  = isset( $GLOBALS['uwb_cache_dir'] ) ? $GLOBALS['uwb_cache_dir'] : '';
+    if ( ! $cache_file || ! $cache_dir ) return;
 
-    if ( ! $cache_file || ! $cache_dir ) {
-        return;
-    }
+    if ( ! file_exists( $cache_dir ) ) @mkdir( $cache_dir, 0755, true );
+    if ( ! is_dir( $cache_dir ) || ! is_writable( $cache_dir ) ) return;
 
-    // Create directory structure if needed
-    if ( ! file_exists( $cache_dir ) ) {
-        @mkdir( $cache_dir, 0755, true );
-    }
-
-    if ( ! is_dir( $cache_dir ) || ! is_writable( $cache_dir ) ) {
-        return;
-    }
-
-    // Append cache timestamp comment
+    // Build timestamp with UTC offset notation
+    $now = time();
     if ( $timezone_str ) {
         @date_default_timezone_set( $timezone_str );
-        $time_str = date( 'H:i d/m/Y' );
+        // Get UTC offset for the timezone
+        $tz_obj      = timezone_open( $timezone_str );
+        $utc_offset  = $tz_obj ? timezone_offset_get( $tz_obj, date_create( 'now', $tz_obj ) ) / 3600 : 0;
+        $utc_label   = 'UTC' . ( $utc_offset >= 0 ? '+' : '' ) . $utc_offset;
+        $time_str    = date( 'H:i:s d/m/Y' );
     } else {
-        $time_str = gmdate( 'H:i d/m/Y', time() + $timezone_offset );
+        $local_ts   = $now + $timezone_offset;
+        $utc_offset = $timezone_offset / 3600;
+        $utc_label  = 'UTC' . ( $utc_offset >= 0 ? '+' : '' ) . $utc_offset;
+        $time_str   = gmdate( 'H:i:s d/m/Y', $local_ts );
     }
-    $html .= "\n<!-- Cached by WP Booster at " . $time_str . " -->";
 
-    // Write plain HTML cache file
+    // Calculate next refresh time
+    if ( $lifespan > 0 ) {
+        if ( $timezone_str ) {
+            $next_ts  = $now + $lifespan;
+            $next_str = date( 'H:i:s d/m/Y', $next_ts );
+        } else {
+            $next_ts  = $now + $timezone_offset + $lifespan;
+            $next_str = gmdate( 'H:i:s d/m/Y', $next_ts );
+        }
+        $refresh_comment = " | Next refresh: {$next_str} ({$utc_label})";
+    } else {
+        $refresh_comment = ' | Cache: unlimited lifespan';
+    }
+
+    $html .= "\n<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment} -->";
+
     @file_put_contents( $cache_file, $html );
 
-    // Write Gzip-compressed cache file
     $gzip_file    = $cache_file . '_gzip';
     $gzipped_html = gzencode( $html, 9 );
     if ( $gzipped_html !== false ) {
