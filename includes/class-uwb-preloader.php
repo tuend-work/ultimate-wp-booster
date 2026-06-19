@@ -262,6 +262,55 @@ class Uwb_Preloader {
             return new WP_Error( 'no_urls', 'No URLs found in the sitemap: ' . esc_url( $sitemap_url ) );
         }
 
+        // Prioritize category links, taxonomy terms, homepage, and archives
+        $tax_slugs = array( 'category', 'post_tag', 'tag', 'author', 'date', 'page', 'type', 'shop' );
+        if ( function_exists( 'get_taxonomies' ) ) {
+            $taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
+            foreach ( $taxonomies as $tax ) {
+                if ( ! empty( $tax->rewrite['slug'] ) ) {
+                    $tax_slugs[] = trim( $tax->rewrite['slug'], '/' );
+                }
+            }
+        }
+        $tax_slugs = array_unique( $tax_slugs );
+
+        $home_url = home_url( '/' );
+        $home_url_no_slash = rtrim( $home_url, '/' );
+
+        $priority_group = array();
+        $normal_group   = array();
+
+        foreach ( $urls as $url ) {
+            $is_taxonomy = false;
+            if ( $url === $home_url || $url === $home_url_no_slash ) {
+                $is_taxonomy = true;
+            } else {
+                $path = wp_parse_url( $url, PHP_URL_PATH );
+                $path_segments = array_filter( explode( '/', trim( $path, '/' ) ) );
+                if ( ! empty( $path_segments ) ) {
+                    $first_segment = reset( $path_segments );
+                    if ( in_array( $first_segment, $tax_slugs, true ) ) {
+                        $is_taxonomy = true;
+                    }
+                }
+                
+                // Fallback database lookup if taxonomy is not slug-matched
+                if ( ! $is_taxonomy && function_exists( 'url_to_postid' ) ) {
+                    if ( url_to_postid( $url ) === 0 ) {
+                        $is_taxonomy = true;
+                    }
+                }
+            }
+
+            if ( $is_taxonomy ) {
+                $priority_group[] = $url;
+            } else {
+                $normal_group[] = $url;
+            }
+        }
+
+        $urls = array_merge( $priority_group, $normal_group );
+
         // 3. Filter and insert into the database queue in batches
         $now = current_time( 'mysql' );
         $values = array();

@@ -1248,17 +1248,57 @@ class Uwb_Admin {
                 var from = (currentPage - 1) * data.per_page + 1;
                 var to = Math.min(currentPage * data.per_page, data.total);
                 var paginHtml = '<span>Showing ' + from + '–' + to + ' of ' + data.total + ' URLs</span>';
-                paginHtml += '<div style="display:flex; gap:6px;">';
-                if (currentPage > 1) {
-                    paginHtml += '<button id="uwb-page-prev" style="border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">‹ Prev</button>';
+                
+                $('#uwb-url-pagination').data('total-pages', totalPages);
+                
+                paginHtml += '<div style="display:flex; gap:6px; align-items:center;">';
+                
+                var firstDisabled = (currentPage > 1) ? '' : ' disabled style="opacity:0.5; cursor:not-allowed;"';
+                var prevDisabled = (currentPage > 1) ? '' : ' disabled style="opacity:0.5; cursor:not-allowed;"';
+                paginHtml += '<button id="uwb-page-first"' + firstDisabled + ' style="border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">First</button>';
+                paginHtml += '<button id="uwb-page-prev"' + prevDisabled + ' style="border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">Prev</button>';
+
+                var range = [];
+                if (totalPages <= 7) {
+                    for (var i = 1; i <= totalPages; i++) {
+                        range.push(i);
+                    }
+                } else {
+                    range.push(1);
+                    range.push(2);
+
+                    var start = Math.max(3, currentPage - 1);
+                    var end = Math.min(totalPages - 2, currentPage + 1);
+
+                    for (var i = start; i <= end; i++) {
+                        range.push(i);
+                    }
+
+                    range.push(totalPages - 1);
+                    range.push(totalPages);
                 }
-                for (var p = Math.max(1, currentPage - 2); p <= Math.min(totalPages, currentPage + 2); p++) {
+
+                range = range.filter(function(item, pos, self) {
+                    return self.indexOf(item) == pos;
+                }).sort(function(a, b) { return a - b; });
+
+                var lastNum = 0;
+                $.each(range, function(idx, p) {
+                    if (lastNum > 0) {
+                        if (p - lastNum > 1) {
+                            paginHtml += '<span style="padding:5px 8px; color:var(--uwb-text-muted);">...</span>';
+                        }
+                    }
                     var active = (p === currentPage) ? 'background:var(--uwb-primary);color:#fff;' : 'background:#fff;';
                     paginHtml += '<button class="uwb-page-btn" data-page="' + p + '" style="border:1px solid var(--uwb-border);' + active + 'border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">' + p + '</button>';
-                }
-                if (currentPage < totalPages) {
-                    paginHtml += '<button id="uwb-page-next" style="border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">Next ›</button>';
-                }
+                    lastNum = p;
+                });
+
+                var nextDisabled = (currentPage < totalPages) ? '' : ' disabled style="opacity:0.5; cursor:not-allowed;"';
+                var lastDisabled = (currentPage < totalPages) ? '' : ' disabled style="opacity:0.5; cursor:not-allowed;"';
+                paginHtml += '<button id="uwb-page-next"' + nextDisabled + ' style="border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">Next</button>';
+                paginHtml += '<button id="uwb-page-last"' + lastDisabled + ' style="border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; font-weight:600;">Last</button>';
+
                 paginHtml += '</div>';
                 $('#uwb-url-pagination').html(paginHtml);
             }
@@ -1304,9 +1344,33 @@ class Uwb_Admin {
             $('#uwb-url-refresh').on('click', function(e) { e.preventDefault(); loadUrlTable(); });
 
             // Pagination
-            $(document).on('click', '#uwb-page-prev', function(e) { e.preventDefault(); uwbUrlPage--; loadUrlTable(); });
-            $(document).on('click', '#uwb-page-next', function(e) { e.preventDefault(); uwbUrlPage++; loadUrlTable(); });
-            $(document).on('click', '.uwb-page-btn', function(e) { e.preventDefault(); uwbUrlPage = parseInt($(this).data('page')); loadUrlTable(); });
+            $(document).on('click', '#uwb-page-first', function(e) {
+                e.preventDefault();
+                if ($(this).prop('disabled')) return;
+                if (uwbUrlPage > 1) { uwbUrlPage = 1; loadUrlTable(); }
+            });
+            $(document).on('click', '#uwb-page-prev', function(e) {
+                e.preventDefault();
+                if ($(this).prop('disabled')) return;
+                if (uwbUrlPage > 1) { uwbUrlPage--; loadUrlTable(); }
+            });
+            $(document).on('click', '#uwb-page-next', function(e) {
+                e.preventDefault();
+                if ($(this).prop('disabled')) return;
+                var totalPages = parseInt($('#uwb-url-pagination').data('total-pages') || 1);
+                if (uwbUrlPage < totalPages) { uwbUrlPage++; loadUrlTable(); }
+            });
+            $(document).on('click', '#uwb-page-last', function(e) {
+                e.preventDefault();
+                if ($(this).prop('disabled')) return;
+                var totalPages = parseInt($('#uwb-url-pagination').data('total-pages') || 1);
+                if (uwbUrlPage < totalPages) { uwbUrlPage = totalPages; loadUrlTable(); }
+            });
+            $(document).on('click', '.uwb-page-btn', function(e) {
+                e.preventDefault();
+                uwbUrlPage = parseInt($(this).data('page'));
+                loadUrlTable();
+            });
 
             // Row action: Process Now
             $(document).on('click', '.uwb-act-process', function(e) {
