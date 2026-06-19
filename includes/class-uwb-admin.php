@@ -837,9 +837,9 @@ class Uwb_Admin {
                                 <table id="uwb-url-table" style="width:100%; border-collapse:collapse; font-size:13px;">
                                     <thead>
                                         <tr style="background:#f8fafc; border-bottom:1px solid var(--uwb-border);">
+                                            <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Priority <span class="uwb-sort-icon">↑</span></th>
                                             <th class="uwb-sortable" data-col="url" style="padding:12px 14px; text-align:left; font-weight:700; cursor:pointer; user-select:none;">URL <span class="uwb-sort-icon">↕</span></th>
                                             <th class="uwb-sortable" data-col="status" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Status <span class="uwb-sort-icon">↕</span></th>
-                                            <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none;">Priority <span class="uwb-sort-icon">↕</span></th>
                                             <th class="uwb-sortable" data-col="attempts" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none;">Tries <span class="uwb-sort-icon">↕</span></th>
                                             <th class="uwb-sortable" data-col="last_attempt" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Last Attempt <span class="uwb-sort-icon">↕</span></th>
                                             <th style="padding:12px 14px; text-align:center; font-weight:700;">Actions</th>
@@ -900,7 +900,7 @@ class Uwb_Admin {
             var uwbUrlPage = 1;
             var uwbUrlStatus = '';
             var uwbUrlSearch = '';
-            var uwbUrlOrderby = 'id';
+            var uwbUrlOrderby = 'priority';
             var uwbUrlOrder = 'ASC';
 
             function updatePreloadStatus() {
@@ -1228,9 +1228,9 @@ class Uwb_Admin {
                         var priorityLabel = (r.priority == 0) ? '<span style="color:#f59e0b; font-weight:700;">★ High</span>' : '<span style="color:#94a3b8; font-size:11.5px;">Normal (#' + r.priority + ')</span>';
                         var lastAttempt = r.last_attempt ? r.last_attempt : '—';
                         html += '<tr style="background:' + rowBg + '; border-bottom:1px solid #f1f5f9; transition:background 0.15s;" onmouseover="this.style.background=\'#eef2ff\'" onmouseout="this.style.background=\'' + rowBg + '\'">';
+                        html += '<td style="padding:10px 14px; text-align:center;">' + priorityLabel + '</td>';
                         html += '<td style="padding:10px 14px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + $('<div>').text(r.url).html() + '"><a href="' + $('<div>').text(r.url).html() + '" target="_blank" style="color:var(--uwb-primary); text-decoration:none; font-size:12.5px;">' + $('<div>').text(r.url).html() + '</a></td>';
                         html += '<td style="padding:10px 14px; text-align:center;">' + statusBadge(r.status) + '</td>';
-                        html += '<td style="padding:10px 14px; text-align:center;">' + priorityLabel + '</td>';
                         html += '<td style="padding:10px 14px; text-align:center; color:var(--uwb-text-muted);">' + r.attempts + '</td>';
                         html += '<td style="padding:10px 14px; text-align:center; color:var(--uwb-text-muted); font-size:12px;">' + lastAttempt + '</td>';
                         html += '<td style="padding:10px 14px; text-align:center; white-space:nowrap;">';

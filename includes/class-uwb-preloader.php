@@ -440,7 +440,7 @@ class Uwb_Preloader {
         $status   = isset( $_POST['status'] ) ? sanitize_text_field( $_POST['status'] ) : '';
         $search   = isset( $_POST['search'] ) ? sanitize_text_field( $_POST['search'] ) : '';
         $orderby  = in_array( $_POST['orderby'] ?? '', array( 'url', 'status', 'priority', 'attempts', 'created_at', 'last_attempt' ), true )
-                    ? $_POST['orderby'] : 'id';
+                    ? $_POST['orderby'] : 'priority';
         $order    = strtoupper( $_POST['order'] ?? 'ASC' ) === 'DESC' ? 'DESC' : 'ASC';
         $page     = max( 1, intval( $_POST['page'] ?? 1 ) );
         $per_page = 20;
@@ -464,7 +464,12 @@ class Uwb_Preloader {
             ? $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->table_name} WHERE {$where_sql}", $params ) )
             : $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name} WHERE {$where_sql}" );
 
-        $query_sql = "SELECT id, url, status, priority, attempts, created_at, last_attempt FROM {$this->table_name} WHERE {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d";
+        $orderby_sql = "{$orderby} {$order}";
+        if ( $orderby === 'priority' ) {
+            $orderby_sql = "priority {$order}, id ASC";
+        }
+
+        $query_sql = "SELECT id, url, status, priority, attempts, created_at, last_attempt FROM {$this->table_name} WHERE {$where_sql} ORDER BY {$orderby_sql} LIMIT %d OFFSET %d";
         $query_params = array_merge( $params, array( $per_page, $offset ) );
         $rows = $wpdb->get_results( $wpdb->prepare( $query_sql, $query_params ) );
 
