@@ -17,7 +17,7 @@ class Uwb_Activator {
         $sql = "CREATE TABLE $table_name (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             url varchar(2083) NOT NULL,
-            priority tinyint(1) NOT NULL DEFAULT 0,
+            priority int(11) NOT NULL DEFAULT 0,
             status varchar(20) NOT NULL DEFAULT 'pending',
             attempts int(11) NOT NULL DEFAULT 0,
             last_attempt datetime DEFAULT NULL,
@@ -29,6 +29,9 @@ class Uwb_Activator {
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
+
+        // Ensure column type is updated to int(11) in case dbDelta skips type modification
+        $wpdb->query( "ALTER TABLE $table_name MODIFY COLUMN priority int(11) NOT NULL DEFAULT 0;" );
 
         // 2. Set default options
         if ( get_option( 'uwb_cache_lifespan' ) === false ) {

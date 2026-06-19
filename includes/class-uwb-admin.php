@@ -1217,7 +1217,7 @@ class Uwb_Admin {
                     var html = '';
                     $.each(rows, function(i, r) {
                         var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
-                        var priorityLabel = r.priority == 1 ? '<span style="color:#f59e0b; font-weight:700;">★ High</span>' : '<span style="color:#cbd5e1;">Normal</span>';
+                        var priorityLabel = (r.priority == 0) ? '<span style="color:#f59e0b; font-weight:700;">★ High</span>' : '<span style="color:#94a3b8; font-size:11.5px;">Normal (#' + r.priority + ')</span>';
                         var lastAttempt = r.last_attempt ? r.last_attempt : '—';
                         html += '<tr style="background:' + rowBg + '; border-bottom:1px solid #f1f5f9; transition:background 0.15s;" onmouseover="this.style.background=\'#eef2ff\'" onmouseout="this.style.background=\'' + rowBg + '\'">';
                         html += '<td style="padding:10px 14px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + $('<div>').text(r.url).html() + '"><a href="' + $('<div>').text(r.url).html() + '" target="_blank" style="color:var(--uwb-primary); text-decoration:none; font-size:12.5px;">' + $('<div>').text(r.url).html() + '</a></td>';

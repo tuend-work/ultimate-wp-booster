@@ -154,7 +154,7 @@ class Uwb_Preloader {
         $query = $wpdb->prepare(
             "SELECT id, url, priority FROM {$this->table_name} 
              WHERE status = 'pending' OR (status = 'failed' AND attempts < 3)
-             ORDER BY priority DESC, id ASC 
+             ORDER BY priority ASC, id ASC 
              LIMIT %d",
             $batch_size
         );
@@ -267,22 +267,29 @@ class Uwb_Preloader {
         $values = array();
         $placeholders = array();
 
+        $non_priority_counter = 1;
         foreach ( $urls as $url ) {
             if ( $this->is_excluded( $url, $excluded_patterns ) ) {
                 continue; // Skip excluded URLs
             }
 
             // Check if it matches priority list
-            $is_priority = 0;
+            $is_priority = false;
             foreach ( $priority_urls as $p_url ) {
                 if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
-                    $is_priority = 1;
+                    $is_priority = true;
                     break;
                 }
             }
 
+            if ( $is_priority ) {
+                $priority_value = 0;
+            } else {
+                $priority_value = $non_priority_counter++;
+            }
+
             $values[] = $url;
-            $values[] = $is_priority;
+            $values[] = $priority_value;
             $values[] = 'pending';
             $values[] = $now;
 
@@ -562,8 +569,8 @@ class Uwb_Preloader {
         if ( ! in_array( $path, $lines, true ) ) {
             $lines[]   = $path;
             update_option( 'uwb_priority_urls', implode( "\n", $lines ) );
-            // Also mark as priority in the queue
-            $wpdb->update( $this->table_name, array( 'priority' => 1 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
+            // Also mark as priority in the queue (set priority to 0)
+            $wpdb->update( $this->table_name, array( 'priority' => 0 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
         }
 
         wp_send_json_success( array( 'message' => "Added {$path} to priority URLs.", 'path' => $path ) );
