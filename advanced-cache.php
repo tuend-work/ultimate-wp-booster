@@ -2,7 +2,7 @@
 /**
  * Early Cache Drop-in for Ultimate WordPress Booster
  * Bypasses PHP/Database execution if a cached static file is available.
- * 
+ *
  * Target path: wp-content/advanced-cache.php
  */
 
@@ -24,10 +24,11 @@ function uwb_advanced_cache_run() {
 
     // 3. Load config file
     $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
-    $config = array(
-        'cache_lifespan' => 36000, // 10 hours in seconds
-        'excluded_urls'  => array(),
-        'ignored_query'  => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' )
+    $config      = array(
+        'cache_lifespan'  => 36000, // 10 hours in seconds
+        'cache_logged_in' => false,
+        'excluded_urls'   => array(),
+        'ignored_query'   => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
     );
 
     if ( file_exists( $config_path ) ) {
@@ -40,66 +41,64 @@ function uwb_advanced_cache_run() {
         }
     }
 
+    $cache_logged_in = (bool) $config['cache_logged_in'];
+
     // 4. Check query string bypass
     if ( ! empty( $_SERVER['QUERY_STRING'] ) ) {
-        // Parse query parameters
         parse_str( $_SERVER['QUERY_STRING'], $query_params );
-        
-        // If query parameters exist, check if there's any non-ignored parameter
         foreach ( $query_params as $param => $val ) {
             if ( ! in_array( $param, $config['ignored_query'], true ) ) {
-                // Non-ignored parameter found (like 's' for search or custom filters). Bypass cache.
-                return;
+                return; // Non-ignored query param – bypass cache
             }
         }
     }
 
-    // 5. Bypass for logged-in users (if configured) and special cookies
-    $cache_logged_in = isset( $config['cache_logged_in'] ) ? (bool) $config['cache_logged_in'] : false;
+    // 5. Detect logged-in state via cookies
+    //    - If cache_logged_in = false: bypass entirely for logged-in users
+    //    - If cache_logged_in = true:  use a per-user sub-directory so each
+    //      user has their own cache, isolated from guests and other users.
+    $logged_in_cookie_hash = '';
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
-            if ( ! $cache_logged_in && strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
-                return;
-            }
+            // Always bypass for special transient cookies
             if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products)/', $key ) ) {
                 return;
             }
+            // Detect WordPress logged-in cookie
+            if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
+                if ( ! $cache_logged_in ) {
+                    return; // Logged-in caching disabled → bypass entirely
+                }
+                // Build a stable, short, per-user segment from the cookie value
+                $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
+            }
         }
     }
 
-    // 6. Get normalized path
+    // 6. Get normalized host & URI
     $host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( $_SERVER['HTTP_HOST'] ) : '';
     if ( empty( $host ) ) {
         return;
     }
+    $host = explode( ':', $host )[0]; // Strip port number
 
-    // Remove port number if exists
-    $host = explode( ':', $host )[0];
-
-    // Clean URI (strip query string)
-    $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-    $uri_parts = explode( '?', $request_uri );
-    $uri_path = rawurldecode( $uri_parts[0] );
+    $request_uri    = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+    $uri_parts      = explode( '?', $request_uri );
+    $uri_path       = rawurldecode( $uri_parts[0] );
     $normalized_uri = trim( $uri_path, '/' );
 
-    // 7. Check if URL matches exclusion list
+    // 7. Check excluded URLs
     if ( ! empty( $config['excluded_urls'] ) ) {
+        $absolute_uri = ( $normalized_uri === '' ) ? '/' : '/' . $normalized_uri;
         foreach ( $config['excluded_urls'] as $pattern ) {
             $pattern = trim( $pattern );
             if ( empty( $pattern ) ) {
                 continue;
             }
-            
-            // Build absolute path for comparison
-            $absolute_uri = '/' . $normalized_uri;
-            if ( $normalized_uri === '' ) {
-                $absolute_uri = '/';
-            }
-
-            // Support wildcard matching e.g., /cart(.*)
             $regex = str_replace( '\*', '.*', preg_quote( $pattern, '#' ) );
-            if ( preg_match( '#^' . $regex . '$#i', $absolute_uri ) || preg_match( '#^' . $regex . '$#i', $uri_path ) ) {
-                return; // Excluded URL. Bypass caching.
+            if ( preg_match( '#^' . $regex . '$#i', $absolute_uri ) ||
+                 preg_match( '#^' . $regex . '$#i', $uri_path ) ) {
+                return; // Excluded URL – bypass
             }
         }
     }
@@ -111,30 +110,38 @@ function uwb_advanced_cache_run() {
          ( isset( $_SERVER['SERVER_PORT'] ) && $_SERVER['SERVER_PORT'] == 443 ) ) {
         $is_https = true;
     }
-
     $filename = $is_https ? 'index-https.html' : 'index.html';
-    $cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket/' . $host . '/' . $normalized_uri;
-    
-    // Normalize trailing slash directory structure
-    if ( $normalized_uri === '' ) {
-        $cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket/' . $host;
+
+    // 9. Build cache directory path
+    //
+    //    Guest users  →  .../wp-rocket/{host}/{uri}/index-https.html
+    //    Logged-in    →  .../wp-rocket/{host}/{uri}/user-{hash}/index-https.html
+    //
+    //    The user-specific sub-directory ensures logged-in cache NEVER bleeds
+    //    into the guest cache and is isolated between different user accounts.
+    $base_cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket/' . $host;
+    if ( $normalized_uri !== '' ) {
+        $base_cache_dir .= '/' . $normalized_uri;
     }
-    
+
+    if ( $logged_in_cookie_hash !== '' ) {
+        $cache_dir = $base_cache_dir . '/' . $logged_in_cookie_hash;
+    } else {
+        $cache_dir = $base_cache_dir;
+    }
+
     $cache_file = $cache_dir . '/' . $filename;
 
-    // 9. If cached file exists, check lifespan and serve
+    // 10. Serve cached file if it exists and is still valid
     if ( file_exists( $cache_file ) ) {
         $file_time = @filemtime( $cache_file );
-        $lifespan = intval( $config['cache_lifespan'] );
+        $lifespan  = intval( $config['cache_lifespan'] );
 
-        // If lifespan is 0, cache is unlimited unless cleared
         if ( $lifespan === 0 || ( time() - $file_time ) < $lifespan ) {
-            
-            // Check if client supports GZIP and we have the gzip file
-            $gzip_file = $cache_file . '_gzip';
-            $supports_gzip = isset( $_SERVER['HTTP_ACCEPT_ENCODING'] ) && strpos( $_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip' ) !== false;
+            $gzip_file     = $cache_file . '_gzip';
+            $supports_gzip = isset( $_SERVER['HTTP_ACCEPT_ENCODING'] ) &&
+                             strpos( $_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip' ) !== false;
 
-            // Send headers
             header( 'X-Ultimate-WP-Booster-Serving-Static: Yes' );
             header( 'Pragma: public' );
             header( 'Cache-Control: max-age=3600, public' );
@@ -144,22 +151,22 @@ function uwb_advanced_cache_run() {
                 header( 'Content-Encoding: gzip' );
                 header( 'Vary: Accept-Encoding' );
                 @readfile( $gzip_file );
-                exit;
             } else {
                 @readfile( $cache_file );
-                exit;
             }
+            exit;
         }
+        // Cache expired – fall through to regenerate
     }
 
-    // 10. Cache does not exist or is expired.
-    // Register output buffer callback to save the generated HTML on shutdown.
+    // 11. Cache does not exist or is expired – capture output to write cache on shutdown
     if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
         define( 'UWB_BUFFER_STARTED', true );
-        
-        // Define global variables so shutdown function can access them
-        $GLOBALS['uwb_cache_file'] = $cache_file;
-        $GLOBALS['uwb_cache_dir'] = $cache_dir;
+
+        $GLOBALS['uwb_cache_file']        = $cache_file;
+        $GLOBALS['uwb_cache_dir']         = $cache_dir;
+        $GLOBALS['uwb_config_path']       = $config_path;
+        $GLOBALS['uwb_logged_in_segment'] = $logged_in_cookie_hash;
 
         ob_start( 'uwb_advanced_cache_ob_callback' );
         register_shutdown_function( 'uwb_advanced_cache_shutdown' );
@@ -167,105 +174,107 @@ function uwb_advanced_cache_run() {
 }
 
 /**
- * Output buffering callback
+ * Output buffering callback — pass-through only
  */
 function uwb_advanced_cache_ob_callback( $buffer ) {
     return $buffer;
 }
 
 /**
- * Shutdown function to write the buffer output to static files
+ * Shutdown function: write the captured HTML output to static cache files
  */
 function uwb_advanced_cache_shutdown() {
-    // Get the final buffer
     $html = ob_get_clean();
     if ( empty( $html ) ) {
         return;
     }
 
-    // Echo the buffer to client so user sees the page instantly
+    // Serve the page to the client immediately
     echo $html;
 
-    // Determine cacheability of the request
-    // 1. Check response code (only cache 200 OK)
-    $response_code = http_response_code();
-    if ( $response_code !== 200 ) {
+    // Only cache 200 OK responses
+    if ( http_response_code() !== 200 ) {
         return;
     }
 
-    // 2. Check content (do not cache blank pages or error messages)
+    // Skip suspiciously short responses
     if ( strlen( $html ) < 200 ) {
         return;
     }
 
-    // 3. Do not cache if search, feed or login/admin pages
+    // Skip admin, search, feed, and other special pages
     if ( is_admin() || is_search() || is_feed() || is_trackback() || is_robots() || is_404() ) {
         return;
     }
 
-    // 4. Do not cache if user is logged in (double check via WordPress functions)
-    $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
+    // Re-read config
+    $config_path     = isset( $GLOBALS['uwb_config_path'] )
+        ? $GLOBALS['uwb_config_path']
+        : WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
     $cache_logged_in = false;
+    $timezone_str    = 'UTC';
+    $timezone_offset = 0;
+
     if ( file_exists( $config_path ) ) {
         $json_data = @file_get_contents( $config_path );
         if ( $json_data ) {
             $parsed_config = @json_decode( $json_data, true );
-            if ( isset( $parsed_config['cache_logged_in'] ) ) {
-                $cache_logged_in = (bool) $parsed_config['cache_logged_in'];
+            if ( is_array( $parsed_config ) ) {
+                $cache_logged_in = ! empty( $parsed_config['cache_logged_in'] );
+                if ( isset( $parsed_config['timezone'] ) ) {
+                    if ( is_numeric( $parsed_config['timezone'] ) ) {
+                        $timezone_offset = floatval( $parsed_config['timezone'] ) * 3600;
+                        $timezone_str    = '';
+                    } else {
+                        $timezone_str = $parsed_config['timezone'];
+                    }
+                }
             }
         }
+    }
+
+    // Safety check: if logged-in caching is now disabled, don't write
+    $logged_in_segment = isset( $GLOBALS['uwb_logged_in_segment'] ) ? $GLOBALS['uwb_logged_in_segment'] : '';
+    if ( ! $cache_logged_in && $logged_in_segment !== '' ) {
+        return;
     }
     if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
         return;
     }
 
-    // 5. Save the cache files
+    // Resolve cache paths
     $cache_file = isset( $GLOBALS['uwb_cache_file'] ) ? $GLOBALS['uwb_cache_file'] : '';
-    $cache_dir = isset( $GLOBALS['uwb_cache_dir'] ) ? $GLOBALS['uwb_cache_dir'] : '';
+    $cache_dir  = isset( $GLOBALS['uwb_cache_dir'] ) ? $GLOBALS['uwb_cache_dir'] : '';
 
-    if ( $cache_file && $cache_dir ) {
-        // Create directory recursively
-        if ( ! file_exists( $cache_dir ) ) {
-            @mkdir( $cache_dir, 0755, true );
-        }
+    if ( ! $cache_file || ! $cache_dir ) {
+        return;
+    }
 
-        if ( is_dir( $cache_dir ) && is_writable( $cache_dir ) ) {
-            // Append cache info comment
-            $timezone_offset = 0;
-            $timezone_str = 'UTC';
-            if ( file_exists( $config_path ) ) {
-                $json_data = @file_get_contents( $config_path );
-                if ( $json_data ) {
-                    $parsed_config = @json_decode( $json_data, true );
-                    if ( isset( $parsed_config['timezone'] ) ) {
-                        if ( is_numeric( $parsed_config['timezone'] ) ) {
-                            $timezone_offset = floatval( $parsed_config['timezone'] ) * 3600;
-                            $timezone_str = '';
-                        } else {
-                            $timezone_str = $parsed_config['timezone'];
-                        }
-                    }
-                }
-            }
+    // Create directory structure if needed
+    if ( ! file_exists( $cache_dir ) ) {
+        @mkdir( $cache_dir, 0755, true );
+    }
 
-            if ( $timezone_str ) {
-                @date_default_timezone_set( $timezone_str );
-                $time_str = date( 'H:i d/m/Y' );
-            } else {
-                $time_str = gmdate( 'H:i d/m/Y', time() + $timezone_offset );
-            }
+    if ( ! is_dir( $cache_dir ) || ! is_writable( $cache_dir ) ) {
+        return;
+    }
 
-            $html .= "\n<!-- Cached by WP Booster at " . $time_str . " -->";
+    // Append cache timestamp comment
+    if ( $timezone_str ) {
+        @date_default_timezone_set( $timezone_str );
+        $time_str = date( 'H:i d/m/Y' );
+    } else {
+        $time_str = gmdate( 'H:i d/m/Y', time() + $timezone_offset );
+    }
+    $html .= "\n<!-- Cached by WP Booster at " . $time_str . " -->";
 
-            // Write normal HTML cache file
-            @file_put_contents( $cache_file, $html );
+    // Write plain HTML cache file
+    @file_put_contents( $cache_file, $html );
 
-            // Write Gzip compressed HTML cache file
-            $gzip_file = $cache_file . '_gzip';
-            $gzipped_html = gzencode( $html, 9 );
-            if ( $gzipped_html !== false ) {
-                @file_put_contents( $gzip_file, $gzipped_html );
-            }
-        }
+    // Write Gzip-compressed cache file
+    $gzip_file    = $cache_file . '_gzip';
+    $gzipped_html = gzencode( $html, 9 );
+    if ( $gzipped_html !== false ) {
+        @file_put_contents( $gzip_file, $gzipped_html );
     }
 }
