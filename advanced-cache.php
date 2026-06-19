@@ -271,7 +271,7 @@ function uwb_advanced_cache_shutdown() {
 
     // Strip admin bar from cached HTML to prevent it from being served from cache
     $cache_html = $html;
-    $cache_html = preg_replace( '~<div\s+id="wpadminbar"[^>]*>(?:[^<]+|<(?!/?div\b)|(?R))*</div>~s', '', $cache_html );
+    $cache_html = preg_replace( '~<div\s+[^>]*id=["\']wpadminbar["\'][^>]*>(?<rec>(?:[^<]+|<(?!\/?div\b)|<div[^>]*>(?P>rec)<\/div>)*+)<\/div>~si', '', $cache_html );
     $cache_html = preg_replace( '~<style[^>]*id=["\']wpadminbar-inline-css["\'][^>]*>.*?</style>~s', '', $cache_html );
     $cache_html = preg_replace( '~<link[^>]*id=["\']admin-bar-css["\'][^>]*>~s', '', $cache_html );
     $cache_html = preg_replace( '~<script[^>]*id=["\']admin-bar-js["\'][^>]*>.*?</script>~s', '', $cache_html );
