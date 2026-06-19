@@ -404,7 +404,7 @@ class Uwb_Preloader {
     }
 
     /**
-     * AJAX action: Manual batch trigger (for real-time fast preload in front-end)
+     * AJAX action: deprecated. Preloading must run through WP-Cron, Linux cron, or WP-CLI.
      */
     public function ajax_trigger_preload_batch() {
         check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
@@ -413,10 +413,9 @@ class Uwb_Preloader {
             wp_send_json_error( array( 'message' => 'Invalid request.' ) );
         }
 
-        $processed = $this->run_preload_batch();
-
         wp_send_json_success( array(
-            'processed' => $processed
+            'processed' => 0,
+            'message'   => 'AJAX preload trigger is disabled. Preloading runs through cron.'
         ) );
     }
 

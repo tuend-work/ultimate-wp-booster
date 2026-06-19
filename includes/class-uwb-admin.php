@@ -964,7 +964,7 @@ class Uwb_Admin {
                         if (res.success) {
                             updatePreloadStatus();
                             if (!checkInterval) {
-                                checkInterval = setInterval(updatePreloadStatus, 2000);
+                                checkInterval = setInterval(updatePreloadStatus, 15000);
                             }
                         } else {
                             alert(res.data.message);
@@ -1021,8 +1021,8 @@ class Uwb_Admin {
 
             // Init status on load
             updatePreloadStatus();
-            // Start polling if preloader running
-            checkInterval = setInterval(updatePreloadStatus, 4000);
+            // Poll status only for display; cron or WP-CLI performs the actual preload work.
+            checkInterval = setInterval(updatePreloadStatus, 15000);
 
             // Toggle Redis configuration fields
             function toggleRedisFields() {
