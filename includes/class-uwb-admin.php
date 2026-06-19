@@ -700,40 +700,7 @@ class Uwb_Admin {
                                 </div>
                             </div>
 
-                            <!-- Cache Stats Block -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                                    Global Cache Statistics
-                                </h3>
-                                <?php
-                                global $wp_object_cache;
-                                $hits = 0; $misses = 0;
-                                if ( isset( $wp_object_cache->cache_hits ) ) $hits = intval( $wp_object_cache->cache_hits );
-                                if ( isset( $wp_object_cache->cache_misses ) ) $misses = intval( $wp_object_cache->cache_misses );
-                                $total_req = $hits + $misses;
-                                $hit_ratio = $total_req > 0 ? round( ( $hits / $total_req ) * 100, 1 ) : 0;
-                                ?>
-                                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:14px; margin-top:12px;">
-                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; text-align:center;">
-                                        <div style="font-size:22px; font-weight:800; color:var(--uwb-primary);"><?php echo number_format( $hits ); ?></div>
-                                        <div style="font-size:12px; color:var(--uwb-text-muted); margin-top:4px;">Cache Hits</div>
-                                    </div>
-                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; text-align:center;">
-                                        <div style="font-size:22px; font-weight:800; color:#f59e0b;"><?php echo number_format( $misses ); ?></div>
-                                        <div style="font-size:12px; color:var(--uwb-text-muted); margin-top:4px;">Cache Misses</div>
-                                    </div>
-                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; text-align:center;">
-                                        <div style="font-size:22px; font-weight:800; color:#10b981;"><?php echo $hit_ratio; ?>%</div>
-                                        <div style="font-size:12px; color:var(--uwb-text-muted); margin-top:4px;">Hit Ratio</div>
-                                    </div>
-                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; text-align:center;">
-                                        <div style="font-size:22px; font-weight:800; color:#64748b;"><?php echo number_format( $total_req ); ?></div>
-                                        <div style="font-size:12px; color:var(--uwb-text-muted); margin-top:4px;">Total Requests</div>
-                                    </div>
-                                </div>
-                                <p style="font-size:12px; color:var(--uwb-text-muted); margin-top:14px;">Statistics are for the current page load only. Persistent stats require a backend like Redis with monitoring enabled.</p>
-                            </div>
+                            
 
                             <!-- Preload status and last processed URLs grid -->
                             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:20px; margin-bottom:24px;">
