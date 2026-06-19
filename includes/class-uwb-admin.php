@@ -508,52 +508,6 @@ class Uwb_Admin {
                                 <input type="number" min="1" max="50" name="uwb_preload_batch_size" id="uwb_preload_batch_size" value="<?php echo esc_attr( get_option( 'uwb_preload_batch_size', 5 ) ); ?>" />
                                 <p class="description">The number of URLs to crawl per batch to minimize CPU and server overhead.</p>
                             </div>
-
-                            <div class="uwb-preload-status-box">
-                                <h3 style="margin-top:0; color:var(--uwb-text);">Preloading Queue Status</h3>
-                                
-                                <div class="uwb-stats-grid">
-                                    <div class="uwb-stat-card uwb-stat-pending">
-                                        <div class="num" id="queue-pending">-</div>
-                                        <div class="label">Pending</div>
-                                    </div>
-                                    <div class="uwb-stat-card uwb-stat-processing">
-                                        <div class="num" id="queue-processing">-</div>
-                                        <div class="label">Processing</div>
-                                    </div>
-                                    <div class="uwb-stat-card uwb-stat-completed">
-                                        <div class="num" id="queue-completed">-</div>
-                                        <div class="label">Completed</div>
-                                    </div>
-                                    <div class="uwb-stat-card uwb-stat-failed">
-                                        <div class="num" id="queue-failed">-</div>
-                                        <div class="label">Failed</div>
-                                    </div>
-                                </div>
-
-                                <div class="uwb-progress-bar-wrap">
-                                    <div class="uwb-progress-bar-fill" id="preload-progress-fill"></div>
-                                </div>
-                                
-                                <div class="uwb-progress-text">
-                                    <span id="preload-progress-pct">Progress: 0%</span>
-                                    <span id="preload-progress-nums">0 / 0 URLs</span>
-                                </div>
-
-                                <div class="uwb-preload-actions" style="margin-top:20px;">
-                                    <button type="button" id="btn-start-preload" class="uwb-btn-action uwb-btn-start">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                        Start Preloading
-                                    </button>
-                                    <button type="button" id="btn-stop-preload" class="uwb-btn-action uwb-btn-stop" style="display:none;">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                                        Pause Preloading
-                                    </button>
-                                    <button type="button" id="btn-clear-preload" class="uwb-btn-action uwb-btn-clear">
-                                        Clear Queue
-                                    </button>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- TAB 3: Redis Object Cache -->
@@ -743,31 +697,6 @@ class Uwb_Admin {
                                             <p style="margin:0 0 10px 0;"><strong>Next Scheduled:</strong> <?php echo $next_run_html; ?></p>
                                         </div>
                                     </div>
-                                    <div style="margin-top: 14px; border-top:1px solid var(--uwb-border); padding-top:14px;">
-                                        <h4 style="margin:0 0 8px 0; font-size:13px; color:var(--uwb-text); font-weight:700;">Last Processed URLs:</h4>
-                                        <?php if ( ! empty( $last_urls ) && is_array( $last_urls ) ) : ?>
-                                            <div style="max-height: 100px; overflow-y: auto; background: #fff; border: 1px solid var(--uwb-border); border-radius: 6px; padding: 6px 8px;">
-                                                <ul style="margin: 0; padding: 0; list-style: none;">
-                                                    <?php foreach ( array_slice( $last_urls, 0, 5 ) as $url_info ) : 
-                                                        $status_color = $url_info['status'] === 'completed' ? '#10b981' : '#ef4444';
-                                                        $url_path = wp_parse_url( $url_info['url'], PHP_URL_PATH );
-                                                        $url_query = wp_parse_url( $url_info['url'], PHP_URL_QUERY );
-                                                        $display_path = '/' . trim( $url_path, '/' ) . ( $url_query ? '?' . $url_query : '' );
-                                                        if ( strlen( $display_path ) > 40 ) {
-                                                            $display_path = substr( $display_path, 0, 37 ) . '...';
-                                                        }
-                                                    ?>
-                                                        <li style="font-size: 11px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                                                            <a href="<?php echo esc_url( $url_info['url'] ); ?>" target="_blank" title="<?php echo esc_attr( $url_info['url'] ); ?>" style="text-decoration: none; color: var(--uwb-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?php echo esc_html( $display_path ); ?></a>
-                                                            <span style="color: <?php echo $status_color; ?>; font-weight: bold; font-size: 10px; text-transform: uppercase;"><?php echo esc_html( $url_info['status'] ); ?></span>
-                                                        </li>
-                                                    <?php endforeach; ?>
-                                                </ul>
-                                            </div>
-                                        <?php else : ?>
-                                            <p style="margin:0; font-size:12px; color:var(--uwb-text-muted); font-style:italic;">No URLs processed yet.</p>
-                                        <?php endif; ?>
-                                    </div>
                                 </div>
                             </div>
 
@@ -804,6 +733,115 @@ class Uwb_Admin {
                                     </div>
                                 </div>
                                 <p style="font-size:12px; color:var(--uwb-text-muted); margin-top:14px;">Statistics are for the current page load only. Persistent stats require a backend like Redis with monitoring enabled.</p>
+                            </div>
+
+                            <!-- Preload status and last processed URLs grid -->
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:20px; margin-bottom:24px;">
+                                <!-- Left Column: Preloading Queue Status -->
+                                <div class="uwb-preload-status-box" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:space-between;">
+                                    <h3 style="margin-top:0; color:var(--uwb-text); font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                        Preloading Queue Status
+                                    </h3>
+                                    
+                                    <div class="uwb-stats-grid" style="margin-top:12px; margin-bottom: 16px;">
+                                        <div class="uwb-stat-card uwb-stat-pending" style="padding:12px 8px;">
+                                            <div class="num" id="queue-pending" style="font-size:22px;">-</div>
+                                            <div class="label" style="font-size:10px;">Pending</div>
+                                        </div>
+                                        <div class="uwb-stat-card uwb-stat-processing" style="padding:12px 8px;">
+                                            <div class="num" id="queue-processing" style="font-size:22px;">-</div>
+                                            <div class="label" style="font-size:10px;">Processing</div>
+                                        </div>
+                                        <div class="uwb-stat-card uwb-stat-completed" style="padding:12px 8px;">
+                                            <div class="num" id="queue-completed" style="font-size:22px;">-</div>
+                                            <div class="label" style="font-size:10px;">Completed</div>
+                                        </div>
+                                        <div class="uwb-stat-card uwb-stat-failed" style="padding:12px 8px;">
+                                            <div class="num" id="queue-failed" style="font-size:22px;">-</div>
+                                            <div class="label" style="font-size:10px;">Failed</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="uwb-progress-bar-wrap" style="margin-bottom: 8px;">
+                                        <div class="uwb-progress-bar-fill" id="preload-progress-fill"></div>
+                                    </div>
+                                    
+                                    <div class="uwb-progress-text" style="margin-bottom: 16px;">
+                                        <span id="preload-progress-pct" style="font-weight:600;">Progress: 0%</span>
+                                        <span id="preload-progress-nums">0 / 0 URLs</span>
+                                    </div>
+
+                                    <div class="uwb-preload-actions" style="margin-top:auto; display:flex; gap:10px;">
+                                        <button type="button" id="btn-start-preload" class="uwb-btn-action uwb-btn-start" style="padding: 10px 16px; font-size:12.5px; flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                            Start Preload
+                                        </button>
+                                        <button type="button" id="btn-stop-preload" class="uwb-btn-action uwb-btn-stop" style="padding: 10px 16px; font-size:12.5px; flex:1; display:none; align-items:center; justify-content:center; gap:6px;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                                            Pause Preload
+                                        </button>
+                                        <button type="button" id="btn-clear-preload" class="uwb-btn-action uwb-btn-clear" style="padding: 10px 16px; font-size:12.5px;">
+                                            Clear Queue
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: Last Processed URLs -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; display:flex; flex-direction:column; justify-content:space-between;">
+                                    <div>
+                                        <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            Last Processed URLs
+                                        </h3>
+                                        
+                                        <?php
+                                        $last_urls = get_option( 'uwb_preload_last_run_urls', array() );
+                                        if ( ! empty( $last_urls ) && is_array( $last_urls ) ) :
+                                        ?>
+                                            <div style="overflow-y:auto; max-height:165px; border:1px solid var(--uwb-border); border-radius:8px; background:#fff; margin-top:12px;">
+                                                <table style="width:100%; border-collapse:collapse; font-size:11.5px; text-align:left;">
+                                                    <thead>
+                                                        <tr style="background:#f1f5f9; border-bottom:1px solid var(--uwb-border); position:sticky; top:0; z-index:10;">
+                                                            <th style="padding:8px 10px; font-weight:700; color:var(--uwb-text);">URL Path</th>
+                                                            <th style="padding:8px 10px; font-weight:700; color:var(--uwb-text); text-align:center; width:70px;">Status</th>
+                                                            <th style="padding:8px 10px; font-weight:700; color:var(--uwb-text); text-align:center; width:120px;">Time</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php foreach ( array_slice( $last_urls, 0, 10 ) as $url_info ) : 
+                                                            $status_badge = '';
+                                                            if ( $url_info['status'] === 'completed' ) {
+                                                                $status_badge = '<span style="color:#059669; font-weight:800; font-size:10px; text-transform:uppercase;">✓ Success</span>';
+                                                            } else {
+                                                                $status_badge = '<span style="color:#dc2626; font-weight:800; font-size:10px; text-transform:uppercase;">✗ Failed</span>';
+                                                            }
+                                                            $url_path = wp_parse_url( $url_info['url'], PHP_URL_PATH );
+                                                            $url_query = wp_parse_url( $url_info['url'], PHP_URL_QUERY );
+                                                            $display_path = '/' . trim( $url_path, '/' ) . ( $url_query ? '?' . $url_query : '' );
+                                                            if ( strlen( $display_path ) > 35 ) {
+                                                                $display_path = substr( $display_path, 0, 32 ) . '...';
+                                                            }
+                                                            $time_display = isset( $url_info['time'] ) ? $url_info['time'] : '';
+                                                        ?>
+                                                            <tr style="border-bottom:1px solid #f1f5f9;">
+                                                                <td style="padding:8px 10px; font-family:monospace; white-space:nowrap; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="<?php echo esc_attr( $url_info['url'] ); ?>">
+                                                                    <a href="<?php echo esc_url( $url_info['url'] ); ?>" target="_blank" style="text-decoration:none; color:var(--uwb-primary);"><?php echo esc_html( $display_path ); ?></a>
+                                                                </td>
+                                                                <td style="padding:8px 10px; text-align:center;"><?php echo $status_badge; ?></td>
+                                                                <td style="padding:8px 10px; text-align:center; color:var(--uwb-text-muted); font-size:10.5px;"><?php echo esc_html( $time_display ); ?></td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        <?php else : ?>
+                                            <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:8px; padding:24px; text-align:center; color:var(--uwb-text-muted); font-style:italic; margin-top:12px;">
+                                                No URLs processed yet.
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Toolbar -->
