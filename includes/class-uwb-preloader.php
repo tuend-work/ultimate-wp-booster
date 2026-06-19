@@ -33,9 +33,14 @@ class Uwb_Preloader {
     /**
      * Parse sitemap and return list of URLs
      */
-    public function parse_sitemap( $sitemap_url, $depth = 0 ) {
+    public function parse_sitemap( $sitemap_url, $depth = 0, $is_priority_sitemap = false ) {
+        $result = array(
+            'priority' => array(),
+            'normal'   => array(),
+        );
+
         if ( $depth > 5 ) {
-            return array(); // Prevent infinite loops or too deep recursion
+            return $result;
         }
 
         $args = array(
@@ -47,17 +52,17 @@ class Uwb_Preloader {
         $response = wp_remote_get( $sitemap_url, $args );
 
         if ( is_wp_error( $response ) ) {
-            return array();
+            return $result;
         }
 
         $code = wp_remote_retrieve_response_code( $response );
         if ( $code !== 200 ) {
-            return array();
+            return $result;
         }
 
         $xml_content = wp_remote_retrieve_body( $response );
         if ( empty( $xml_content ) ) {
-            return array();
+            return $result;
         }
 
         // Enable internal errors to handle invalid XML gracefully
@@ -65,10 +70,8 @@ class Uwb_Preloader {
         $xml = simplexml_load_string( trim( $xml_content ) );
         if ( ! $xml ) {
             libxml_clear_errors();
-            return array();
+            return $result;
         }
-
-        $urls = array();
 
         // 1. Check if it's a sitemap index
         if ( isset( $xml->sitemap ) ) {
@@ -76,12 +79,23 @@ class Uwb_Preloader {
                 if ( isset( $sub_sitemap->loc ) ) {
                     $sub_url = trim( (string) $sub_sitemap->loc );
                     if ( filter_var( $sub_url, FILTER_VALIDATE_URL ) ) {
-                        $sub_urls = $this->parse_sitemap( $sub_url, $depth + 1 );
-                        $urls = array_merge( $urls, $sub_urls );
+                        // Check if the sub-sitemap URL indicates a priority type (taxonomy/category/etc.)
+                        $filename = strtolower( basename( wp_parse_url( $sub_url, PHP_URL_PATH ) ) );
+                        $is_sub_priority = false;
+                        if ( preg_match( '/(category|cat|tag|tax|author|archive|brand)/i', $filename ) ) {
+                            $is_sub_priority = true;
+                        }
+                        
+                        $sub_result = $this->parse_sitemap( $sub_url, $depth + 1, $is_sub_priority );
+                        $result['priority'] = array_merge( $result['priority'], $sub_result['priority'] );
+                        $result['normal']   = array_merge( $result['normal'], $sub_result['normal'] );
                     }
                 }
             }
         }
+
+        // Collect URLs
+        $raw_urls = array();
 
         // 2. Check if it's a URL sitemap
         if ( isset( $xml->url ) ) {
@@ -89,28 +103,92 @@ class Uwb_Preloader {
                 if ( isset( $url_node->loc ) ) {
                     $loc = trim( (string) $url_node->loc );
                     if ( filter_var( $loc, FILTER_VALIDATE_URL ) ) {
-                        $urls[] = $loc;
+                        $raw_urls[] = $loc;
                     }
                 }
             }
         }
 
         // Standard sitemap parser failsafe for basic xml
-        if ( empty( $urls ) ) {
+        if ( empty( $raw_urls ) ) {
             // RegEx fallback if standard XML parsing failed due to namespaces
             preg_match_all( '/<loc>(https?:\/\/[^<]+)<\/loc>/i', $xml_content, $matches );
             if ( ! empty( $matches[1] ) ) {
                 foreach ( $matches[1] as $loc ) {
                     $loc = trim( html_entity_decode( $loc ) );
                     if ( filter_var( $loc, FILTER_VALIDATE_URL ) ) {
-                        $urls[] = $loc;
+                        $raw_urls[] = $loc;
                     }
                 }
             }
         }
 
         libxml_clear_errors();
-        return array_unique( $urls );
+
+        // Classify raw URLs
+        $tax_slugs = array( 'category', 'post_tag', 'tag', 'author', 'date', 'page', 'type', 'shop' );
+        if ( function_exists( 'get_taxonomies' ) ) {
+            $taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
+            foreach ( $taxonomies as $tax ) {
+                if ( ! empty( $tax->rewrite['slug'] ) ) {
+                    $tax_slugs[] = trim( $tax->rewrite['slug'], '/' );
+                }
+            }
+        }
+        $tax_slugs = array_unique( $tax_slugs );
+
+        $post_type_slugs = array( 'post', 'page' );
+        if ( function_exists( 'get_post_types' ) ) {
+            $post_types = get_post_types( array( 'public' => true ), 'objects' );
+            foreach ( $post_types as $pt ) {
+                if ( ! empty( $pt->rewrite['slug'] ) ) {
+                    $post_type_slugs[] = trim( $pt->rewrite['slug'], '/' );
+                }
+            }
+        }
+        $post_type_slugs = array_unique( $post_type_slugs );
+
+        $home_url = home_url( '/' );
+        $home_url_no_slash = rtrim( $home_url, '/' );
+
+        foreach ( array_unique( $raw_urls ) as $url ) {
+            if ( $is_priority_sitemap ) {
+                $result['priority'][] = $url;
+            } else {
+                $is_taxonomy = false;
+                if ( $url === $home_url || $url === $home_url_no_slash ) {
+                    $is_taxonomy = true;
+                } else {
+                    $path = wp_parse_url( $url, PHP_URL_PATH );
+                    $path_segments = array_filter( explode( '/', trim( $path, '/' ) ) );
+                    if ( ! empty( $path_segments ) ) {
+                        $first_segment = reset( $path_segments );
+                        if ( in_array( $first_segment, $tax_slugs, true ) ) {
+                            $is_taxonomy = true;
+                        } elseif ( in_array( $first_segment, $post_type_slugs, true ) ) {
+                            $is_taxonomy = false;
+                        } else {
+                            if ( function_exists( 'url_to_postid' ) ) {
+                                if ( url_to_postid( $url ) === 0 ) {
+                                    $is_taxonomy = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if ( $is_taxonomy ) {
+                    $result['priority'][] = $url;
+                } else {
+                    $result['normal'][] = $url;
+                }
+            }
+        }
+
+        $result['priority'] = array_unique( $result['priority'] );
+        $result['normal']   = array_unique( $result['normal'] );
+
+        return $result;
     }
 
     /**
@@ -256,60 +334,12 @@ class Uwb_Preloader {
         $wpdb->query( "TRUNCATE TABLE {$this->table_name}" );
 
         // 2. Parse Sitemap
-        $urls = $this->parse_sitemap( $sitemap_url );
+        $parsed = $this->parse_sitemap( $sitemap_url );
+        $urls = array_merge( $parsed['priority'], $parsed['normal'] );
 
         if ( empty( $urls ) ) {
             return new WP_Error( 'no_urls', 'No URLs found in the sitemap: ' . esc_url( $sitemap_url ) );
         }
-
-        // Prioritize category links, taxonomy terms, homepage, and archives
-        $tax_slugs = array( 'category', 'post_tag', 'tag', 'author', 'date', 'page', 'type', 'shop' );
-        if ( function_exists( 'get_taxonomies' ) ) {
-            $taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
-            foreach ( $taxonomies as $tax ) {
-                if ( ! empty( $tax->rewrite['slug'] ) ) {
-                    $tax_slugs[] = trim( $tax->rewrite['slug'], '/' );
-                }
-            }
-        }
-        $tax_slugs = array_unique( $tax_slugs );
-
-        $home_url = home_url( '/' );
-        $home_url_no_slash = rtrim( $home_url, '/' );
-
-        $priority_group = array();
-        $normal_group   = array();
-
-        foreach ( $urls as $url ) {
-            $is_taxonomy = false;
-            if ( $url === $home_url || $url === $home_url_no_slash ) {
-                $is_taxonomy = true;
-            } else {
-                $path = wp_parse_url( $url, PHP_URL_PATH );
-                $path_segments = array_filter( explode( '/', trim( $path, '/' ) ) );
-                if ( ! empty( $path_segments ) ) {
-                    $first_segment = reset( $path_segments );
-                    if ( in_array( $first_segment, $tax_slugs, true ) ) {
-                        $is_taxonomy = true;
-                    }
-                }
-                
-                // Fallback database lookup if taxonomy is not slug-matched
-                if ( ! $is_taxonomy && function_exists( 'url_to_postid' ) ) {
-                    if ( url_to_postid( $url ) === 0 ) {
-                        $is_taxonomy = true;
-                    }
-                }
-            }
-
-            if ( $is_taxonomy ) {
-                $priority_group[] = $url;
-            } else {
-                $normal_group[] = $url;
-            }
-        }
-
-        $urls = array_merge( $priority_group, $normal_group );
 
         // 3. Filter and insert into the database queue in batches
         $now = current_time( 'mysql' );
