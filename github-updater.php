@@ -17,7 +17,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
 
         public function __construct( $file ) {
             $this->file = $file;
-            $this->basename = plugin_basename( $this->file );
+            $this->basename = 'ultimate-wp-booster/ultimate-wp-booster.php';
 
             // Hook to admin_init to load plugin properties
             add_action( 'admin_init', array( $this, 'init_properties' ) );
@@ -150,23 +150,48 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
         /**
          * Rename the GitHub zip extraction folder to the proper plugin folder name
          */
-        public function post_install_rename( $true, $hook_extra, $result ) {
+        public function post_install_rename( $response, $hook_extra, $result ) {
             global $wp_filesystem;
 
-            $plugin_folder = dirname( $this->basename );
+            // Check if this upgrade is for our plugin
+            if ( empty( $hook_extra['plugin'] ) || $hook_extra['plugin'] !== $this->basename ) {
+                return $response;
+            }
+
+            // If there's an error already, do not proceed
+            if ( is_wp_error( $response ) ) {
+                return $response;
+            }
+
+            // Ensure $wp_filesystem is initialized
+            if ( ! $wp_filesystem ) {
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                WP_Filesystem();
+            }
+
+            $plugin_folder = dirname( $this->basename ); // 'ultimate-wp-booster'
             $proper_destination = WP_PLUGIN_DIR . '/' . $plugin_folder;
             $source = $result['destination'];
 
-            // Perform moves
-            $wp_filesystem->move( $source, $proper_destination );
-            $result['destination'] = $proper_destination;
+            if ( $source !== $proper_destination ) {
+                // Delete destination if it exists
+                if ( $wp_filesystem->exists( $proper_destination ) ) {
+                    $wp_filesystem->delete( $proper_destination, true );
+                }
+
+                // Perform moves
+                $moved = $wp_filesystem->move( $source, $proper_destination );
+                if ( ! $moved ) {
+                    return new WP_Error( 'rename_failed', 'Failed to rename the plugin folder to ' . $plugin_folder );
+                }
+            }
 
             // Reactivate if it was active prior to upgrade
             if ( is_plugin_active( $this->basename ) ) {
                 activate_plugin( $this->basename );
             }
 
-            return $result;
+            return true;
         }
 
         /**
@@ -213,7 +238,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             }
             
             $obj = new stdClass();
-            $obj->slug        = $this->basename;
+            $obj->slug        = 'ultimate-wp-booster';
             $obj->plugin      = $this->basename;
             $obj->new_version = $github_version;
             $obj->url         = "https://github.com/{$this->username}/{$this->repository}";
