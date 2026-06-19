@@ -172,6 +172,7 @@ class Uwb_Preloader {
         $wpdb->query( "UPDATE {$this->table_name} SET status = 'processing' WHERE id IN ($ids_string)" );
 
         $processed_count = 0;
+        $processed_urls = array();
 
         foreach ( $queue_items as $item ) {
             $url = $item->url;
@@ -209,10 +210,21 @@ class Uwb_Preloader {
                 array( '%d' )
             );
 
+            $processed_urls[] = array(
+                'url'    => $url,
+                'status' => $status,
+                'time'   => current_time( 'mysql' )
+            );
+
             $processed_count++;
 
             // Wait a small fraction of a second to prevent overloading CPU
             usleep( 100000 ); // 0.1 seconds
+        }
+
+        if ( ! empty( $processed_urls ) ) {
+            update_option( 'uwb_preload_last_run_time', current_time( 'mysql' ) );
+            update_option( 'uwb_preload_last_run_urls', $processed_urls );
         }
 
         return $processed_count;

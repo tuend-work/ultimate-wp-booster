@@ -636,7 +636,7 @@ class Uwb_Admin {
                             <h2 style="margin-top:0;">Dashboard</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter by status, search, sort columns, and take actions on individual URLs.</p>
 
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:20px;">
                                 <!-- Status Block -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
                                     <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
@@ -704,6 +704,69 @@ class Uwb_Admin {
                                     <div style="display:flex; gap:12px;">
                                         <button type="button" id="btn-test-redis" class="button" style="border:1px solid var(--uwb-border); padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; background:#fff; cursor:pointer; color:var(--uwb-text); transition:all 0.2s;">Test Connection</button>
                                         <button type="button" id="btn-flush-redis" class="button" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; cursor:pointer; transition:all 0.2s;">Flush Cache</button>
+                                    </div>
+                                </div>
+
+                                <!-- Cron Preloader Status Block -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; display:flex; flex-direction:column; justify-content:space-between;">
+                                    <div>
+                                        <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            Cron Preloader Status
+                                        </h3>
+                                        <div style="margin-top:12px; font-size:13px; line-height:1.5;">
+                                            <?php
+                                            $preload_mode = intval( get_option( 'uwb_preload_enabled', 0 ) );
+                                            $last_run = get_option( 'uwb_preload_last_run_time', '' );
+                                            $last_urls = get_option( 'uwb_preload_last_run_urls', array() );
+
+                                            // Determine Badge and Next Run info
+                                            if ( $preload_mode === 0 ) {
+                                                $badge_html = '<div style="display:inline-flex; align-items:center; gap:8px; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:4px 10px; border-radius:6px; font-weight:700; font-size:11px;"><span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span> Disabled</div>';
+                                                $next_run_html = '<span style="color:var(--uwb-text-muted);">None (Preload is disabled)</span>';
+                                            } elseif ( $preload_mode === 1 ) {
+                                                $badge_html = '<div style="display:inline-flex; align-items:center; gap:8px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:4px 10px; border-radius:6px; font-weight:700; font-size:11px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Enabled (WP-Cron)</div>';
+                                                $next_timestamp = wp_next_scheduled( 'uwb_preload_cron_job' );
+                                                if ( $next_timestamp ) {
+                                                    $next_run_time = function_exists( 'wp_date' ) ? wp_date( 'Y-m-d H:i:s', $next_timestamp ) : date_i18n( 'Y-m-d H:i:s', $next_timestamp );
+                                                    $next_run_html = '<strong>' . esc_html( $next_run_time ) . '</strong>';
+                                                } else {
+                                                    $next_run_html = '<span style="color:#b45309; font-weight:600;">Not scheduled / Waiting</span>';
+                                                }
+                                            } else {
+                                                $badge_html = '<div style="display:inline-flex; align-items:center; gap:8px; background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 10px; border-radius:6px; font-weight:700; font-size:11px;"><span style="width:6px;height:6px;background:#6366f1;border-radius:50%;display:inline-block;"></span> Enabled (Custom Cron)</div>';
+                                                $next_run_html = '<span style="color:#4f46e5; font-weight:600;">Managed by server crontab</span>';
+                                            }
+                                            ?>
+                                            <p style="margin:0 0 10px 0;"><strong>Active Mode:</strong> <?php echo $badge_html; ?></p>
+                                            <p style="margin:0 0 10px 0;"><strong>Last Run:</strong> <code><?php echo ! empty( $last_run ) ? esc_html( $last_run ) : 'Never'; ?></code></p>
+                                            <p style="margin:0 0 10px 0;"><strong>Next Scheduled:</strong> <?php echo $next_run_html; ?></p>
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 14px; border-top:1px solid var(--uwb-border); padding-top:14px;">
+                                        <h4 style="margin:0 0 8px 0; font-size:13px; color:var(--uwb-text); font-weight:700;">Last Processed URLs:</h4>
+                                        <?php if ( ! empty( $last_urls ) && is_array( $last_urls ) ) : ?>
+                                            <div style="max-height: 100px; overflow-y: auto; background: #fff; border: 1px solid var(--uwb-border); border-radius: 6px; padding: 6px 8px;">
+                                                <ul style="margin: 0; padding: 0; list-style: none;">
+                                                    <?php foreach ( array_slice( $last_urls, 0, 5 ) as $url_info ) : 
+                                                        $status_color = $url_info['status'] === 'completed' ? '#10b981' : '#ef4444';
+                                                        $url_path = wp_parse_url( $url_info['url'], PHP_URL_PATH );
+                                                        $url_query = wp_parse_url( $url_info['url'], PHP_URL_QUERY );
+                                                        $display_path = '/' . trim( $url_path, '/' ) . ( $url_query ? '?' . $url_query : '' );
+                                                        if ( strlen( $display_path ) > 40 ) {
+                                                            $display_path = substr( $display_path, 0, 37 ) . '...';
+                                                        }
+                                                    ?>
+                                                        <li style="font-size: 11px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                                                            <a href="<?php echo esc_url( $url_info['url'] ); ?>" target="_blank" title="<?php echo esc_attr( $url_info['url'] ); ?>" style="text-decoration: none; color: var(--uwb-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?php echo esc_html( $display_path ); ?></a>
+                                                            <span style="color: <?php echo $status_color; ?>; font-weight: bold; font-size: 10px; text-transform: uppercase;"><?php echo esc_html( $url_info['status'] ); ?></span>
+                                                        </li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            </div>
+                                        <?php else : ?>
+                                            <p style="margin:0; font-size:12px; color:var(--uwb-text-muted); font-style:italic;">No URLs processed yet.</p>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
