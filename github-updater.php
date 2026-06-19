@@ -206,29 +206,81 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             // Verify nonce
             check_ajax_referer( 'uwb_github_update_nonce', 'nonce' );
 
-            // Temporarily force transient update to ensure updater recognizes the source package
-            $transient = get_site_transient( 'update_plugins' );
-            if ( ! is_object( $transient ) ) {
-                $transient = new stdClass();
+            // Deactivate plugin if active to avoid file lock issues (especially on Windows)
+            $was_active = false;
+            if ( is_plugin_active( $this->basename ) ) {
+                deactivate_plugins( $this->basename );
+                $was_active = true;
             }
-            
-            $obj = new stdClass();
-            $obj->slug        = 'ultimate-wp-booster';
-            $obj->plugin      = $this->basename;
-            $obj->new_version = '999.0.0'; // High version to force WordPress to run the installation
-            $obj->url         = "https://github.com/{$this->username}/{$this->repository}";
-            $obj->package     = "https://github.com/{$this->username}/{$this->repository}/archive/refs/heads/main.zip";
-            $transient->response[ $this->basename ] = $obj;
-            set_site_transient( 'update_plugins', $transient );
 
-            // Generate native WordPress update URL with nonce
-            $upgrade_url = wp_nonce_url( self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . urlencode( $this->basename ) ), 'upgrade-plugin_' . $this->basename );
+            // Include required WP file functions
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/misc.php';
+            require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 
-            wp_send_json_success( array(
-                'update_available' => true,
-                'upgrade_url'      => $upgrade_url,
-                'message'          => 'Redirecting to native WordPress installer to fetch latest codebase...'
-            ) );
+            // Download the latest zip from GitHub main branch
+            $zip_url   = "https://github.com/{$this->username}/{$this->repository}/archive/refs/heads/main.zip";
+            $temp_file = download_url( $zip_url );
+            if ( is_wp_error( $temp_file ) ) {
+                // Reactivate if needed before returning error
+                if ( $was_active ) {
+                    activate_plugin( $this->basename );
+                }
+                wp_send_json_error( array( 'message' => 'Failed to download zip: ' . $temp_file->get_error_message() ) );
+            }
+
+            // Unzip the package to a temporary directory
+            $result = unzip_file( $temp_file, WP_CONTENT_DIR . '/upgrade-temp' );
+            // Clean up the downloaded zip file
+            @unlink( $temp_file );
+            if ( is_wp_error( $result ) ) {
+                if ( $was_active ) {
+                    activate_plugin( $this->basename );
+                }
+                wp_send_json_error( array( 'message' => 'Failed to unzip package: ' . $result->get_error_message() ) );
+            }
+
+            // Determine extracted folder name (normally "{repo}-main")
+            $extracted_dir = WP_CONTENT_DIR . '/upgrade-temp';
+            $entries       = scandir( $extracted_dir );
+            $new_folder    = '';
+            foreach ( $entries as $entry ) {
+                if ( $entry === '.' || $entry === '..' ) {
+                    continue;
+                }
+                $new_folder = $extracted_dir . '/' . $entry;
+                break;
+            }
+            if ( ! $new_folder || ! is_dir( $new_folder ) ) {
+                if ( $was_active ) {
+                    activate_plugin( $this->basename );
+                }
+                wp_send_json_error( array( 'message' => 'Unexpected zip structure.' ) );
+            }
+
+            // Remove old plugin folder
+            $plugin_dir = WP_PLUGIN_DIR . '/' . dirname( $this->basename );
+            $this->delete_directory( $plugin_dir );
+
+            // Move new folder into plugins directory
+            $move_result = rename( $new_folder, $plugin_dir );
+            // Clean temporary extract directory
+            $this->delete_directory( $extracted_dir );
+
+            if ( ! $move_result ) {
+                if ( $was_active ) {
+                    activate_plugin( $this->basename );
+                }
+                wp_send_json_error( array( 'message' => 'Failed to move new plugin into place.' ) );
+            }
+
+            // Reactivate if it was active before update
+            if ( $was_active ) {
+                activate_plugin( $this->basename );
+            }
+
+            // Return success response
+            wp_send_json_success( array( 'update_available' => true, 'message' => 'Plugin updated to the latest version from GitHub.' ) );
         }
 
         /**
