@@ -10,6 +10,7 @@ class Uwb_Admin {
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'add_plugin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'admin_init', array( $this, 'admin_init_sync' ) );
 
         // Sync config JSON file when options are saved
         $options_to_sync = array(
@@ -61,6 +62,13 @@ class Uwb_Admin {
         register_setting( 'uwb_redis_socket', 'uwb_redis_socket', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_password', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_db', 'intval' );
+    }
+
+    public function admin_init_sync() {
+        if ( get_option( 'uwb_redis_enabled' ) ) {
+            require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
+            Uwb_Activator::copy_object_cache_dropin();
+        }
     }
 
     /**

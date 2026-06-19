@@ -20,6 +20,9 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
         private $blog_id = 0;
         private $prefix = '';
 
+        public $cache_hits = 0;
+        public $cache_misses = 0;
+
         public function __construct() {
             $this->blog_id = get_current_blog_id();
             $this->prefix = is_multisite() ? $this->blog_id . ':' : '';
@@ -77,6 +80,7 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
             // Check local memory cache first
             if ( isset( $this->cache[ $group ][ $key ] ) ) {
                 $found = true;
+                $this->cache_hits++;
                 return is_object( $this->cache[ $group ][ $key ] ) ? clone $this->cache[ $group ][ $key ] : $this->cache[ $group ][ $key ];
             }
 
@@ -88,6 +92,7 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
                         $data = unserialize( $value );
                         $this->cache[ $group ][ $key ] = $data;
                         $found = true;
+                        $this->cache_hits++;
                         return $data;
                     }
                 } catch ( Exception $e ) {
@@ -96,6 +101,7 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
             }
 
             $found = false;
+            $this->cache_misses++;
             return false;
         }
 
