@@ -195,7 +195,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
         }
 
         /**
-         * AJAX Action: Trigger manual update from GitHub
+         * AJAX Action: Check for updates and return native upgrade URL
          */
         public function ajax_manual_update() {
             // Check permission
@@ -217,19 +217,10 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
 
             if ( version_compare( $local_version, $github_version, '>=' ) ) {
                 wp_send_json_success( array(
-                    'updated' => false,
-                    'message' => 'Plugin is already at the latest version (' . $local_version . ').'
+                    'update_available' => false,
+                    'message'          => 'Plugin is already at the latest version (' . $local_version . ').'
                 ) );
             }
-
-            // Include WordPress upgrade libraries
-            require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            require_once ABSPATH . 'wp-admin/includes/plugin.php';
-
-            // Set up updater skin and transient
-            $skin     = new Automatic_Upgrader_Skin();
-            $upgrader = new Plugin_Upgrader( $skin );
 
             // Temporarily force transient update to ensure updater recognizes the source package
             $transient = get_site_transient( 'update_plugins' );
@@ -246,18 +237,13 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             $transient->response[ $this->basename ] = $obj;
             set_site_transient( 'update_plugins', $transient );
 
-            // Trigger upgrade
-            $result = $upgrader->upgrade( $this->basename );
-
-            if ( is_wp_error( $result ) ) {
-                wp_send_json_error( array( 'message' => $result->get_error_message() ) );
-            } elseif ( $result === false ) {
-                wp_send_json_error( array( 'message' => 'Update failed. Please try again later.' ) );
-            }
+            // Generate native WordPress update URL with nonce
+            $upgrade_url = wp_nonce_url( self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . urlencode( $this->basename ) ), 'upgrade-plugin_' . $this->basename );
 
             wp_send_json_success( array(
-                'updated' => true,
-                'message' => 'Plugin updated successfully to v' . $github_version . ' from GitHub!'
+                'update_available' => true,
+                'upgrade_url'      => $upgrade_url,
+                'message'          => 'New version v' . $github_version . ' found. Redirecting to WordPress Update screen...'
             ) );
         }
 
@@ -399,9 +385,9 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                     var btnText = btn.find('.uwb-btn-text');
                     
                     btn.prop('disabled', true);
-                    btnText.text('Processing...');
+                    btnText.text('Checking...');
                     spinner.show();
-                    status.css('color', '#475569').text('Connecting to GitHub...');
+                    status.css('color', '#475569').text('Checking GitHub...');
                     
                     $.ajax({
                         url: ajaxurl,
@@ -414,10 +400,10 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                             spinner.hide();
                             if (res.success) {
                                 status.css('color', '#16a34a').text(res.data.message);
-                                if (res.data.updated) {
+                                if (res.data.update_available) {
                                     setTimeout(function() {
-                                        window.location.reload();
-                                    }, 2000);
+                                        window.location.href = res.data.upgrade_url;
+                                    }, 1500);
                                 } else {
                                     btn.prop('disabled', false);
                                     btnText.text('Check & Update');
