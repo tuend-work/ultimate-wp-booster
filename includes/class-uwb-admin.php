@@ -572,8 +572,25 @@ class Uwb_Admin {
                                     <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" />
                                 </div>
                             </div>
+                        </div>
 
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
+                        <!-- TAB 4: GitHub Updater -->
+                        <div id="tab-updater_settings" class="uwb-tab-content">
+                            <?php
+                            if ( class_exists( 'Uwb_Github_Updater' ) ) {
+                                Uwb_Github_Updater::render_update_button();
+                            } else {
+                                echo '<p>Error: Uwb_Github_Updater class not found.</p>';
+                            }
+                            ?>
+                        </div>
+
+                        <!-- TAB 5: Dashboard -->
+                        <div id="tab-url_status" class="uwb-tab-content active">
+                            <h2 style="margin-top:0;">Dashboard</h2>
+                            <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter by status, search, sort columns, and take actions on individual URLs.</p>
+
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
                                 <!-- Status Block -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
                                     <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
@@ -646,7 +663,7 @@ class Uwb_Admin {
                             </div>
 
                             <!-- Cache Stats Block -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                 <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                                     Global Cache Statistics
@@ -679,23 +696,6 @@ class Uwb_Admin {
                                 </div>
                                 <p style="font-size:12px; color:var(--uwb-text-muted); margin-top:14px;">Statistics are for the current page load only. Persistent stats require a backend like Redis with monitoring enabled.</p>
                             </div>
-                        </div>
-
-                        <!-- TAB 4: GitHub Updater -->
-                        <div id="tab-updater_settings" class="uwb-tab-content">
-                            <?php
-                            if ( class_exists( 'Uwb_Github_Updater' ) ) {
-                                Uwb_Github_Updater::render_update_button();
-                            } else {
-                                echo '<p>Error: Uwb_Github_Updater class not found.</p>';
-                            }
-                            ?>
-                        </div>
-
-                        <!-- TAB 5: Dashboard -->
-                        <div id="tab-url_status" class="uwb-tab-content active">
-                            <h2 style="margin-top:0;">Dashboard</h2>
-                            <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter by status, search, sort columns, and take actions on individual URLs.</p>
 
                             <!-- Toolbar -->
                             <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
