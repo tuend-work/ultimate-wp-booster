@@ -161,11 +161,17 @@ function uwb_advanced_cache_shutdown() {
     $html = ob_get_clean();
     if ( empty( $html ) ) return;
 
-    echo $html;
-
-    if ( http_response_code() !== 200 ) return;
-    if ( strlen( $html ) < 200 ) return;
-    if ( is_admin() || is_search() || is_feed() || is_trackback() || is_robots() || is_404() ) return;
+    // Determine if we should cache
+    $should_cache = true;
+    if ( http_response_code() !== 200 ) {
+        $should_cache = false;
+    }
+    if ( strlen( $html ) < 200 ) {
+        $should_cache = false;
+    }
+    if ( is_admin() || is_search() || is_feed() || is_trackback() || is_robots() || is_404() ) {
+        $should_cache = false;
+    }
 
     // Re-read config
     $config_path = isset( $GLOBALS['uwb_config_path'] )
@@ -182,59 +188,99 @@ function uwb_advanced_cache_shutdown() {
     $lifespan = isset( $config['cache_lifespan'] ) ? intval( $config['cache_lifespan'] ) : 36000;
 
     $logged_in_segment = isset( $GLOBALS['uwb_logged_in_segment'] ) ? $GLOBALS['uwb_logged_in_segment'] : '';
-    if ( ! $cache_logged_in && $logged_in_segment !== '' ) return;
-    if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) return;
+    if ( ! $cache_logged_in && $logged_in_segment !== '' ) {
+        $should_cache = false;
+    }
+    if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
+        $should_cache = false;
+    }
 
     $cache_file = isset( $GLOBALS['uwb_cache_file'] ) ? $GLOBALS['uwb_cache_file'] : '';
     $cache_dir  = isset( $GLOBALS['uwb_cache_dir'] ) ? $GLOBALS['uwb_cache_dir'] : '';
-    if ( ! $cache_file || ! $cache_dir ) return;
+    if ( ! $cache_file || ! $cache_dir ) {
+        $should_cache = false;
+    }
+
+    // Gather Object Cache statistics
+    global $wp_object_cache;
+    $oc_hits = 0;
+    $oc_misses = 0;
+    if ( isset( $wp_object_cache->cache_hits ) ) {
+        $oc_hits = intval( $wp_object_cache->cache_hits );
+    }
+    if ( isset( $wp_object_cache->cache_misses ) ) {
+        $oc_misses = intval( $wp_object_cache->cache_misses );
+    }
+    $oc_total = $oc_hits + $oc_misses;
+    $oc_ratio = $oc_total > 0 ? round( ( $oc_hits / $oc_total ) * 100, 1 ) : 0;
+    $oc_status = wp_using_ext_object_cache() ? 'Active (Redis)' : 'Inactive';
+    $oc_comment = " | Object Cache: {$oc_status} (Hits: {$oc_hits} | Misses: {$oc_misses} | Ratio: {$oc_ratio}%)";
+
+    // Only append comments to HTML responses and non-admin requests
+    $is_html = true;
+    if ( is_admin() || is_feed() || is_trackback() || is_robots() ) {
+        $is_html = false;
+    }
+
+    if ( $is_html ) {
+        // Build timestamp with UTC offset notation
+        $now = time();
+        if ( $timezone_str ) {
+            @date_default_timezone_set( $timezone_str );
+            // Get UTC offset for the timezone
+            $tz_obj      = timezone_open( $timezone_str );
+            $utc_offset  = $tz_obj ? timezone_offset_get( $tz_obj, date_create( 'now', $tz_obj ) ) / 3600 : 0;
+            $utc_label   = 'UTC' . ( $utc_offset >= 0 ? '+' : '' ) . $utc_offset;
+            $time_str    = date( 'H:i:s d/m/Y' );
+        } else {
+            $local_ts   = $now + $timezone_offset;
+            $utc_offset = $timezone_offset / 3600;
+            $utc_label  = 'UTC' . ( $utc_offset >= 0 ? '+' : '' ) . $utc_offset;
+            $time_str   = gmdate( 'H:i:s d/m/Y', $local_ts );
+        }
+
+        // Calculate next refresh time
+        if ( $lifespan > 0 ) {
+            if ( $timezone_str ) {
+                $next_ts  = $now + $lifespan;
+                $next_str = date( 'H:i:s d/m/Y', $next_ts );
+            } else {
+                $next_ts  = $now + $timezone_offset + $lifespan;
+                $next_str = gmdate( 'H:i:s d/m/Y', $next_ts );
+            }
+            $refresh_comment = " | Next refresh: {$next_str} ({$utc_label})";
+        } else {
+            $refresh_comment = ' | Cache: unlimited lifespan';
+        }
+
+        if ( $should_cache ) {
+            $comment_to_append = "\n<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment} -->";
+        } else {
+            $comment_to_append = "\n<!-- Dynamic Page{$oc_comment} -->";
+        }
+
+        $html .= $comment_to_append;
+    }
+
+    echo $html;
+
+    if ( ! $should_cache ) return;
 
     if ( ! file_exists( $cache_dir ) ) @mkdir( $cache_dir, 0755, true );
     if ( ! is_dir( $cache_dir ) || ! is_writable( $cache_dir ) ) return;
 
-    // Build timestamp with UTC offset notation
-    $now = time();
-    if ( $timezone_str ) {
-        @date_default_timezone_set( $timezone_str );
-        // Get UTC offset for the timezone
-        $tz_obj      = timezone_open( $timezone_str );
-        $utc_offset  = $tz_obj ? timezone_offset_get( $tz_obj, date_create( 'now', $tz_obj ) ) / 3600 : 0;
-        $utc_label   = 'UTC' . ( $utc_offset >= 0 ? '+' : '' ) . $utc_offset;
-        $time_str    = date( 'H:i:s d/m/Y' );
-    } else {
-        $local_ts   = $now + $timezone_offset;
-        $utc_offset = $timezone_offset / 3600;
-        $utc_label  = 'UTC' . ( $utc_offset >= 0 ? '+' : '' ) . $utc_offset;
-        $time_str   = gmdate( 'H:i:s d/m/Y', $local_ts );
-    }
-
-    // Calculate next refresh time
-    if ( $lifespan > 0 ) {
-        if ( $timezone_str ) {
-            $next_ts  = $now + $lifespan;
-            $next_str = date( 'H:i:s d/m/Y', $next_ts );
-        } else {
-            $next_ts  = $now + $timezone_offset + $lifespan;
-            $next_str = gmdate( 'H:i:s d/m/Y', $next_ts );
-        }
-        $refresh_comment = " | Next refresh: {$next_str} ({$utc_label})";
-    } else {
-        $refresh_comment = ' | Cache: unlimited lifespan';
-    }
-
     // Strip admin bar from cached HTML to prevent it from being served from cache
-    $html = preg_replace( '~<div\s+id="wpadminbar"[^>]*>(?:[^<]+|<(?!/?div\b)|(?R))*</div>~s', '', $html );
-    $html = preg_replace( '~<style[^>]*id=["\']wpadminbar-inline-css["\'][^>]*>.*?</style>~s', '', $html );
-    $html = preg_replace( '~<link[^>]*id=["\']admin-bar-css["\'][^>]*>~s', '', $html );
-    $html = preg_replace( '~<script[^>]*id=["\']admin-bar-js["\'][^>]*>.*?</script>~s', '', $html );
-    $html = preg_replace( '~<body([^>]*)class=["\']([^"\']*)admin-bar\s*([^"\']*)["\']~s', '<body$1class="$2$3"', $html );
+    $cache_html = $html;
+    $cache_html = preg_replace( '~<div\s+id="wpadminbar"[^>]*>(?:[^<]+|<(?!/?div\b)|(?R))*</div>~s', '', $cache_html );
+    $cache_html = preg_replace( '~<style[^>]*id=["\']wpadminbar-inline-css["\'][^>]*>.*?</style>~s', '', $cache_html );
+    $cache_html = preg_replace( '~<link[^>]*id=["\']admin-bar-css["\'][^>]*>~s', '', $cache_html );
+    $cache_html = preg_replace( '~<script[^>]*id=["\']admin-bar-js["\'][^>]*>.*?</script>~s', '', $cache_html );
+    $cache_html = preg_replace( '~<body([^>]*)class=["\']([^"\']*)admin-bar\s*([^"\']*)["\']~s', '<body$1class="$2$3"', $cache_html );
 
-    $html .= "\n<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment} -->";
-
-    @file_put_contents( $cache_file, $html );
+    @file_put_contents( $cache_file, $cache_html );
 
     $gzip_file    = $cache_file . '_gzip';
-    $gzipped_html = gzencode( $html, 9 );
+    $gzipped_html = gzencode( $cache_html, 9 );
     if ( $gzipped_html !== false ) {
         @file_put_contents( $gzip_file, $gzipped_html );
     }
