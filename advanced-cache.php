@@ -269,20 +269,10 @@ function uwb_advanced_cache_shutdown() {
     if ( ! file_exists( $cache_dir ) ) @mkdir( $cache_dir, 0755, true );
     if ( ! is_dir( $cache_dir ) || ! is_writable( $cache_dir ) ) return;
 
-    // Strip admin bar from cached HTML to prevent it from being served from cache (only for guest cache)
-    $cache_html = $html;
-    if ( empty( $logged_in_segment ) ) {
-        $cache_html = preg_replace( '~<div\s+[^>]*id=["\']wpadminbar["\'][^>]*>(?<rec>(?:[^<]+|<(?!\/?div\b)|<div[^>]*>(?P>rec)<\/div>)*+)<\/div>~si', '', $cache_html );
-        $cache_html = preg_replace( '~<style[^>]*id=["\']wpadminbar-inline-css["\'][^>]*>.*?</style>~s', '', $cache_html );
-        $cache_html = preg_replace( '~<link[^>]*id=["\']admin-bar-css["\'][^>]*>~s', '', $cache_html );
-        $cache_html = preg_replace( '~<script[^>]*id=["\']admin-bar-js["\'][^>]*>.*?</script>~s', '', $cache_html );
-        $cache_html = preg_replace( '~<body([^>]*)class=["\']([^"\']*)admin-bar\s*([^"\']*)["\']~s', '<body$1class="$2$3"', $cache_html );
-    }
-
-    @file_put_contents( $cache_file, $cache_html );
+    @file_put_contents( $cache_file, $html );
 
     $gzip_file    = $cache_file . '_gzip';
-    $gzipped_html = gzencode( $cache_html, 9 );
+    $gzipped_html = gzencode( $html, 9 );
     if ( $gzipped_html !== false ) {
         @file_put_contents( $gzip_file, $gzipped_html );
     }
