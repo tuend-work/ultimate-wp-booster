@@ -449,8 +449,46 @@ class Uwb_Admin {
                                 <select name="uwb_preload_enabled" id="uwb_preload_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                     <option value="0" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 0 ); ?>>Disabled</option>
                                     <option value="1" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 1 ); ?>>Enabled (via WP-Cron)</option>
+                                    <option value="2" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 2 ); ?>>Enabled (via Custom Linux Cron)</option>
                                 </select>
                                 <p class="description">When enabled, the crawler runs in the background to fetch URLs in the preloading queue in small batches.</p>
+
+                                <!-- Custom Cron Instructions -->
+                                <?php
+                                $secret_key = get_option( 'uwb_preload_secret_key', '' );
+                                $http_cron_cmd = '* * * * * curl -s "' . esc_url( home_url( '/?uwb_preload_key=' . $secret_key ) ) . '" >/dev/null 2>&1';
+                                $wp_path = ABSPATH;
+                                $wp_cli_cron_cmd = '* * * * * wp uwb-preload run --path=' . escapeshellarg( $wp_path ) . ' >/dev/null 2>&1';
+                                ?>
+                                <div id="uwb-custom-cron-info" style="margin-top: 16px; padding: 20px; background: #f8fafc; border: 1px solid var(--uwb-border); border-radius: 12px; display: <?php echo ( get_option( 'uwb_preload_enabled', 0 ) == 2 ) ? 'block' : 'none'; ?>;">
+                                    <h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--uwb-text); display: flex; align-items: center; gap: 6px;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        Custom Linux Cron Configuration
+                                    </h4>
+                                    <p style="font-size: 13px; color: var(--uwb-text-muted); margin: 0 0 16px 0; line-height: 1.4;">
+                                        Real Linux cron jobs are more reliable than virtual WP-Cron. Use one of the options below to trigger the preloader every minute via your server's crontab (run <code>crontab -e</code> on your server):
+                                    </p>
+                                    
+                                    <div style="margin-bottom: 16px;">
+                                        <span style="font-weight: 700; font-size: 12.5px; display: block; margin-bottom: 6px; color: var(--uwb-text);">Option 1: Using curl (Recommended)</span>
+                                        <div style="position: relative;">
+                                            <input type="text" readonly value="<?php echo esc_attr( $http_cron_cmd ); ?>" style="width: 100%; font-family: monospace; font-size: 12px; background: #fff; padding: 10px 40px 10px 10px; border: 1px solid var(--uwb-border); border-radius: 6px; color: #1e293b;" onclick="this.select();" />
+                                            <button type="button" class="uwb-copy-cron" data-clipboard-text="<?php echo esc_attr( $http_cron_cmd ); ?>" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer; padding: 4px; color: var(--uwb-text-muted);" title="Copy to clipboard">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <span style="font-weight: 700; font-size: 12.5px; display: block; margin-bottom: 6px; color: var(--uwb-text);">Option 2: Using WP-CLI</span>
+                                        <div style="position: relative;">
+                                            <input type="text" readonly value="<?php echo esc_attr( $wp_cli_cron_cmd ); ?>" style="width: 100%; font-family: monospace; font-size: 12px; background: #fff; padding: 10px 40px 10px 10px; border: 1px solid var(--uwb-border); border-radius: 6px; color: #1e293b;" onclick="this.select();" />
+                                            <button type="button" class="uwb-copy-cron" data-clipboard-text="<?php echo esc_attr( $wp_cli_cron_cmd ); ?>" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer; padding: 4px; color: var(--uwb-text-muted);" title="Copy to clipboard">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="uwb-form-group">
@@ -959,6 +997,39 @@ class Uwb_Admin {
             }
             $('#uwb_redis_conn_type').on('change', toggleRedisFields);
             toggleRedisFields();
+
+            // Toggle Custom Cron instructions
+            function toggleCronFields() {
+                var preloadEnabled = $('#uwb_preload_enabled').val();
+                if (preloadEnabled === '2') {
+                    $('#uwb-custom-cron-info').slideDown(250);
+                } else {
+                    $('#uwb-custom-cron-info').slideUp(250);
+                }
+            }
+            $('#uwb_preload_enabled').on('change', toggleCronFields);
+            toggleCronFields();
+
+            // Copy Cron Job to clipboard
+            $('.uwb-copy-cron').on('click', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var text = $btn.data('clipboard-text');
+                
+                // Copy text using a temporary input element
+                var $temp = $("<input>");
+                $("body").append($temp);
+                $temp.val(text).select();
+                document.execCommand("copy");
+                $temp.remove();
+                
+                // Show copied feedback
+                var originalHtml = $btn.html();
+                $btn.html('<span style="color:var(--uwb-success); font-weight:bold; font-size:11px;">✓ Copied</span>');
+                setTimeout(function() {
+                    $btn.html(originalHtml);
+                }, 1500);
+            });
 
             // Test Redis Connection
             $('#btn-test-redis').on('click', function(e) {

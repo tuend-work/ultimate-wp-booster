@@ -288,11 +288,16 @@ class Uwb_Preloader {
             }
         }
 
-        // 4. Set status as running and schedule WP Cron
+        // 4. Set status as running and schedule WP Cron if enabled via WP-Cron
         update_option( 'uwb_preload_running', 1 );
         
-        if ( ! wp_next_scheduled( 'uwb_preload_cron_job' ) ) {
-            wp_schedule_event( time(), 'every_minute', 'uwb_preload_cron_job' );
+        $preload_enabled = intval( get_option( 'uwb_preload_enabled', 0 ) );
+        if ( $preload_enabled === 1 ) {
+            if ( ! wp_next_scheduled( 'uwb_preload_cron_job' ) ) {
+                wp_schedule_event( time(), 'every_minute', 'uwb_preload_cron_job' );
+            }
+        } else {
+            wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
         }
 
         return count( $urls );

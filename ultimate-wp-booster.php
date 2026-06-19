@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.3.3
+ * Version:     1.3.4
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.3.3' );
+define( 'UWB_VERSION', '1.3.4' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -47,6 +47,11 @@ function run_ultimate_wp_booster() {
 
     // Initialize Preloader Engine
     $uwb_preloader = new Uwb_Preloader();
+
+    // Generate secret key if not exists
+    if ( ! get_option( 'uwb_preload_secret_key' ) ) {
+        update_option( 'uwb_preload_secret_key', wp_generate_password( 24, false, false ) );
+    }
 
     // Initialize Admin Interface
     if ( is_admin() ) {
@@ -240,4 +245,44 @@ function uwb_handle_admin_bar_flush_object_cache() {
     // Redirect back to referrer
     wp_safe_redirect( wp_get_referer() ? wp_get_referer() : home_url( '/' ) );
     exit;
+}
+
+// 7. Register WP-CLI command
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+    class Uwb_CLI_Preload {
+        public function run( $args, $assoc_args ) {
+            $batch_size = isset( $assoc_args['batch-size'] ) ? intval( $assoc_args['batch-size'] ) : 0;
+            if ( class_exists( 'Uwb_Preloader' ) ) {
+                $preloader = new Uwb_Preloader();
+                $processed = $preloader->run_preload_batch( $batch_size );
+                WP_CLI::success( "Preloaded {$processed} URLs successfully!" );
+            } else {
+                WP_CLI::error( "Preloader class not found." );
+            }
+        }
+    }
+    WP_CLI::add_command( 'uwb-preload', 'Uwb_CLI_Preload' );
+}
+
+// 8. Handle external cron trigger
+add_action( 'init', 'uwb_handle_external_cron_trigger' );
+function uwb_handle_external_cron_trigger() {
+    if ( isset( $_GET['uwb_preload_key'] ) ) {
+        $saved_key = get_option( 'uwb_preload_secret_key' );
+        if ( empty( $saved_key ) ) {
+            wp_die( 'Secret key is empty.' );
+        }
+        if ( hash_equals( $saved_key, $_GET['uwb_preload_key'] ) ) {
+            if ( class_exists( 'Uwb_Preloader' ) ) {
+                $preloader = new Uwb_Preloader();
+                $processed = $preloader->run_preload_batch();
+                echo "OK: Preloaded {$processed} URLs.";
+            } else {
+                echo "ERROR: Preloader class not found.";
+            }
+            exit;
+        } else {
+            wp_die( 'Invalid secret key.' );
+        }
+    }
 }
