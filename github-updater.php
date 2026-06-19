@@ -195,7 +195,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
         }
 
         /**
-         * AJAX Action: Check for updates and return native upgrade URL
+         * AJAX Action: Return native upgrade URL for the latest codebase
          */
         public function ajax_manual_update() {
             // Check permission
@@ -206,14 +206,6 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             // Verify nonce
             check_ajax_referer( 'uwb_github_update_nonce', 'nonce' );
 
-            $release = $this->get_latest_github_release();
-
-            if ( is_wp_error( $release ) ) {
-                wp_send_json_error( array( 'message' => 'GitHub connection error: ' . $release->get_error_message() ) );
-            }
-
-            $github_version = ltrim( $release->tag_name, 'v' );
-
             // Temporarily force transient update to ensure updater recognizes the source package
             $transient = get_site_transient( 'update_plugins' );
             if ( ! is_object( $transient ) ) {
@@ -223,9 +215,9 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             $obj = new stdClass();
             $obj->slug        = 'ultimate-wp-booster';
             $obj->plugin      = $this->basename;
-            $obj->new_version = $github_version;
+            $obj->new_version = '999.0.0'; // High version to force WordPress to run the installation
             $obj->url         = "https://github.com/{$this->username}/{$this->repository}";
-            $obj->package     = $release->zipball_url;
+            $obj->package     = "https://github.com/{$this->username}/{$this->repository}/archive/refs/heads/main.zip";
             $transient->response[ $this->basename ] = $obj;
             set_site_transient( 'update_plugins', $transient );
 
@@ -235,7 +227,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             wp_send_json_success( array(
                 'update_available' => true,
                 'upgrade_url'      => $upgrade_url,
-                'message'          => 'Latest version ' . $github_version . ' found. Redirecting to native installer...'
+                'message'          => 'Redirecting to native WordPress installer to fetch latest codebase...'
             ) );
         }
 
