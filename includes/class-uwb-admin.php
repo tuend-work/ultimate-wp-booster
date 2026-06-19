@@ -30,6 +30,12 @@ class Uwb_Admin {
             add_action( "add_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
         }
 
+        // Also sync config when WordPress timezone settings change
+        add_action( 'update_option_timezone_string', array( 'Uwb_Cache', 'write_config_file' ) );
+        add_action( 'add_option_timezone_string', array( 'Uwb_Cache', 'write_config_file' ) );
+        add_action( 'update_option_gmt_offset', array( 'Uwb_Cache', 'write_config_file' ) );
+        add_action( 'add_option_gmt_offset', array( 'Uwb_Cache', 'write_config_file' ) );
+
         // Redis AJAX hooks
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
         add_action( 'wp_ajax_uwb_flush_redis_cache', array( $this, 'ajax_flush_redis_cache' ) );
@@ -70,6 +76,8 @@ class Uwb_Admin {
         if ( get_option( 'uwb_redis_enabled' ) ) {
             Uwb_Activator::copy_object_cache_dropin();
         }
+        // Sync config JSON file to keep core options (like timezone) up to date
+        Uwb_Cache::write_config_file();
     }
 
     /**
