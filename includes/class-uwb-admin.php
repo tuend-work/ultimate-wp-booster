@@ -330,7 +330,7 @@ class Uwb_Admin {
         <div class="uwb-dashboard-wrap">
             <div class="uwb-header">
                 <div class="uwb-header-title">
-                    <h1>Ultimate WordPress Booster</h1>
+                    <h1>Ultimate WordPress Booster v<?php echo esc_html( UWB_VERSION ); ?></h1>
                     <p>Optimize website loading speed with ultra-fast Static Page Caching.</p>
                 </div>
                 <div class="uwb-header-actions">

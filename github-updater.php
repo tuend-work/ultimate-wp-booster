@@ -213,14 +213,6 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             }
 
             $github_version = ltrim( $release->tag_name, 'v' );
-            $local_version  = get_plugin_data( $this->file )['Version'];
-
-            if ( version_compare( $local_version, $github_version, '>=' ) ) {
-                wp_send_json_success( array(
-                    'update_available' => false,
-                    'message'          => 'Plugin is already at the latest version (' . $local_version . ').'
-                ) );
-            }
 
             // Temporarily force transient update to ensure updater recognizes the source package
             $transient = get_site_transient( 'update_plugins' );
@@ -243,7 +235,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             wp_send_json_success( array(
                 'update_available' => true,
                 'upgrade_url'      => $upgrade_url,
-                'message'          => 'New version v' . $github_version . ' found. Redirecting to WordPress Update screen...'
+                'message'          => 'Latest version ' . $github_version . ' found. Redirecting to native installer...'
             ) );
         }
 
@@ -251,7 +243,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
          * Render Update Button HTML in Settings Page
          */
         public static function render_update_button() {
-            $plugin_file = dirname( __DIR__ ) . '/ultimate-wp-booster.php';
+            $plugin_file = __DIR__ . '/ultimate-wp-booster.php';
             $version = 'N/A';
             if ( file_exists( $plugin_file ) ) {
                 $data = get_plugin_data( $plugin_file );
