@@ -117,6 +117,11 @@ function uwb_advanced_cache_run() {
         $file_time = @filemtime( $cache_file );
         $lifespan  = intval( $config['cache_lifespan'] );
 
+        // Cache logged-in users for at most 10 minutes (600 seconds) to prevent wpnonce expiration
+        if ( $logged_in_cookie_hash !== '' ) {
+            $lifespan = ( $lifespan === 0 ) ? 600 : min( $lifespan, 600 );
+        }
+
         if ( $lifespan === 0 || ( time() - $file_time ) < $lifespan ) {
             $gzip_file     = $cache_file . '_gzip';
             $supports_gzip = isset( $_SERVER['HTTP_ACCEPT_ENCODING'] ) &&
@@ -188,6 +193,11 @@ function uwb_advanced_cache_shutdown() {
     $lifespan = isset( $config['cache_lifespan'] ) ? intval( $config['cache_lifespan'] ) : 36000;
 
     $logged_in_segment = isset( $GLOBALS['uwb_logged_in_segment'] ) ? $GLOBALS['uwb_logged_in_segment'] : '';
+    // Cache logged-in users for at most 10 minutes (600 seconds) to prevent wpnonce expiration
+    if ( $logged_in_segment !== '' ) {
+        $lifespan = ( $lifespan === 0 ) ? 600 : min( $lifespan, 600 );
+    }
+
     if ( ! $cache_logged_in && $logged_in_segment !== '' ) {
         $should_cache = false;
     }

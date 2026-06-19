@@ -430,7 +430,7 @@ class Uwb_Admin {
                                     <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
                                 </select>
                                 <p class="description">
-                                    Enable this to serve static cached pages to logged-in users. <br>
+                                    Enable this to serve static cached pages to logged-in users. Capped at a maximum of 10 minutes (600 seconds) to prevent <code>wpnonce</code> expiration. <br>
                                     <strong>Warning:</strong> Personalized content (like user profile names or WooCommerce carts) may be cached and incorrectly displayed to other users if not configured carefully.
                                 </p>
                             </div>
