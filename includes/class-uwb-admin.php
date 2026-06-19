@@ -12,12 +12,22 @@ class Uwb_Admin {
         add_action( 'admin_init', array( $this, 'register_settings' ) );
 
         // Sync config JSON file when options are saved
-        add_action( 'update_option_uwb_cache_lifespan', array( 'Uwb_Cache', 'write_config_file' ) );
-        add_action( 'add_option_uwb_cache_lifespan', array( 'Uwb_Cache', 'write_config_file' ) );
-        add_action( 'update_option_uwb_excluded_urls', array( 'Uwb_Cache', 'write_config_file' ) );
-        add_action( 'add_option_uwb_excluded_urls', array( 'Uwb_Cache', 'write_config_file' ) );
-        add_action( 'update_option_uwb_cache_logged_in', array( 'Uwb_Cache', 'write_config_file' ) );
-        add_action( 'add_option_uwb_cache_logged_in', array( 'Uwb_Cache', 'write_config_file' ) );
+        $options_to_sync = array(
+            'uwb_cache_lifespan',
+            'uwb_excluded_urls',
+            'uwb_cache_logged_in',
+            'uwb_redis_enabled',
+            'uwb_redis_conn_type',
+            'uwb_redis_host',
+            'uwb_redis_port',
+            'uwb_redis_socket',
+            'uwb_redis_password',
+            'uwb_redis_db'
+        );
+        foreach ( $options_to_sync as $opt ) {
+            add_action( "update_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
+            add_action( "add_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
+        }
 
         // Redis AJAX hooks
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
@@ -42,6 +52,15 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', 'esc_url_raw' );
         register_setting( 'uwb_settings_group', 'uwb_priority_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_batch_size', 'intval' );
+
+        // Redis Object Cache Settings
+        register_setting( 'uwb_settings_group', 'uwb_redis_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_conn_type', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_host', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_port', 'intval' );
+        register_setting( 'uwb_redis_socket', 'uwb_redis_socket', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_password', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_db', 'intval' );
     }
 
     /**
@@ -487,6 +506,64 @@ class Uwb_Admin {
                             <h2 style="margin-top:0;">Redis Object Cache</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom:24px;">Persistent object caching stores database query results in memory (like Redis), reducing redundant queries and speeding up WordPress.</p>
 
+                            <!-- Configuration Fields -->
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    Redis Configuration
+                                </h3>
+
+                                <div class="uwb-form-group" style="margin-top:16px;">
+                                    <label for="uwb_redis_enabled">Enable Redis Object Cache</label>
+                                    <select name="uwb_redis_enabled" id="uwb_redis_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                        <option value="0" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 0 ); ?>>Disabled</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 1 ); ?>>Enabled</option>
+                                    </select>
+                                    <p class="description">When enabled, WordPress database query results will be stored persistently in Redis. Our custom drop-in file will be automatically copied to <code>wp-content/object-cache.php</code>.</p>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_conn_type">Connection Type</label>
+                                        <select name="uwb_redis_conn_type" id="uwb_redis_conn_type" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                            <option value="tcp" <?php selected( get_option( 'uwb_redis_conn_type', 'tcp' ), 'tcp' ); ?>>TCP/IP (Host/Port)</option>
+                                            <option value="socket" <?php selected( get_option( 'uwb_redis_conn_type', 'tcp' ), 'socket' ); ?>>Unix Socket</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_db">Database Index</label>
+                                        <input type="number" min="0" max="15" name="uwb_redis_db" id="uwb_redis_db" value="<?php echo esc_attr( get_option( 'uwb_redis_db', 0 ) ); ?>" />
+                                    </div>
+                                </div>
+
+                                <!-- TCP Settings -->
+                                <div id="redis-tcp-settings" style="display:grid; grid-template-columns: 2fr 1fr; gap:16px;">
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_host">Redis Host</label>
+                                        <input type="text" name="uwb_redis_host" id="uwb_redis_host" value="<?php echo esc_attr( get_option( 'uwb_redis_host', '127.0.0.1' ) ); ?>" />
+                                    </div>
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_port">Redis Port</label>
+                                        <input type="number" name="uwb_redis_port" id="uwb_redis_port" value="<?php echo esc_attr( get_option( 'uwb_redis_port', 6379 ) ); ?>" />
+                                    </div>
+                                </div>
+
+                                <!-- Socket Settings -->
+                                <div id="redis-socket-settings" style="display:none;">
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_socket">Unix Socket Path</label>
+                                        <input type="text" name="uwb_redis_socket" id="uwb_redis_socket" placeholder="/var/run/redis/redis.sock" value="<?php echo esc_attr( get_option( 'uwb_redis_socket', '' ) ); ?>" />
+                                    </div>
+                                </div>
+
+                                <!-- Password Setting -->
+                                <div class="uwb-form-group">
+                                    <label for="uwb_redis_password">Redis Password (Optional)</label>
+                                    <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" />
+                                </div>
+                            </div>
+
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
                                 <!-- Status Block -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
@@ -502,7 +579,7 @@ class Uwb_Admin {
                                             echo '<div style="display:inline-flex; align-items:center; gap:8px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px;"><span style="width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active</div>';
                                             // Detect backend
                                             $backend = 'Unknown';
-                                            if ( class_exists('Redis') || class_exists('Predis\Client') || defined('WP_REDIS_HOST') ) {
+                                            if ( class_exists('Redis') || class_exists('Predis\Client') || defined('WP_REDIS_HOST') || get_option('uwb_redis_enabled') ) {
                                                 $backend = 'Redis';
                                             } elseif ( class_exists('Memcached') || class_exists('Memcache') ) {
                                                 $backend = 'Memcached';
@@ -521,7 +598,7 @@ class Uwb_Admin {
                                             <p style="font-size:13px; color:#065f46; margin:0;"><strong>✓</strong> <code>wp-content/object-cache.php</code> is installed.</p>
                                         <?php else : ?>
                                             <p style="font-size:13px; color:#92400e; margin:0;"><strong>✗</strong> <code>wp-content/object-cache.php</code> not found.</p>
-                                            <p style="font-size:12px; color:var(--uwb-text-muted); margin-top:6px; line-height:1.4;">To enable persistent object caching, install a backend plugin (e.g. <em>Redis Object Cache</em>, <em>Memcached Object Cache</em>) or manually place an <code>object-cache.php</code> drop-in.</p>
+                                            <p style="font-size:12px; color:var(--uwb-text-muted); margin-top:6px; line-height:1.4;">To enable persistent object caching, configure connection above, select Enabled, and click Save Changes.</p>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -534,8 +611,19 @@ class Uwb_Admin {
                                             Redis Connection Test
                                         </h3>
                                         <div style="margin-top:12px; font-size:13px; line-height:1.5;">
-                                            <p style="margin:0 0 8px 0;"><strong>Configured Host:</strong> <code><?php echo esc_html( defined('WP_REDIS_HOST') ? WP_REDIS_HOST : '127.0.0.1' ); ?></code></p>
-                                            <p style="margin:0 0 8px 0;"><strong>Configured Port:</strong> <code><?php echo esc_html( defined('WP_REDIS_PORT') ? WP_REDIS_PORT : '6379' ); ?></code></p>
+                                            <?php
+                                            $curr_conn_type = get_option('uwb_redis_conn_type', 'tcp');
+                                            $curr_host = get_option('uwb_redis_host', '127.0.0.1');
+                                            $curr_port = get_option('uwb_redis_port', 6379);
+                                            $curr_socket = get_option('uwb_redis_socket', '');
+                                            $curr_db = get_option('uwb_redis_db', 0);
+                                            if ( $curr_conn_type === 'socket' ) {
+                                                $conn_str = esc_html( $curr_socket );
+                                            } else {
+                                                $conn_str = esc_html( $curr_host . ':' . $curr_port );
+                                            }
+                                            ?>
+                                            <p style="margin:0 0 8px 0;"><strong>Saved Connection:</strong> <code><?php echo $conn_str; ?></code> (DB: <?php echo intval( $curr_db ); ?>)</p>
                                             <p style="margin:0 0 12px 0;"><strong>PHP Redis Extension:</strong> <code><?php echo class_exists('Redis') ? 'Available ✓' : 'Not Installed ✗'; ?></code></p>
                                         </div>
                                         <div id="redis-test-result" style="display:none; padding:10px 14px; border-radius:8px; font-size:12.5px; font-weight:600; margin-bottom:12px;"></div>
@@ -661,7 +749,7 @@ class Uwb_Admin {
                 $('#tab-' + tabId).addClass('active');
 
                 // Hide submit row on non-settings tabs
-                if (['updater_settings', 'object_cache', 'url_status'].indexOf(tabId) !== -1) {
+                if (['updater_settings', 'url_status'].indexOf(tabId) !== -1) {
                     $('#uwb-submit-row').hide();
                 } else {
                     $('#uwb-submit-row').show();
@@ -841,6 +929,20 @@ class Uwb_Admin {
             // Start polling if preloader running
             checkInterval = setInterval(updatePreloadStatus, 4000);
 
+            // Toggle Redis configuration fields
+            function toggleRedisFields() {
+                var connType = $('#uwb_redis_conn_type').val();
+                if (connType === 'socket') {
+                    $('#redis-tcp-settings').hide();
+                    $('#redis-socket-settings').show();
+                } else {
+                    $('#redis-tcp-settings').show();
+                    $('#redis-socket-settings').hide();
+                }
+            }
+            $('#uwb_redis_conn_type').on('change', toggleRedisFields);
+            toggleRedisFields();
+
             // Test Redis Connection
             $('#btn-test-redis').on('click', function(e) {
                 e.preventDefault();
@@ -850,12 +952,25 @@ class Uwb_Admin {
                 $btn.prop('disabled', true).text('Testing...');
                 $result.hide().removeClass('notice-success notice-error').css({'background': '', 'color': '', 'border': ''});
                 
+                var connType = $('#uwb_redis_conn_type').val();
+                var host = $('#uwb_redis_host').val();
+                var port = $('#uwb_redis_port').val();
+                var socket = $('#uwb_redis_socket').val();
+                var password = $('#uwb_redis_password').val();
+                var db = $('#uwb_redis_db').val();
+
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
                     data: {
                         action: 'uwb_test_redis_connection',
-                        nonce: nonce
+                        nonce: nonce,
+                        conn_type: connType,
+                        host: host,
+                        port: port,
+                        socket: socket,
+                        password: password,
+                        db: db
                     },
                     success: function(res) {
                         $btn.prop('disabled', false).text('Test Connection');

@@ -53,7 +53,14 @@ class Uwb_Cache {
             'cache_logged_in' => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
             'excluded_urls'   => array_values( $exclusions ),
             'ignored_query'   => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
-            'timezone'        => $timezone
+            'timezone'        => $timezone,
+            'redis_enabled'   => intval( get_option( 'uwb_redis_enabled', 0 ) ),
+            'redis_conn_type' => get_option( 'uwb_redis_conn_type', 'tcp' ),
+            'redis_host'      => get_option( 'uwb_redis_host', '127.0.0.1' ),
+            'redis_port'      => intval( get_option( 'uwb_redis_port', 6379 ) ),
+            'redis_socket'    => get_option( 'uwb_redis_socket', '/var/run/redis/redis.sock' ),
+            'redis_password'  => get_option( 'uwb_redis_password', '' ),
+            'redis_db'        => intval( get_option( 'uwb_redis_db', 0 ) )
         );
 
         @file_put_contents( $config_path, json_encode( $config, JSON_PRETTY_PRINT ) );
@@ -61,6 +68,13 @@ class Uwb_Cache {
         // Auto-sync advanced-cache.php drop-in file to wp-content/
         require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
         Uwb_Activator::copy_advanced_cache_dropin();
+
+        // Auto-sync object-cache.php drop-in based on Redis status
+        if ( ! empty( $config['redis_enabled'] ) ) {
+            Uwb_Activator::copy_object_cache_dropin();
+        } else {
+            Uwb_Activator::remove_object_cache_dropin();
+        }
     }
 
     /**

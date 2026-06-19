@@ -97,4 +97,31 @@ class Uwb_Activator {
 
         @file_put_contents( $config_file, $config_content );
     }
+
+    /**
+     * Copy object-cache.php to wp-content/object-cache.php
+     */
+    public static function copy_object_cache_dropin() {
+        $source = dirname( __DIR__ ) . '/object-cache.php';
+        $destination = WP_CONTENT_DIR . '/object-cache.php';
+
+        if ( file_exists( $source ) ) {
+            if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
+                @copy( $source, $destination );
+            }
+        }
+    }
+
+    /**
+     * Remove wp-content/object-cache.php
+     */
+    public static function remove_object_cache_dropin() {
+        $destination = WP_CONTENT_DIR . '/object-cache.php';
+        if ( file_exists( $destination ) ) {
+            $content = @file_get_contents( $destination );
+            if ( $content && strpos( $content, 'Ultimate WP Booster Redis Drop-in' ) !== false ) {
+                @unlink( $destination );
+            }
+        }
+    }
 }
