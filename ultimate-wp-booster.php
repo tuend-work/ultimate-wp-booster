@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.3.4
+ * Version:     1.3.5
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.3.4' );
+define( 'UWB_VERSION', '1.3.5' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -48,11 +48,6 @@ function run_ultimate_wp_booster() {
     // Initialize Preloader Engine
     $uwb_preloader = new Uwb_Preloader();
 
-    // Generate secret key if not exists
-    if ( ! get_option( 'uwb_preload_secret_key' ) ) {
-        update_option( 'uwb_preload_secret_key', wp_generate_password( 24, false, false ) );
-    }
-
     // Initialize Admin Interface
     if ( is_admin() ) {
         $uwb_admin = new Uwb_Admin();
@@ -62,6 +57,14 @@ function run_ultimate_wp_booster() {
     }
 }
 run_ultimate_wp_booster();
+
+// Generate secret key if not exists (runs after pluggable functions are loaded)
+add_action( 'init', 'uwb_init_preload_secret_key', 9 );
+function uwb_init_preload_secret_key() {
+    if ( ! get_option( 'uwb_preload_secret_key' ) ) {
+        update_option( 'uwb_preload_secret_key', wp_generate_password( 24, false, false ) );
+    }
+}
 
 // 5. Admin Bar Menu Customization
 add_action( 'admin_bar_menu', 'uwb_add_admin_bar_nodes', 999 );
