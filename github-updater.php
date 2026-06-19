@@ -45,8 +45,8 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                 return $this->github_response;
             }
 
-            // Fetch the raw main file from the main branch to check the version
-            $url = "https://raw.githubusercontent.com/{$this->username}/{$this->repository}/main/ultimate-wp-booster.php";
+            // Fetch the raw main file from the main branch to check the version (append timestamp to bypass CDN caching)
+            $url = "https://raw.githubusercontent.com/{$this->username}/{$this->repository}/main/ultimate-wp-booster.php?t=" . time();
             $args = array(
                 'timeout' => 10
             );
