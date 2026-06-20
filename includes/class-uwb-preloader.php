@@ -399,16 +399,12 @@ class Uwb_Preloader {
                 continue; // Skip excluded URLs
             }
 
-            // Check if it is a collected priority URL
-            $is_priority = in_array( $url, $collected_priority_urls, true );
-            
             // Check if it matches priority list from settings
-            if ( ! $is_priority ) {
-                foreach ( $priority_urls as $p_url ) {
-                    if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
-                        $is_priority = true;
-                        break;
-                    }
+            $is_priority = false;
+            foreach ( $priority_urls as $p_url ) {
+                if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
+                    $is_priority = true;
+                    break;
                 }
             }
 
