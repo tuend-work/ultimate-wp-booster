@@ -316,6 +316,12 @@ class Uwb_Preloader {
     public function start_preload() {
         global $wpdb;
 
+        // Prevent concurrent queue population
+        if ( get_transient( 'uwb_populating_queue' ) ) {
+            return new WP_Error( 'already_running', 'Queue is already being populated.' );
+        }
+        set_transient( 'uwb_populating_queue', 1, 60 ); // lock for 60 seconds
+
         // Retrieve settings
         $sitemap_url = get_option( 'uwb_preload_sitemap', '' );
         if ( empty( $sitemap_url ) ) {
@@ -330,16 +336,17 @@ class Uwb_Preloader {
         $priority_raw = get_option( 'uwb_priority_urls', '' );
         $priority_urls = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $priority_raw ) ) ) );
 
-        // 1. Empty the queue first
-        $wpdb->query( "TRUNCATE TABLE {$this->table_name}" );
-
-        // 2. Parse Sitemap
+        // 1. Parse Sitemap first to avoid truncating table if parse fails
         $parsed = $this->parse_sitemap( $sitemap_url );
-        $urls = array_merge( $parsed['priority'], $parsed['normal'] );
+        $urls = array_values( array_unique( array_merge( $parsed['priority'], $parsed['normal'] ) ) );
 
         if ( empty( $urls ) ) {
+            delete_transient( 'uwb_populating_queue' );
             return new WP_Error( 'no_urls', 'No URLs found in the sitemap: ' . esc_url( $sitemap_url ) );
         }
+
+        // 2. Empty the queue first
+        $wpdb->query( "TRUNCATE TABLE {$this->table_name}" );
 
         // 3. Filter and insert into the database queue in batches
         $now = current_time( 'mysql' );
@@ -398,6 +405,8 @@ class Uwb_Preloader {
         } else {
             wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
         }
+
+        delete_transient( 'uwb_populating_queue' );
 
         return count( $urls );
     }
