@@ -14,6 +14,17 @@ class Uwb_Activator {
         $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
         $charset_collate = $wpdb->get_charset_collate();
 
+        // Drop old non-unique index if it exists, to allow UNIQUE KEY index creation
+        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
+            $index_exists = $wpdb->get_results( "SHOW INDEX FROM $table_name WHERE Key_name = 'url'" );
+            if ( ! empty( $index_exists ) ) {
+                $is_unique = (int) $index_exists[0]->Non_unique === 0;
+                if ( ! $is_unique ) {
+                    $wpdb->query( "ALTER TABLE $table_name DROP INDEX url" );
+                }
+            }
+        }
+
         $sql = "CREATE TABLE $table_name (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             url varchar(2083) NOT NULL,
@@ -23,7 +34,7 @@ class Uwb_Activator {
             last_attempt datetime DEFAULT NULL,
             created_at datetime NOT NULL,
             PRIMARY KEY  (id),
-            KEY url (url(191)),
+            UNIQUE KEY url (url(191)),
             KEY status_priority (status, priority, id)
         ) $charset_collate;";
 

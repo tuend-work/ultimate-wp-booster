@@ -389,7 +389,7 @@ class Uwb_Preloader {
             foreach ( $chunks as $chunk ) {
                 $rows_count = count( $chunk ) / 4;
                 $chunk_placeholders = array_slice( $placeholders, 0, $rows_count );
-                $sql = "INSERT INTO {$this->table_name} (url, priority, status, created_at) VALUES " . implode( ',', $chunk_placeholders );
+                $sql = "INSERT IGNORE INTO {$this->table_name} (url, priority, status, created_at) VALUES " . implode( ',', $chunk_placeholders );
                 $wpdb->query( $wpdb->prepare( $sql, $chunk ) );
             }
         }
