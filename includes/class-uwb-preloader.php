@@ -588,36 +588,35 @@ class Uwb_Preloader {
             $params[] = '%' . $wpdb->esc_like( $search ) . '%';
         }
         if ( $is_woocommerce ) {
-            $wc_patterns = array( 'product', 'product-category', 'product-tag', 'shop' );
-            if ( class_exists( 'WooCommerce' ) ) {
-                $permalinks = function_exists( 'wc_get_permalink_structure' ) ? wc_get_permalink_structure() : array();
-                if ( ! empty( $permalinks['product_base'] ) ) {
-                    $wc_patterns[] = trim( $permalinks['product_base'], '/' );
-                }
-                if ( ! empty( $permalinks['category_base'] ) ) {
-                    $wc_patterns[] = trim( $permalinks['category_base'], '/' );
-                }
-                if ( ! empty( $permalinks['tag_base'] ) ) {
-                    $wc_patterns[] = trim( $permalinks['tag_base'], '/' );
-                }
-                if ( function_exists( 'wc_get_page_id' ) ) {
-                    $shop_id = wc_get_page_id( 'shop' );
-                    if ( $shop_id > 0 ) {
-                        $shop_path = trim( wp_parse_url( get_permalink( $shop_id ), PHP_URL_PATH ), '/' );
-                        if ( ! empty( $shop_path ) ) {
-                            $wc_patterns[] = $shop_path;
+            $wc_paths = array();
+            if ( class_exists( 'WooCommerce' ) && function_exists( 'wc_get_page_id' ) ) {
+                $wc_pages = array( 'shop', 'cart', 'checkout', 'myaccount', 'terms' );
+                foreach ( $wc_pages as $page ) {
+                    $page_id = wc_get_page_id( $page );
+                    if ( $page_id > 0 ) {
+                        $permalink = get_permalink( $page_id );
+                        if ( $permalink ) {
+                            $path = trim( wp_parse_url( $permalink, PHP_URL_PATH ), '/' );
+                            if ( ! empty( $path ) ) {
+                                $wc_paths[] = $path;
+                            }
                         }
                     }
                 }
             }
-            $wc_patterns = array_values( array_unique( array_filter( $wc_patterns ) ) );
+
+            // Fallback in case WooCommerce is inactive or page IDs are not set
+            if ( empty( $wc_paths ) ) {
+                $wc_paths = array( 'shop', 'cart', 'checkout', 'my-account' );
+            }
+            $wc_paths = array_values( array_unique( array_filter( $wc_paths ) ) );
 
             $wc_where = array();
-            foreach ( $wc_patterns as $pat ) {
+            foreach ( $wc_paths as $path ) {
                 $wc_where[] = 'url LIKE %s';
-                $params[] = '%/' . $wpdb->esc_like( $pat ) . '/%';
+                $params[] = '%/' . $wpdb->esc_like( $path ) . '/%';
                 $wc_where[] = 'url LIKE %s';
-                $params[] = '%/' . $wpdb->esc_like( $pat );
+                $params[] = '%/' . $wpdb->esc_like( $path );
             }
             if ( ! empty( $wc_where ) ) {
                 $where[] = '(' . implode( ' OR ', $wc_where ) . ')';
