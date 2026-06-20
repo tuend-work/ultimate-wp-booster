@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Plugin Name: Redis Object Cache Drop-In
  * Plugin URI: https://wordpress.org/plugins/redis-cache/
@@ -44,9 +44,14 @@ if ( defined( 'WP_CONTENT_DIR' ) ) {
                     define( 'WP_REDIS_DATABASE', intval( $uwb_config_data['redis_db'] ) );
                 }
                 
-                // Add default non-persistent groups to prevent stale plugin/theme lists
+                // Prefix keys to avoid clashes with other WordPress sites
+                if ( ! defined( 'WP_REDIS_PREFIX' ) ) {
+                    define( 'WP_REDIS_PREFIX', 'uwb_oc:' );
+                }
+
+                // Add default non-persistent groups to prevent stale option, plugin/theme lists
                 if ( ! defined( 'WP_REDIS_IGNORED_GROUPS' ) ) {
-                    define( 'WP_REDIS_IGNORED_GROUPS', array( 'counts', 'plugins', 'themes' ) );
+                    define( 'WP_REDIS_IGNORED_GROUPS', array( 'counts', 'plugins', 'themes', 'options', 'site-options' ) );
                 }
             }
         } else {
