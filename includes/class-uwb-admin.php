@@ -366,6 +366,19 @@ class Uwb_Admin {
                 line-height: 1.6;
                 border-left: 4px solid var(--uwb-primary);
             }
+
+            #uwb-filter-wc {
+                transition: all 0.2s ease;
+            }
+            #uwb-filter-wc:hover {
+                background: #f1f5f9 !important;
+                border-color: #cbd5e1 !important;
+            }
+            #uwb-filter-wc.active {
+                background: #e0e7ff !important;
+                color: var(--uwb-primary-dark) !important;
+                border-color: var(--uwb-primary) !important;
+            }
         </style>
         <?php
     }
@@ -829,6 +842,10 @@ class Uwb_Admin {
                                     <button type="button" class="uwb-filter-btn" data-status="completed" style="border:1px solid #6ee7b7; background:#d1fae5; color:#065f46; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Completed</button>
                                     <button type="button" class="uwb-filter-btn" data-status="failed" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Failed</button>
                                 </div>
+                                <button type="button" id="uwb-filter-wc" style="border:1px solid #cbd5e1; background:#fff; color:var(--uwb-text); border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                                    WooCommerce
+                                </button>
                                 <button type="button" id="uwb-url-refresh" style="margin-left:auto; border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">⟳ Refresh</button>
                             </div>
 
@@ -900,6 +917,7 @@ class Uwb_Admin {
             var uwbUrlPage = 1;
             var uwbUrlStatus = '';
             var uwbUrlSearch = '';
+            var uwbUrlWc = 0;
             var uwbUrlOrderby = 'priority';
             var uwbUrlOrder = 'ASC';
 
@@ -1206,7 +1224,8 @@ class Uwb_Admin {
                         search:  uwbUrlSearch,
                         orderby: uwbUrlOrderby,
                         order:   uwbUrlOrder,
-                        page:    uwbUrlPage
+                        page:    uwbUrlPage,
+                        is_woocommerce: uwbUrlWc
                     },
                     success: function(res) {
                         if (!res.success) { showToast('Failed to load table.', true); return; }
@@ -1325,6 +1344,15 @@ class Uwb_Admin {
                 $('.uwb-filter-btn').css('outline', '').removeClass('active');
                 $(this).css('outline', '2px solid var(--uwb-primary)').addClass('active');
                 uwbUrlStatus = $(this).data('status');
+                uwbUrlPage = 1;
+                loadUrlTable();
+            });
+
+            // Filter WooCommerce
+            $('#uwb-filter-wc').on('click', function(e) {
+                e.preventDefault();
+                $(this).toggleClass('active');
+                uwbUrlWc = $(this).hasClass('active') ? 1 : 0;
                 uwbUrlPage = 1;
                 loadUrlTable();
             });

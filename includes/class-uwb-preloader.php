@@ -310,6 +310,43 @@ class Uwb_Preloader {
     }
 
     /**
+     * Get home URL and all public taxonomy term URLs
+     * @return array List of URLs
+     */
+    private function collect_public_taxonomy_urls() {
+        $urls = array();
+
+        // 1. Homepage
+        $home_url = home_url( '/' );
+        $urls[] = $home_url;
+        $urls[] = rtrim( $home_url, '/' );
+
+        // 2. Public Taxonomy Terms
+        if ( function_exists( 'get_taxonomies' ) && function_exists( 'get_terms' ) ) {
+            $taxonomies = get_taxonomies( array( 'public' => true ), 'names' );
+            if ( ! empty( $taxonomies ) && is_array( $taxonomies ) ) {
+                foreach ( $taxonomies as $taxonomy ) {
+                    $terms = get_terms( array(
+                        'taxonomy'   => $taxonomy,
+                        'hide_empty' => false,
+                    ) );
+
+                    if ( ! is_wp_error( $terms ) && ! empty( $terms ) && is_array( $terms ) ) {
+                        foreach ( $terms as $term ) {
+                            $link = get_term_link( $term );
+                            if ( ! is_wp_error( $link ) && filter_var( $link, FILTER_VALIDATE_URL ) ) {
+                                $urls[] = $link;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return array_values( array_unique( $urls ) );
+    }
+
+    /**
      * Start the preloading process by parsing sitemap and populating queue
      * @return int|WP_Error Number of URLs added, or WP_Error on failure
      */
@@ -336,19 +373,22 @@ class Uwb_Preloader {
         $priority_raw = get_option( 'uwb_priority_urls', '' );
         $priority_urls = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $priority_raw ) ) ) );
 
-        // 1. Parse Sitemap first to avoid truncating table if parse fails
+        // 1. Collect priority URLs (Homepage + Public Taxonomy Terms)
+        $collected_priority_urls = $this->collect_public_taxonomy_urls();
+
+        // 2. Parse Sitemap
         $parsed = $this->parse_sitemap( $sitemap_url );
-        $urls = array_values( array_unique( array_merge( $parsed['priority'], $parsed['normal'] ) ) );
+        $urls = array_values( array_unique( array_merge( $collected_priority_urls, $parsed['priority'], $parsed['normal'] ) ) );
 
         if ( empty( $urls ) ) {
             delete_transient( 'uwb_populating_queue' );
-            return new WP_Error( 'no_urls', 'No URLs found in the sitemap: ' . esc_url( $sitemap_url ) );
+            return new WP_Error( 'no_urls', 'No URLs found in sitemap or taxonomy terms.' );
         }
 
-        // 2. Empty the queue first
+        // 3. Empty the queue first
         $wpdb->query( "TRUNCATE TABLE {$this->table_name}" );
 
-        // 3. Filter and insert into the database queue in batches
+        // 4. Filter and insert into the database queue in batches
         $now = current_time( 'mysql' );
         $values = array();
         $placeholders = array();
@@ -359,12 +399,16 @@ class Uwb_Preloader {
                 continue; // Skip excluded URLs
             }
 
-            // Check if it matches priority list
-            $is_priority = false;
-            foreach ( $priority_urls as $p_url ) {
-                if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
-                    $is_priority = true;
-                    break;
+            // Check if it is a collected priority URL
+            $is_priority = in_array( $url, $collected_priority_urls, true );
+            
+            // Check if it matches priority list from settings
+            if ( ! $is_priority ) {
+                foreach ( $priority_urls as $p_url ) {
+                    if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
+                        $is_priority = true;
+                        break;
+                    }
                 }
             }
 
@@ -534,6 +578,8 @@ class Uwb_Preloader {
         $per_page = 20;
         $offset   = ( $page - 1 ) * $per_page;
 
+        $is_woocommerce = isset( $_POST['is_woocommerce'] ) ? intval( $_POST['is_woocommerce'] ) : 0;
+
         $where = array( '1=1' );
         $params = array();
 
@@ -544,6 +590,42 @@ class Uwb_Preloader {
         if ( $search ) {
             $where[]  = 'url LIKE %s';
             $params[] = '%' . $wpdb->esc_like( $search ) . '%';
+        }
+        if ( $is_woocommerce ) {
+            $wc_patterns = array( 'product', 'product-category', 'product-tag', 'shop' );
+            if ( class_exists( 'WooCommerce' ) ) {
+                $permalinks = function_exists( 'wc_get_permalink_structure' ) ? wc_get_permalink_structure() : array();
+                if ( ! empty( $permalinks['product_base'] ) ) {
+                    $wc_patterns[] = trim( $permalinks['product_base'], '/' );
+                }
+                if ( ! empty( $permalinks['category_base'] ) ) {
+                    $wc_patterns[] = trim( $permalinks['category_base'], '/' );
+                }
+                if ( ! empty( $permalinks['tag_base'] ) ) {
+                    $wc_patterns[] = trim( $permalinks['tag_base'], '/' );
+                }
+                if ( function_exists( 'wc_get_page_id' ) ) {
+                    $shop_id = wc_get_page_id( 'shop' );
+                    if ( $shop_id > 0 ) {
+                        $shop_path = trim( wp_parse_url( get_permalink( $shop_id ), PHP_URL_PATH ), '/' );
+                        if ( ! empty( $shop_path ) ) {
+                            $wc_patterns[] = $shop_path;
+                        }
+                    }
+                }
+            }
+            $wc_patterns = array_values( array_unique( array_filter( $wc_patterns ) ) );
+
+            $wc_where = array();
+            foreach ( $wc_patterns as $pat ) {
+                $wc_where[] = 'url LIKE %s';
+                $params[] = '%/' . $wpdb->esc_like( $pat ) . '/%';
+                $wc_where[] = 'url LIKE %s';
+                $params[] = '%/' . $wpdb->esc_like( $pat );
+            }
+            if ( ! empty( $wc_where ) ) {
+                $where[] = '(' . implode( ' OR ', $wc_where ) . ')';
+            }
         }
 
         $where_sql = implode( ' AND ', $where );
