@@ -1,10 +1,15 @@
 <?php
+// Prevent loading from the plugins directory
+if ( strpos( __FILE__, '/plugins/' ) !== false || strpos( __FILE__, '\\plugins\\' ) !== false ) {
+    return;
+}
+
 /**
- * Plugin Name: Redis Object Cache Drop-In
+ * Drop-In Name: Redis Object Cache Drop-In
  * Plugin URI: https://wordpress.org/plugins/redis-cache/
  * Description: A persistent object cache backend powered by Redis. Supports Predis, PhpRedis, Relay, replication, sentinels, clustering and WP-CLI.
  * Version: 2.8.0
- * Author: Till KrÃ¼ss
+ * Author: Till Krüss
  * Author URI: https://objectcache.pro
  * License: GPLv3
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html

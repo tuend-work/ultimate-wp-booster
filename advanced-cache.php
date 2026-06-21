@@ -1,4 +1,9 @@
 <?php
+// Prevent loading from the plugins directory
+if ( strpos( __FILE__, '/plugins/' ) !== false || strpos( __FILE__, '\\plugins\\' ) !== false ) {
+    return;
+}
+
 /**
  * Early Cache Drop-in for Ultimate WordPress Booster
  * Bypasses PHP/Database execution if a cached static file is available.
