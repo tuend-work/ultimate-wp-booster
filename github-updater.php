@@ -166,7 +166,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             // Ensure $wp_filesystem is initialized
             if ( ! $wp_filesystem ) {
                 require_once ABSPATH . 'wp-admin/includes/file.php';
-                WP_Filesystem();
+                WP_Filesystem( false, false, true );
             }
 
             $plugin_folder = dirname( $this->basename ); // 'ultimate-wp-booster'
@@ -224,6 +224,12 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/misc.php';
             require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+
+            // Initialize WordPress Filesystem API with relaxed file ownership check
+            global $wp_filesystem;
+            if ( ! $wp_filesystem ) {
+                WP_Filesystem( false, false, true );
+            }
 
             // Download the latest zip from GitHub main branch
             $zip_url   = "https://github.com/{$this->username}/{$this->repository}/archive/refs/heads/main.zip";
