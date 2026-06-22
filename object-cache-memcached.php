@@ -1,5 +1,38 @@
 <?php
 // Ultimate WP Booster Object Cache Drop-in
+
+// Stub class to prevent fatal error if PHP Memcached extension is not installed
+if ( ! class_exists( 'Memcached' ) ) {
+    class Memcached {
+        public function __construct( $persistent_id = null ) {}
+        public function __call( $name, $arguments ) { return false; }
+        public static function __callStatic( $name, $arguments ) { return false; }
+        const RES_SUCCESS = 0;
+        const RES_FAILURE = 1;
+        const RES_NOTFOUND = 16;
+        const RES_EXISTS = 12;
+        const OPT_SERIALIZER = 0;
+        const OPT_COMPRESSION = 1;
+        const OPT_PREFIX_KEY = 2;
+        const OPT_HASH = 3;
+        const OPT_DISTRIBUTION = 4;
+        const OPT_LIBKETAMA_COMPATIBLE = 5;
+        const OPT_BUFFER_WRITES = 6;
+        const OPT_BINARY_PROTOCOL = 7;
+        const OPT_NO_BLOCK = 8;
+        const OPT_TCP_NODELAY = 9;
+        const OPT_SOCKET_SEND_SIZE = 10;
+        const OPT_SOCKET_RECV_SIZE = 11;
+        const OPT_CONNECT_TIMEOUT = 12;
+        const OPT_RETRY_TIMEOUT = 13;
+        const OPT_SEND_TIMEOUT = 14;
+        const OPT_RECV_TIMEOUT = 15;
+        const OPT_POLL_TIMEOUT = 16;
+        const OPT_CACHE_LOOKUPS = 17;
+        const OPT_SERVER_FAILURE_LIMIT = 18;
+    }
+}
+
 /**
  * Adds a value to cache.
  *

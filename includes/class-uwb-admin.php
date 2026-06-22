@@ -722,7 +722,7 @@ class Uwb_Admin {
                                                         $curr_port = 11211;
                                                     }
                                                     $conn_str = esc_html( $curr_host . ':' . $curr_port );
-                                                    $ext_available = class_exists('Memcached');
+                                                    $ext_available = extension_loaded('memcached');
                                                     $ext_label = 'Memcached';
                                                 } else {
                                                     if ( intval( $curr_port ) === 11211 ) {
@@ -733,7 +733,7 @@ class Uwb_Admin {
                                                     } else {
                                                         $conn_str = esc_html( $curr_host . ':' . $curr_port );
                                                     }
-                                                    $ext_available = class_exists('Redis');
+                                                    $ext_available = extension_loaded('redis') || class_exists('Redis');
                                                     $ext_label = 'Redis';
                                                 }
                                                 ?>
@@ -1654,7 +1654,7 @@ class Uwb_Admin {
 
         if ( $type === 2 ) {
             // Memcached Test
-            if ( ! class_exists( 'Memcached' ) ) {
+            if ( ! extension_loaded( 'memcached' ) ) {
                 $fp = @fsockopen( $host, $port, $errno, $errstr, 1.0 );
                 if ( $fp ) {
                     fclose( $fp );
