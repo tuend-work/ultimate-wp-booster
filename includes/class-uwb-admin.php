@@ -87,9 +87,7 @@ class Uwb_Admin {
 
         require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
         Uwb_Activator::copy_advanced_cache_dropin();
-        if ( get_option( 'uwb_redis_enabled' ) ) {
-            Uwb_Activator::copy_object_cache_dropin();
-        }
+        Uwb_Activator::copy_object_cache_dropin();
         // Sync config JSON file to keep core options (like timezone) up to date
         Uwb_Cache::write_config_file();
     }
@@ -531,24 +529,25 @@ class Uwb_Admin {
                                 </div>
                             </div>
 
-                            <!-- Group 4: Redis Object Cache Settings -->
+                            <!-- Group 4: Object Cache Settings -->
                             <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                 <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    Redis Object Cache Settings
+                                    Object Cache
                                 </h3>
 
                                 <div class="uwb-form-group">
-                                    <label for="uwb_redis_enabled">Enable Redis Object Cache</label>
+                                    <label for="uwb_redis_enabled">Enable Object Cache?</label>
                                     <select name="uwb_redis_enabled" id="uwb_redis_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                        <option value="0" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 0 ); ?>>Disabled</option>
-                                        <option value="1" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 1 ); ?>>Enabled</option>
+                                        <option value="0" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 0 ); ?>>None</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 1 ); ?>>Redis / Valkey</option>
+                                        <option value="2" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 2 ); ?>>Memcached</option>
                                     </select>
-                                    <p class="description" style="margin-bottom:0;">When enabled, WordPress database query results will be stored persistently in Redis. Our custom drop-in file will be automatically copied to <code>wp-content/object-cache.php</code>.</p>
+                                    <p class="description" style="margin-bottom:0;">When enabled, database query results will be stored persistently in the selected cache backend. Our custom drop-in file will be automatically copied to <code>wp-content/object-cache.php</code>.</p>
                                 </div>
 
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                                    <div class="uwb-form-group">
+                                    <div id="uwb-oc-conn-type-group" class="uwb-form-group">
                                         <label for="uwb_redis_conn_type">Connection Type</label>
                                         <select name="uwb_redis_conn_type" id="uwb_redis_conn_type" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                             <option value="tcp" <?php selected( get_option( 'uwb_redis_conn_type', 'tcp' ), 'tcp' ); ?>>TCP/IP (Host/Port)</option>
@@ -556,7 +555,7 @@ class Uwb_Admin {
                                         </select>
                                     </div>
 
-                                    <div class="uwb-form-group">
+                                    <div id="uwb-oc-db-group" class="uwb-form-group">
                                         <label for="uwb_redis_db">Database Index</label>
                                         <input type="number" min="0" max="15" name="uwb_redis_db" id="uwb_redis_db" value="<?php echo esc_attr( get_option( 'uwb_redis_db', 0 ) ); ?>" />
                                     </div>
@@ -583,7 +582,7 @@ class Uwb_Admin {
                                 </div>
 
                                 <!-- Password Setting -->
-                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div id="uwb-oc-password-group" class="uwb-form-group" style="margin-bottom:0;">
                                     <label for="uwb_redis_password">Redis Password (Optional)</label>
                                     <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" />
                                 </div>
@@ -686,8 +685,13 @@ class Uwb_Admin {
                                                 <?php
                                                 $oc_active = wp_using_ext_object_cache();
                                                 $oc_dropin = file_exists( WP_CONTENT_DIR . '/object-cache.php' );
+                                                $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
                                                 if ( $oc_active ) {
-                                                    echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active (Redis)</div>';
+                                                    if ( $oc_type === 2 ) {
+                                                        echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active (Memcached)</div>';
+                                                    } else {
+                                                        echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active (Redis)</div>';
+                                                    }
                                                 } else {
                                                     echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span> Inactive</div>';
                                                 }
@@ -712,19 +716,34 @@ class Uwb_Admin {
                                                 $curr_port = get_option('uwb_redis_port', 6379);
                                                 $curr_socket = get_option('uwb_redis_socket', '');
                                                 $curr_db = get_option('uwb_redis_db', 0);
-                                                if ( $curr_conn_type === 'socket' ) {
-                                                    $conn_str = esc_html( $curr_socket );
-                                                } else {
+                                                
+                                                if ( $oc_type === 2 ) {
+                                                    if ( intval( $curr_port ) === 6379 ) {
+                                                        $curr_port = 11211;
+                                                    }
                                                     $conn_str = esc_html( $curr_host . ':' . $curr_port );
+                                                    $ext_available = class_exists('Memcached');
+                                                    $ext_label = 'Memcached';
+                                                } else {
+                                                    if ( intval( $curr_port ) === 11211 ) {
+                                                        $curr_port = 6379;
+                                                    }
+                                                    if ( $curr_conn_type === 'socket' ) {
+                                                        $conn_str = esc_html( $curr_socket );
+                                                    } else {
+                                                        $conn_str = esc_html( $curr_host . ':' . $curr_port );
+                                                    }
+                                                    $ext_available = class_exists('Redis');
+                                                    $ext_label = 'Redis';
                                                 }
                                                 ?>
                                                 <div style="display:flex; justify-content:space-between;">
                                                     <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
-                                                    <code><?php echo $conn_str; ?> (DB <?php echo intval( $curr_db ); ?>)</code>
+                                                    <code><?php echo $conn_str; ?><?php if ($oc_type !== 2) { echo ' (DB ' . intval( $curr_db ) . ')'; } ?></code>
                                                 </div>
                                                 <div style="display:flex; justify-content:space-between;">
                                                     <span style="font-weight:600; color:var(--uwb-text);">PHP Extension:</span>
-                                                    <span><?php echo class_exists('Redis') ? 'Available ✓' : 'Not Installed ✗'; ?></span>
+                                                    <span><?php echo $ext_available ? $ext_label . ' Available ✓' : $ext_label . ' Not Installed ✗'; ?></span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1119,6 +1138,43 @@ class Uwb_Admin {
             $('#uwb_redis_conn_type').on('change', toggleRedisFields);
             toggleRedisFields();
 
+            // Toggle Object Cache fields depending on type (None, Redis, Memcached)
+            function toggleObjectCacheFields() {
+                var ocType = $('#uwb_redis_enabled').val();
+                if (ocType === '0') {
+                    $('#uwb-oc-conn-type-group').hide();
+                    $('#redis-tcp-settings').hide();
+                    $('#redis-socket-settings').hide();
+                    $('#uwb-oc-db-group').hide();
+                    $('#uwb-oc-password-group').hide();
+                } else if (ocType === '2') {
+                    // Memcached: show Host/Port, hide others
+                    $('#uwb-oc-conn-type-group').hide();
+                    if ($('#uwb_redis_port').val() === '6379') {
+                        $('#uwb_redis_port').val('11211');
+                    }
+                    $('label[for="uwb_redis_host"]').text('Memcached Host');
+                    $('label[for="uwb_redis_port"]').text('Memcached Port');
+                    $('#redis-tcp-settings').show();
+                    $('#redis-socket-settings').hide();
+                    $('#uwb-oc-db-group').hide();
+                    $('#uwb-oc-password-group').hide();
+                } else {
+                    // Redis
+                    $('#uwb-oc-conn-type-group').show();
+                    $('#uwb-oc-db-group').show();
+                    $('#uwb-oc-password-group').show();
+                    $('label[for="uwb_redis_host"]').text('Redis Host');
+                    $('label[for="uwb_redis_port"]').text('Redis Port');
+                    if ($('#uwb_redis_port').val() === '11211') {
+                        $('#uwb_redis_port').val('6379');
+                    }
+                    toggleRedisFields();
+                }
+            }
+            $('#uwb_redis_enabled').on('change', toggleObjectCacheFields);
+            toggleObjectCacheFields();
+
             // Toggle Custom Cron instructions
             function toggleCronFields() {
                 var preloadEnabled = $('#uwb_preload_enabled').val();
@@ -1222,6 +1278,7 @@ class Uwb_Admin {
                 $btn.prop('disabled', true).text('Testing...');
                 $result.hide().removeClass('notice-success notice-error').css({'background': '', 'color': '', 'border': ''});
                 
+                var ocType = $('#uwb_redis_enabled').val();
                 var connType = $('#uwb_redis_conn_type').val();
                 var host = $('#uwb_redis_host').val();
                 var port = $('#uwb_redis_port').val();
@@ -1235,6 +1292,7 @@ class Uwb_Admin {
                     data: {
                         action: 'uwb_test_redis_connection',
                         nonce: nonce,
+                        type: ocType,
                         conn_type: connType,
                         host: host,
                         port: port,
@@ -1587,21 +1645,61 @@ class Uwb_Admin {
             wp_send_json_error( array( 'message' => 'Permission denied.' ) );
         }
 
-        $redis_host = defined( 'WP_REDIS_HOST' ) ? WP_REDIS_HOST : '127.0.0.1';
-        $redis_port = defined( 'WP_REDIS_PORT' ) ? WP_REDIS_PORT : 6379;
-        $redis_password = defined( 'WP_REDIS_PASSWORD' ) ? WP_REDIS_PASSWORD : '';
+        $type = isset( $_POST['type'] ) ? intval( $_POST['type'] ) : 1;
+        $host = isset( $_POST['host'] ) ? sanitize_text_field( $_POST['host'] ) : '127.0.0.1';
+        $port = isset( $_POST['port'] ) ? intval( $_POST['port'] ) : ( $type === 2 ? 11211 : 6379 );
+        $socket = isset( $_POST['socket'] ) ? sanitize_text_field( $_POST['socket'] ) : '';
+        $conn_type = isset( $_POST['conn_type'] ) ? sanitize_text_field( $_POST['conn_type'] ) : 'tcp';
+        $password = isset( $_POST['password'] ) ? sanitize_text_field( $_POST['password'] ) : '';
 
+        if ( $type === 2 ) {
+            // Memcached Test
+            if ( ! class_exists( 'Memcached' ) ) {
+                $fp = @fsockopen( $host, $port, $errno, $errstr, 1.0 );
+                if ( $fp ) {
+                    fclose( $fp );
+                    wp_send_json_success( array(
+                        'message' => sprintf( 'Memcached extension is not installed, but port %d is open on %s.', $port, $host )
+                    ) );
+                } else {
+                    wp_send_json_error( array(
+                        'message' => 'Memcached PHP extension is not installed, and could not connect to port ' . $port . ' on ' . $host
+                    ) );
+                }
+                exit;
+            }
+
+            $m = new Memcached();
+            $m->addServer( $host, $port );
+            $statuses = $m->getVersion();
+            
+            if ( is_array( $statuses ) && ! empty( $statuses ) ) {
+                $versions = array_values( $statuses );
+                $version = isset( $versions[0] ) ? $versions[0] : 'Unknown';
+                if ( $version !== '255.255.255' && $version !== '0.0.0' && ! empty( $version ) ) {
+                    wp_send_json_success( array(
+                        'message' => sprintf( 'Memcached connection successful! Host: %s:%d | Version: %s', $host, $port, $version )
+                    ) );
+                }
+            }
+            
+            wp_send_json_error( array(
+                'message' => sprintf( 'Could not connect to Memcached server at %s:%d.', $host, $port )
+            ) );
+            exit;
+        }
+
+        // Redis Test
         if ( ! class_exists( 'Redis' ) ) {
-            // Check if socket is open as a fallback indicator
-            $fp = @fsockopen( $redis_host, $redis_port, $errno, $errstr, 1.0 );
+            $fp = @fsockopen( $host, $port, $errno, $errstr, 1.0 );
             if ( $fp ) {
                 fclose( $fp );
                 wp_send_json_success( array(
-                    'message' => sprintf( 'Redis extension is not installed, but port %d is open on %s.', $redis_port, $redis_host )
+                    'message' => sprintf( 'Redis extension is not installed, but port %d is open on %s.', $port, $host )
                 ) );
             } else {
                 wp_send_json_error( array(
-                    'message' => 'Redis PHP extension is not installed, and could not connect to port ' . $redis_port . ' on ' . $redis_host
+                    'message' => 'Redis PHP extension is not installed, and could not connect to port ' . $port . ' on ' . $host
                 ) );
             }
             exit;
@@ -1609,18 +1707,23 @@ class Uwb_Admin {
 
         $redis = new Redis();
         try {
-            $connected = @$redis->connect( $redis_host, $redis_port, 1.0 );
+            if ( $conn_type === 'socket' && ! empty( $socket ) ) {
+                $connected = @$redis->connect( $socket );
+            } else {
+                $connected = @$redis->connect( $host, $port, 1.0 );
+            }
+            
             if ( ! $connected ) {
                 wp_send_json_error( array(
-                    'message' => sprintf( 'Could not connect to Redis server at %s:%d.', $redis_host, $redis_port )
+                    'message' => sprintf( 'Could not connect to Redis server at %s:%d.', $host, $port )
                 ) );
             }
 
-            if ( ! empty( $redis_password ) ) {
-                $authenticated = @$redis->auth( $redis_password );
+            if ( ! empty( $password ) ) {
+                $authenticated = @$redis->auth( $password );
                 if ( ! $authenticated ) {
                     wp_send_json_error( array(
-                        'message' => 'Authentication failed. Please verify WP_REDIS_PASSWORD.'
+                        'message' => 'Authentication failed. Please verify password.'
                     ) );
                 }
             }
@@ -1629,7 +1732,7 @@ class Uwb_Admin {
             $ping_str = is_bool( $ping ) ? ( $ping ? 'PONG' : 'FAIL' ) : (string) $ping;
 
             wp_send_json_success( array(
-                'message' => sprintf( 'Connection successful! Host: %s:%d | Ping: %s', $redis_host, $redis_port, $ping_str )
+                'message' => sprintf( 'Connection successful! Host: %s:%d | Ping: %s', $host, $port, $ping_str )
             ) );
 
         } catch ( Exception $e ) {
@@ -1649,28 +1752,45 @@ class Uwb_Admin {
         $flushed = wp_cache_flush();
 
         if ( $flushed ) {
-            wp_send_json_success( array( 'message' => 'Redis Object Cache flushed successfully!' ) );
+            wp_send_json_success( array( 'message' => 'Object Cache flushed successfully!' ) );
         } else {
-            // Try direct flushing via Redis extension
-            if ( class_exists( 'Redis' ) ) {
-                $redis_host = defined( 'WP_REDIS_HOST' ) ? WP_REDIS_HOST : '127.0.0.1';
-                $redis_port = defined( 'WP_REDIS_PORT' ) ? WP_REDIS_PORT : 6379;
-                $redis_password = defined( 'WP_REDIS_PASSWORD' ) ? WP_REDIS_PASSWORD : '';
-
-                $redis = new Redis();
-                try {
-                    if ( @$redis->connect( $redis_host, $redis_port, 1.0 ) ) {
-                        if ( ! empty( $redis_password ) ) {
-                            @$redis->auth( $redis_password );
-                        }
-                        $redis->flushDB();
-                        wp_send_json_success( array( 'message' => 'Redis DB flushed successfully via direct connection!' ) );
+            $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
+            if ( $oc_type === 2 ) {
+                if ( class_exists( 'Memcached' ) ) {
+                    $mc_host = get_option( 'uwb_redis_host', '127.0.0.1' );
+                    $mc_port = intval( get_option( 'uwb_redis_port', 11211 ) );
+                    if ( $mc_port === 6379 ) {
+                        $mc_port = 11211;
                     }
-                } catch ( Exception $e ) {
-                    // fall through
+                    $m = new Memcached();
+                    $m->addServer( $mc_host, $mc_port );
+                    if ( $m->flush() ) {
+                        wp_send_json_success( array( 'message' => 'Memcached flushed successfully via direct connection!' ) );
+                        exit;
+                    }
+                }
+            } else {
+                if ( class_exists( 'Redis' ) ) {
+                    $redis_host = get_option( 'uwb_redis_host', '127.0.0.1' );
+                    $redis_port = get_option( 'uwb_redis_port', 6379 );
+                    $redis_password = get_option( 'uwb_redis_password', '' );
+
+                    $redis = new Redis();
+                    try {
+                        if ( @$redis->connect( $redis_host, $redis_port, 1.0 ) ) {
+                            if ( ! empty( $redis_password ) ) {
+                                @$redis->auth( $redis_password );
+                            }
+                            $redis->flushDB();
+                            wp_send_json_success( array( 'message' => 'Redis DB flushed successfully via direct connection!' ) );
+                            exit;
+                        }
+                    } catch ( Exception $e ) {
+                        // fall through
+                    }
                 }
             }
-            wp_send_json_error( array( 'message' => 'Failed to flush object cache. Make sure Redis Object Cache is active and configured.' ) );
+            wp_send_json_error( array( 'message' => 'Failed to flush object cache. Make sure Object Cache is active and configured.' ) );
         }
         exit;
     }

@@ -1,4 +1,5 @@
 <?php
+// Ultimate WP Booster Object Cache Drop-in
 // Prevent loading from the plugins directory
 if ( strpos( __FILE__, '/plugins/' ) !== false || strpos( __FILE__, '\\plugins\\' ) !== false ) {
     return;

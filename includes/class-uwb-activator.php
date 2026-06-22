@@ -130,16 +130,28 @@ class Uwb_Activator {
     }
 
     /**
-     * Copy object-cache.php to wp-content/object-cache.php
+     * Copy the appropriate object-cache drop-in to wp-content/object-cache.php
      */
     public static function copy_object_cache_dropin() {
-        $source = dirname( __DIR__ ) . '/object-cache.php';
+        $type = intval( get_option( 'uwb_redis_enabled', 0 ) );
         $destination = WP_CONTENT_DIR . '/object-cache.php';
 
-        if ( file_exists( $source ) ) {
-            if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
-                @copy( $source, $destination );
+        if ( $type === 1 ) {
+            $source = dirname( __DIR__ ) . '/object-cache.php';
+            if ( file_exists( $source ) ) {
+                if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
+                    @copy( $source, $destination );
+                }
             }
+        } elseif ( $type === 2 ) {
+            $source = dirname( __DIR__ ) . '/object-cache-memcached.php';
+            if ( file_exists( $source ) ) {
+                if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
+                    @copy( $source, $destination );
+                }
+            }
+        } else {
+            self::remove_object_cache_dropin();
         }
     }
 
@@ -150,7 +162,7 @@ class Uwb_Activator {
         $destination = WP_CONTENT_DIR . '/object-cache.php';
         if ( file_exists( $destination ) ) {
             $content = @file_get_contents( $destination );
-            if ( $content && strpos( $content, 'Ultimate WP Booster Redis Drop-in' ) !== false ) {
+            if ( $content && strpos( $content, 'Ultimate WP Booster Object Cache Drop-in' ) !== false ) {
                 @unlink( $destination );
             }
         }

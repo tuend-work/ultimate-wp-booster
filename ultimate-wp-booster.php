@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.4.26
+ * Version:     1.4.27
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.4.26' );
+define( 'UWB_VERSION', '1.4.27' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -212,34 +212,48 @@ function uwb_handle_admin_bar_flush_object_cache() {
 
     check_admin_referer( 'uwb_flush_object_cache_action' );
 
-    // Try direct flush using Redis client if class exists
-    if ( class_exists( 'Redis' ) ) {
-        $conn_type = get_option( 'uwb_redis_conn_type', 'tcp' );
-        $redis_host = get_option( 'uwb_redis_host', '127.0.0.1' );
-        $redis_port = get_option( 'uwb_redis_port', 6379 );
-        $redis_socket = get_option( 'uwb_redis_socket', '' );
-        $redis_password = get_option( 'uwb_redis_password', '' );
-        $redis_db = get_option( 'uwb_redis_db', 0 );
-
-        $redis = new Redis();
-        try {
-            if ( $conn_type === 'socket' && ! empty( $redis_socket ) ) {
-                $connected = @$redis->connect( $redis_socket );
-            } else {
-                $connected = @$redis->connect( $redis_host, $redis_port, 1.0 );
+    // Try direct flush using client if class exists
+    $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
+    if ( $oc_type === 2 ) {
+        if ( class_exists( 'Memcached' ) ) {
+            $mc_host = get_option( 'uwb_redis_host', '127.0.0.1' );
+            $mc_port = intval( get_option( 'uwb_redis_port', 11211 ) );
+            if ( $mc_port === 6379 ) {
+                $mc_port = 11211;
             }
+            $m = new Memcached();
+            $m->addServer( $mc_host, $mc_port );
+            @$m->flush();
+        }
+    } else {
+        if ( class_exists( 'Redis' ) ) {
+            $conn_type = get_option( 'uwb_redis_conn_type', 'tcp' );
+            $redis_host = get_option( 'uwb_redis_host', '127.0.0.1' );
+            $redis_port = get_option( 'uwb_redis_port', 6379 );
+            $redis_socket = get_option( 'uwb_redis_socket', '' );
+            $redis_password = get_option( 'uwb_redis_password', '' );
+            $redis_db = get_option( 'uwb_redis_db', 0 );
 
-            if ( $connected ) {
-                if ( ! empty( $redis_password ) ) {
-                    @$redis->auth( $redis_password );
+            $redis = new Redis();
+            try {
+                if ( $conn_type === 'socket' && ! empty( $redis_socket ) ) {
+                    $connected = @$redis->connect( $redis_socket );
+                } else {
+                    $connected = @$redis->connect( $redis_host, $redis_port, 1.0 );
                 }
-                if ( $redis_db > 0 ) {
-                    @$redis->select( $redis_db );
+
+                if ( $connected ) {
+                    if ( ! empty( $redis_password ) ) {
+                        @$redis->auth( $redis_password );
+                    }
+                    if ( $redis_db > 0 ) {
+                        @$redis->select( $redis_db );
+                    }
+                    $redis->flushDB();
                 }
-                $redis->flushDB();
+            } catch ( Exception $e ) {
+                // fall through
             }
-        } catch ( Exception $e ) {
-            // fall through
         }
     }
 
