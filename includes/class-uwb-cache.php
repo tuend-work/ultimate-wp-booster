@@ -16,6 +16,73 @@ class Uwb_Cache {
 
         // Admin actions for purging
         add_action( 'admin_init', array( $this, 'handle_purge_actions' ) );
+
+        // Cron actions for cleaning expired cache
+        add_action( 'uwb_clean_expired_cache', array( $this, 'clean_expired_cache' ) );
+        add_action( 'init', array( $this, 'schedule_cleanup_cron' ) );
+    }
+
+    /**
+     * Schedule the expired cache cleanup cron job
+     */
+    public function schedule_cleanup_cron() {
+        if ( ! wp_next_scheduled( 'uwb_clean_expired_cache' ) ) {
+            wp_schedule_event( time(), 'hourly', 'uwb_clean_expired_cache' );
+        }
+    }
+
+    /**
+     * Clean expired cache files from the disk
+     */
+    public function clean_expired_cache() {
+        $lifespan_hours = floatval( get_option( 'uwb_cache_lifespan', 10 ) );
+        if ( $lifespan_hours <= 0 ) {
+            return; // Unlimited lifespan
+        }
+        $lifespan_seconds = intval( $lifespan_hours * 3600 );
+        $cache_dir = self::get_cache_dir();
+
+        if ( file_exists( $cache_dir ) && is_dir( $cache_dir ) ) {
+            $this->delete_expired_files_recursive( $cache_dir, $lifespan_seconds );
+        }
+    }
+
+    /**
+     * Helper to recursively delete expired cache files and empty folders
+     */
+    private function delete_expired_files_recursive( $dir, $lifespan_seconds ) {
+        if ( ! is_dir( $dir ) ) {
+            return;
+        }
+
+        $now = time();
+        $items = scandir( $dir );
+        foreach ( $items as $item ) {
+            if ( $item === '.' || $item === '..' ) {
+                continue;
+            }
+
+            $path = $dir . '/' . $item;
+            if ( is_dir( $path ) ) {
+                $this->delete_expired_files_recursive( $path, $lifespan_seconds );
+            } else {
+                $filename = basename( $path );
+                if ( 
+                    $filename === 'index.html' || 
+                    $filename === 'index-https.html' || 
+                    $filename === 'index.html_gzip' || 
+                    $filename === 'index-https.html_gzip' 
+                ) {
+                    $file_time = @filemtime( $path );
+                    if ( $file_time && ( $now - $file_time ) >= $lifespan_seconds ) {
+                        @unlink( $path );
+                    }
+                }
+            }
+        }
+
+        // Clean up empty directories
+        $this->remove_empty_dirs( $dir );
     }
 
     /**

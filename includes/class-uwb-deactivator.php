@@ -27,6 +27,7 @@ class Uwb_Deactivator {
 
         // 3. Clear scheduled cron jobs
         wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
+        wp_clear_scheduled_hook( 'uwb_clean_expired_cache' );
 
         // Note: We don't delete the database table here to preserve queue state if the user reactivates,
         // and we don't delete the cache folder to prevent slow loading immediately after reactivation.
