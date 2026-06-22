@@ -173,13 +173,9 @@ class Uwb_Preloader {
         // Enable internal errors to handle invalid XML gracefully
         libxml_use_internal_errors( true );
         $xml = simplexml_load_string( trim( $xml_content ) );
-        if ( ! $xml ) {
-            libxml_clear_errors();
-            return $result;
-        }
 
         // 1. Check if it's a sitemap index
-        $has_sitemap_index = isset( $xml->sitemap );
+        $has_sitemap_index = $xml && isset( $xml->sitemap );
         if ( $has_sitemap_index ) {
             foreach ( $xml->sitemap as $sub_sitemap ) {
                 if ( isset( $sub_sitemap->loc ) ) {
@@ -200,11 +196,31 @@ class Uwb_Preloader {
             }
         }
 
+        // Fallback for sitemap indexes with namespaces or non-standard XML parsing.
+        if ( ! $has_sitemap_index ) {
+            preg_match_all( '/<loc>\s*(https?:\/\/[^<]+\.xml(?:\?[^<]*)?)\s*<\/loc>/i', $xml_content, $sitemap_matches );
+            if ( ! empty( $sitemap_matches[1] ) ) {
+                foreach ( $sitemap_matches[1] as $sub_url ) {
+                    $sub_url = trim( html_entity_decode( $sub_url ) );
+                    if ( filter_var( $sub_url, FILTER_VALIDATE_URL ) ) {
+                        $filename = strtolower( basename( wp_parse_url( $sub_url, PHP_URL_PATH ) ) );
+                        $is_sub_priority = preg_match( '/(category|cat|tag|tax|author|archive|brand|important)/i', $filename ) === 1;
+
+                        $sub_result = $this->parse_sitemap( $sub_url, $depth + 1, $is_sub_priority );
+                        $result['priority'] = array_merge( $result['priority'], $sub_result['priority'] );
+                        $result['normal']   = array_merge( $result['normal'], $sub_result['normal'] );
+                    }
+                }
+
+                $has_sitemap_index = true;
+            }
+        }
+
         // Collect URLs
         $raw_urls = array();
 
         // 2. Check if it's a URL sitemap
-        if ( isset( $xml->url ) ) {
+        if ( $xml && isset( $xml->url ) ) {
             foreach ( $xml->url as $url_node ) {
                 if ( isset( $url_node->loc ) ) {
                     $loc = trim( (string) $url_node->loc );
