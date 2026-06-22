@@ -114,6 +114,21 @@ class Uwb_Cache {
             @mkdir( $cache_dir, 0755, true );
         }
 
+        // Create .htaccess to deny direct web access to the config JSON file
+        $htaccess_path = $cache_dir . '/.htaccess';
+        if ( ! file_exists( $htaccess_path ) ) {
+            $htaccess_content = "<Files \"ultimate-wp-booster-config.json\">\n" .
+                                "    <IfModule mod_authz_core.c>\n" .
+                                "        Require all denied\n" .
+                                "    </IfModule>\n" .
+                                "    <IfModule !mod_authz_core.c>\n" .
+                                "        Order deny,allow\n" .
+                                "        Deny from all\n" .
+                                "    </IfModule>\n" .
+                                "</Files>\n";
+            @file_put_contents( $htaccess_path, $htaccess_content );
+        }
+
         $config_path = $cache_dir . '/ultimate-wp-booster-config.json';
         
         $lifespan_hours = floatval( get_option( 'uwb_cache_lifespan', 10 ) );
