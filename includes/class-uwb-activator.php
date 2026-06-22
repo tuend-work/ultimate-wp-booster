@@ -69,6 +69,10 @@ class Uwb_Activator {
             update_option( 'uwb_browser_cache_lifespan', 1.0 ); // 1 hour by default
         }
 
+        if ( get_option( 'uwb_ignored_query' ) === false ) {
+            update_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
+        }
+
         // 3. Copy advanced-cache.php drop-in
         self::copy_advanced_cache_dropin();
 

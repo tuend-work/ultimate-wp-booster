@@ -19,6 +19,7 @@ class Uwb_Admin {
             'uwb_cache_logged_in',
             'uwb_browser_cache_enabled',
             'uwb_browser_cache_lifespan',
+            'uwb_ignored_query',
             'uwb_redis_enabled',
             'uwb_redis_conn_type',
             'uwb_redis_host',
@@ -59,6 +60,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_lifespan', 'floatval' );
         register_setting( 'uwb_settings_group', 'uwb_excluded_urls', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_ignored_query', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', 'esc_url_raw' );
         register_setting( 'uwb_settings_group', 'uwb_priority_urls', 'sanitize_textarea_field' );
@@ -475,6 +477,18 @@ class Uwb_Admin {
                                     Examples:<br>
                                     <code>/cart(.*)</code> to exclude the shopping cart pages<br>
                                     <code>/checkout(.*)</code> to exclude checkout pages
+                                </p>
+                            </div>
+
+                            <div class="uwb-form-group">
+                                <label for="uwb_ignored_query">Ignored Query Parameters</label>
+                                <textarea name="uwb_ignored_query" id="uwb_ignored_query" rows="5"><?php 
+                                    $ignored_query_val = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
+                                    echo esc_textarea( $ignored_query_val ); 
+                                ?></textarea>
+                                <p class="description">
+                                    Query parameters to ignore when deciding whether to serve the static cache (one per line).<br>
+                                    Marketing parameters like <code>utm_source</code>, <code>fbclid</code>, and <code>gclid</code> are ignored by default to ensure ad campaign clicks still get fast static pages.
                                 </p>
                             </div>
                         </div>

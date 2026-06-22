@@ -145,13 +145,16 @@ class Uwb_Cache {
         $browser_cache_hours = floatval( get_option( 'uwb_browser_cache_lifespan', 1.0 ) );
         $browser_cache_seconds = intval( $browser_cache_hours * 3600 );
 
+        $ignored_query_raw = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
+        $ignored_queries = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $ignored_query_raw ) ) ) );
+
         $config = array(
             'cache_lifespan'         => $lifespan_seconds,
             'cache_logged_in'        => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
             'browser_cache_enabled'  => intval( get_option( 'uwb_browser_cache_enabled', 1 ) ),
             'browser_cache_lifespan' => $browser_cache_seconds,
             'excluded_urls'          => array_values( $exclusions ),
-            'ignored_query'          => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
+            'ignored_query'          => array_values( $ignored_queries ),
             'timezone'               => $timezone,
             'redis_enabled'          => intval( get_option( 'uwb_redis_enabled', 0 ) ),
             'redis_conn_type'        => get_option( 'uwb_redis_conn_type', 'tcp' ),
