@@ -17,6 +17,8 @@ class Uwb_Admin {
             'uwb_cache_lifespan',
             'uwb_excluded_urls',
             'uwb_cache_logged_in',
+            'uwb_browser_cache_enabled',
+            'uwb_browser_cache_lifespan',
             'uwb_redis_enabled',
             'uwb_redis_conn_type',
             'uwb_redis_host',
@@ -54,6 +56,8 @@ class Uwb_Admin {
     public function register_settings() {
         register_setting( 'uwb_settings_group', 'uwb_cache_lifespan', 'floatval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_logged_in', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_lifespan', 'floatval' );
         register_setting( 'uwb_settings_group', 'uwb_excluded_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', 'esc_url_raw' );
@@ -446,6 +450,21 @@ class Uwb_Admin {
                                     Enable this to serve static cached pages to logged-in users. Capped at a maximum of 10 minutes (600 seconds) to prevent <code>wpnonce</code> expiration. <br>
                                     <strong>Warning:</strong> Personalized content (like user profile names or WooCommerce carts) may be cached and incorrectly displayed to other users if not configured carefully.
                                 </p>
+                            </div>
+
+                            <div class="uwb-form-group">
+                                <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
+                                <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                    <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
+                                    <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
+                                </select>
+                                <p class="description">Allow guests' browsers to cache static HTML pages locally, bypassing requests to the server for repeat visits.</p>
+                            </div>
+
+                            <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group">
+                                <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Hours)</label>
+                                <input type="number" step="0.01" min="0.01" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 1.0 ) ); ?>" />
+                                <p class="description">The amount of time (in hours) guest browsers are instructed to cache pages. Default is <code>1.0</code> hour.</p>
                             </div>
 
                             <div class="uwb-form-group">
@@ -1075,6 +1094,18 @@ class Uwb_Admin {
             }
             $('#uwb_preload_enabled').on('change', toggleCronFields);
             toggleCronFields();
+
+            // Toggle Browser Cache fields
+            function toggleBrowserCacheFields() {
+                var browserCacheEnabled = $('#uwb_browser_cache_enabled').val();
+                if (browserCacheEnabled === '1') {
+                    $('#uwb-browser-cache-lifespan-group').slideDown(250);
+                } else {
+                    $('#uwb-browser-cache-lifespan-group').slideUp(250);
+                }
+            }
+            $('#uwb_browser_cache_enabled').on('change', toggleBrowserCacheFields);
+            toggleBrowserCacheFields();
 
             // Copy Cron Job to clipboard
             $('.uwb-copy-cron').on('click', function(e) {

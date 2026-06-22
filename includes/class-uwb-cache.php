@@ -127,19 +127,24 @@ class Uwb_Cache {
             $timezone = get_option( 'gmt_offset', 0 );
         }
 
+        $browser_cache_hours = floatval( get_option( 'uwb_browser_cache_lifespan', 1.0 ) );
+        $browser_cache_seconds = intval( $browser_cache_hours * 3600 );
+
         $config = array(
-            'cache_lifespan'  => $lifespan_seconds,
-            'cache_logged_in' => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
-            'excluded_urls'   => array_values( $exclusions ),
-            'ignored_query'   => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
-            'timezone'        => $timezone,
-            'redis_enabled'   => intval( get_option( 'uwb_redis_enabled', 0 ) ),
-            'redis_conn_type' => get_option( 'uwb_redis_conn_type', 'tcp' ),
-            'redis_host'      => get_option( 'uwb_redis_host', '127.0.0.1' ),
-            'redis_port'      => intval( get_option( 'uwb_redis_port', 6379 ) ),
-            'redis_socket'    => get_option( 'uwb_redis_socket', '/var/run/redis/redis.sock' ),
-            'redis_password'  => get_option( 'uwb_redis_password', '' ),
-            'redis_db'        => intval( get_option( 'uwb_redis_db', 0 ) )
+            'cache_lifespan'         => $lifespan_seconds,
+            'cache_logged_in'        => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
+            'browser_cache_enabled'  => intval( get_option( 'uwb_browser_cache_enabled', 1 ) ),
+            'browser_cache_lifespan' => $browser_cache_seconds,
+            'excluded_urls'          => array_values( $exclusions ),
+            'ignored_query'          => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
+            'timezone'               => $timezone,
+            'redis_enabled'          => intval( get_option( 'uwb_redis_enabled', 0 ) ),
+            'redis_conn_type'        => get_option( 'uwb_redis_conn_type', 'tcp' ),
+            'redis_host'             => get_option( 'uwb_redis_host', '127.0.0.1' ),
+            'redis_port'             => intval( get_option( 'uwb_redis_port', 6379 ) ),
+            'redis_socket'           => get_option( 'uwb_redis_socket', '/var/run/redis/redis.sock' ),
+            'redis_password'         => get_option( 'uwb_redis_password', '' ),
+            'redis_db'               => intval( get_option( 'uwb_redis_db', 0 ) )
         );
 
         @file_put_contents( $config_path, json_encode( $config, JSON_PRETTY_PRINT ) );

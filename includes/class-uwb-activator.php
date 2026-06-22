@@ -61,6 +61,14 @@ class Uwb_Activator {
             update_option( 'uwb_cache_logged_in', 0 ); // Disabled by default
         }
 
+        if ( get_option( 'uwb_browser_cache_enabled' ) === false ) {
+            update_option( 'uwb_browser_cache_enabled', 1 ); // Enabled by default
+        }
+
+        if ( get_option( 'uwb_browser_cache_lifespan' ) === false ) {
+            update_option( 'uwb_browser_cache_lifespan', 1.0 ); // 1 hour by default
+        }
+
         // 3. Copy advanced-cache.php drop-in
         self::copy_advanced_cache_dropin();
 

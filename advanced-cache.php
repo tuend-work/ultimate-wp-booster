@@ -137,8 +137,15 @@ function uwb_advanced_cache_run() {
                 header( 'Cache-Control: no-cache, no-store, must-revalidate, private' );
                 header( 'Pragma: no-cache' );
             } else {
-                header( 'Pragma: public' );
-                header( 'Cache-Control: max-age=3600, public' );
+                $bc_enabled = isset( $config['browser_cache_enabled'] ) ? intval( $config['browser_cache_enabled'] ) : 1;
+                if ( $bc_enabled ) {
+                    $bc_lifespan = isset( $config['browser_cache_lifespan'] ) ? intval( $config['browser_cache_lifespan'] ) : 3600;
+                    header( 'Pragma: public' );
+                    header( 'Cache-Control: max-age=' . $bc_lifespan . ', public' );
+                } else {
+                    header( 'Cache-Control: no-cache, no-store, must-revalidate, private' );
+                    header( 'Pragma: no-cache' );
+                }
             }
             header( 'Content-Type: text/html; charset=UTF-8' );
 
