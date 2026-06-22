@@ -385,6 +385,24 @@ class Uwb_Admin {
                 color: var(--uwb-primary-dark) !important;
                 border-color: var(--uwb-primary) !important;
             }
+            .uwb-btn-purge:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+            .uwb-spinner {
+                width: 16px;
+                height: 16px;
+                border: 2px solid #ffffff;
+                border-bottom-color: transparent;
+                border-radius: 50%;
+                display: inline-block;
+                box-sizing: border-box;
+                animation: uwb-rotation 1s linear infinite;
+            }
+            @keyframes uwb-rotation {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
         </style>
         <?php
     }
@@ -393,6 +411,7 @@ class Uwb_Admin {
         $this->render_assets();
         
         $purge_url = wp_nonce_url( admin_url( 'admin.php?page=ultimate-wp-booster&action=uwb_purge_cache' ), 'uwb_purge_cache_action' );
+        $update_nonce = wp_create_nonce( 'uwb_github_update_nonce' );
         ?>
         <div class="uwb-dashboard-wrap">
             <div class="uwb-header">
@@ -400,11 +419,13 @@ class Uwb_Admin {
                     <h1>Ultimate WordPress Booster v<?php echo esc_html( UWB_VERSION ); ?></h1>
                     <p>Optimize website loading speed with ultra-fast Static Page Caching.</p>
                 </div>
-                <div class="uwb-header-actions">
-                    <a href="<?php echo esc_url( $purge_url ); ?>" class="uwb-btn-purge">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-                        Purge All Cache
-                    </a>
+                <div class="uwb-header-actions" style="display: flex; align-items: center; gap: 12px;">
+                    <span id="uwb-github-update-status" style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.9);"></span>
+                    <button type="button" id="uwb-github-update-btn" class="uwb-btn-purge" style="cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.3); outline: none;">
+                        <svg class="uwb-git-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" style="color: inherit;"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+                        <span class="uwb-btn-text">Update Plugin</span>
+                        <span class="uwb-spinner" style="display: none; margin-left: 6px;"></span>
+                    </button>
                 </div>
             </div>
 
@@ -422,9 +443,6 @@ class Uwb_Admin {
                     <div class="uwb-nav-item" data-tab="object_cache">
                         Redis Object Cache
                     </div>
-                    <div class="uwb-nav-item" data-tab="updater_settings">
-                        Updates
-                    </div>
                 </div>
 
                 <div class="uwb-content-panel">
@@ -436,60 +454,84 @@ class Uwb_Admin {
                             <h2 style="margin-top:0;">Cache Configuration</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Configure cache lifespan, bypass conditions, and exclusions for static files.</p>
 
-                            <div class="uwb-form-group">
-                                <label for="uwb_cache_lifespan">Cache Lifespan (Hours)</label>
-                                <input type="number" step="0.1" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 10 ) ); ?>" />
-                                <p class="description">The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.</p>
+                            <!-- Group 1: Page Cache Settings -->
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                    Page Cache Settings
+                                </h3>
+                                
+                                <div class="uwb-form-group">
+                                    <label for="uwb_cache_lifespan">Cache Lifespan (Hours)</label>
+                                    <input type="number" step="0.1" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 10 ) ); ?>" />
+                                    <p class="description">The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.</p>
+                                </div>
+
+                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                    <label for="uwb_cache_logged_in">Cache for Logged-in Users</label>
+                                    <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                        <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
+                                    </select>
+                                    <p class="description" style="margin-bottom:0;">
+                                        Enable this to serve static cached pages to logged-in users. Capped at a maximum of 10 minutes (600 seconds) to prevent <code>wpnonce</code> expiration. <br>
+                                        <strong>Warning:</strong> Personalized content (like user profile names or WooCommerce carts) may be cached and incorrectly displayed to other users if not configured carefully.
+                                    </p>
+                                </div>
                             </div>
 
-                            <div class="uwb-form-group">
-                                <label for="uwb_cache_logged_in">Cache for Logged-in Users</label>
-                                <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                    <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
-                                    <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
-                                </select>
-                                <p class="description">
-                                    Enable this to serve static cached pages to logged-in users. Capped at a maximum of 10 minutes (600 seconds) to prevent <code>wpnonce</code> expiration. <br>
-                                    <strong>Warning:</strong> Personalized content (like user profile names or WooCommerce carts) may be cached and incorrectly displayed to other users if not configured carefully.
-                                </p>
+                            <!-- Group 2: Browser Cache Settings -->
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    Browser Cache Settings
+                                </h3>
+
+                                <div class="uwb-form-group">
+                                    <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
+                                    <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                        <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
+                                    </select>
+                                    <p class="description">Allow guests' browsers to cache static HTML pages locally, bypassing requests to the server for repeat visits.</p>
+                                </div>
+
+                                <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="margin-bottom:0;">
+                                    <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Hours)</label>
+                                    <input type="number" step="0.01" min="0.01" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 1.0 ) ); ?>" />
+                                    <p class="description" style="margin-bottom:0;">The amount of time (in hours) guest browsers are instructed to cache pages. Default is <code>1.0</code> hour.</p>
+                                </div>
                             </div>
 
-                            <div class="uwb-form-group">
-                                <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
-                                <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                    <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
-                                    <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
-                                </select>
-                                <p class="description">Allow guests' browsers to cache static HTML pages locally, bypassing requests to the server for repeat visits.</p>
-                            </div>
+                            <!-- Group 3: Exclusion & Bypass Rules -->
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                    Exclusion & Bypass Rules
+                                </h3>
 
-                            <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group">
-                                <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Hours)</label>
-                                <input type="number" step="0.01" min="0.01" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 1.0 ) ); ?>" />
-                                <p class="description">The amount of time (in hours) guest browsers are instructed to cache pages. Default is <code>1.0</code> hour.</p>
-                            </div>
+                                <div class="uwb-form-group">
+                                    <label for="uwb_excluded_urls">Excluded URLs</label>
+                                    <textarea name="uwb_excluded_urls" id="uwb_excluded_urls" rows="6"><?php echo esc_textarea( get_option( 'uwb_excluded_urls', '' ) ); ?></textarea>
+                                    <p class="description">
+                                        URLs or RegEx patterns that should NEVER be cached (one per line).<br>
+                                        Examples:<br>
+                                        <code>/cart(.*)</code> to exclude the shopping cart pages<br>
+                                        <code>/checkout(.*)</code> to exclude checkout pages
+                                    </p>
+                                </div>
 
-                            <div class="uwb-form-group">
-                                <label for="uwb_excluded_urls">Excluded URLs</label>
-                                <textarea name="uwb_excluded_urls" id="uwb_excluded_urls" rows="6"><?php echo esc_textarea( get_option( 'uwb_excluded_urls', '' ) ); ?></textarea>
-                                <p class="description">
-                                    URLs or RegEx patterns that should NEVER be cached (one per line).<br>
-                                    Examples:<br>
-                                    <code>/cart(.*)</code> to exclude the shopping cart pages<br>
-                                    <code>/checkout(.*)</code> to exclude checkout pages
-                                </p>
-                            </div>
-
-                            <div class="uwb-form-group">
-                                <label for="uwb_ignored_query">Ignored Query Parameters</label>
-                                <textarea name="uwb_ignored_query" id="uwb_ignored_query" rows="5"><?php 
-                                    $ignored_query_val = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
-                                    echo esc_textarea( $ignored_query_val ); 
-                                ?></textarea>
-                                <p class="description">
-                                    Query parameters to ignore when deciding whether to serve the static cache (one per line).<br>
-                                    Marketing parameters like <code>utm_source</code>, <code>fbclid</code>, and <code>gclid</code> are ignored by default to ensure ad campaign clicks still get fast static pages.
-                                </p>
+                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                    <label for="uwb_ignored_query">Ignored Query Parameters</label>
+                                    <textarea name="uwb_ignored_query" id="uwb_ignored_query" rows="5"><?php 
+                                        $ignored_query_val = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
+                                        echo esc_textarea( $ignored_query_val ); 
+                                    ?></textarea>
+                                    <p class="description" style="margin-bottom:0;">
+                                        Query parameters to ignore when deciding whether to serve the static cache (one per line).<br>
+                                        Marketing parameters like <code>utm_source</code>, <code>fbclid</code>, and <code>gclid</code> are ignored by default to ensure ad campaign clicks still get fast static pages.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -628,16 +670,7 @@ class Uwb_Admin {
                             </div>
                         </div>
 
-                        <!-- TAB 4: GitHub Updater -->
-                        <div id="tab-updater_settings" class="uwb-tab-content">
-                            <?php
-                            if ( class_exists( 'Uwb_Github_Updater' ) ) {
-                                Uwb_Github_Updater::render_update_button();
-                            } else {
-                                echo '<p>Error: Uwb_Github_Updater class not found.</p>';
-                            }
-                            ?>
-                        </div>
+
 
                         <!-- TAB 5: Dashboard -->
                         <div id="tab-url_status" class="uwb-tab-content active">
@@ -930,7 +963,7 @@ class Uwb_Admin {
                 $('#tab-' + tabId).addClass('active');
 
                 // Hide submit row on non-settings tabs
-                if (['updater_settings', 'url_status'].indexOf(tabId) !== -1) {
+                if (['url_status'].indexOf(tabId) !== -1) {
                     $('#uwb-submit-row').hide();
                 } else {
                     $('#uwb-submit-row').show();
@@ -1140,6 +1173,55 @@ class Uwb_Admin {
                 setTimeout(function() {
                     $btn.html(originalHtml);
                 }, 1500);
+            });
+
+            // GitHub manual update click handler in Header
+            $('#uwb-github-update-btn').on('click', function(e) {
+                e.preventDefault();
+                var btn = $(this);
+                var status = $('#uwb-github-update-status');
+                var spinner = btn.find('.uwb-spinner');
+                var btnText = btn.find('.uwb-btn-text');
+                
+                btn.prop('disabled', true);
+                btnText.text('Updating...');
+                spinner.show();
+                status.text('Downloading latest version from GitHub...');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    timeout: 120000,
+                    data: {
+                        action: 'uwb_github_manual_update',
+                        nonce: '<?php echo esc_js( $update_nonce ); ?>'
+                    },
+                    success: function(res) {
+                        spinner.hide();
+                        btn.prop('disabled', false);
+                        btnText.text('Update Plugin');
+                        if (res.success) {
+                            status.css('color', '#a7f3d0').text('✓ Plugin updated to latest version. Reloading...');
+                            alert('Plugin updated successfully! The page will now reload.');
+                            location.reload();
+                        } else {
+                            status.css('color', '#fca5a5').text('✗ Error: ' + (res.data.message || 'Unknown error.'));
+                            alert('Update failed: ' + (res.data.message || 'Unknown error.'));
+                        }
+                    },
+                    error: function(xhr, textStatus, errorThrown) {
+                        spinner.hide();
+                        btn.prop('disabled', false);
+                        btnText.text('Update Plugin');
+                        var detail = errorThrown || textStatus;
+                        if (xhr.responseText) {
+                            var preview = xhr.responseText.replace(/<[^>]+>/g, '').trim().substring(0, 300);
+                            detail = '(HTTP ' + xhr.status + ') ' + preview;
+                        }
+                        status.css('color', '#fca5a5').text('✗ Server error.');
+                        alert('Server error: ' + detail);
+                    }
+                });
             });
 
             // Test Redis Connection
