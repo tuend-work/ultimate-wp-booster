@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.4.30
+ * Version:     1.4.31
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.4.30' );
+define( 'UWB_VERSION', '1.4.31' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -103,50 +103,52 @@ function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
         'href'   => $clear_preload_url,
     ) );
 
-    // Add sub-node: Flush Object Cache
-    $flush_oc_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_object_cache' ), 'uwb_flush_object_cache_action' );
-    $wp_admin_bar->add_node( array(
-        'id'     => 'uwb-flush-object-cache',
-        'parent' => 'uwb-admin-bar',
-        'title'  => 'Flush Object Cache',
-        'href'   => $flush_oc_url,
-    ) );
+    if ( wp_using_ext_object_cache() ) {
+        // Add sub-node: Flush Object Cache
+        $flush_oc_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_object_cache' ), 'uwb_flush_object_cache_action' );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-flush-object-cache',
+            'parent' => 'uwb-admin-bar',
+            'title'  => 'Flush Object Cache',
+            'href'   => $flush_oc_url,
+        ) );
 
-    // Add Global Cache Statistics to Admin Bar
-    global $wp_object_cache;
-    $hits = 0; $misses = 0;
-    if ( isset( $wp_object_cache->cache_hits ) ) $hits = intval( $wp_object_cache->cache_hits );
-    if ( isset( $wp_object_cache->cache_misses ) ) $misses = intval( $wp_object_cache->cache_misses );
-    $total_req = $hits + $misses;
-    $hit_ratio = $total_req > 0 ? round( ( $hits / $total_req ) * 100, 1 ) : 0;
+        // Add Global Cache Statistics to Admin Bar
+        global $wp_object_cache;
+        $hits = 0; $misses = 0;
+        if ( isset( $wp_object_cache->cache_hits ) ) $hits = intval( $wp_object_cache->cache_hits );
+        if ( isset( $wp_object_cache->cache_misses ) ) $misses = intval( $wp_object_cache->cache_misses );
+        $total_req = $hits + $misses;
+        $hit_ratio = $total_req > 0 ? round( ( $hits / $total_req ) * 100, 1 ) : 0;
 
-    $wp_admin_bar->add_node( array(
-        'id'     => 'uwb-oc-stats',
-        'parent' => 'uwb-admin-bar',
-        'title'  => sprintf( 'Object Cache Stats (Hit Ratio: %s%%)', $hit_ratio ),
-        'href'   => admin_url( 'options-general.php?page=ultimate-wp-booster' ),
-    ) );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-oc-stats',
+            'parent' => 'uwb-admin-bar',
+            'title'  => sprintf( 'Object Cache Stats (Hit Ratio: %s%%)', $hit_ratio ),
+            'href'   => admin_url( 'options-general.php?page=ultimate-wp-booster' ),
+        ) );
 
-    $wp_admin_bar->add_node( array(
-        'id'     => 'uwb-oc-hits',
-        'parent' => 'uwb-oc-stats',
-        'title'  => sprintf( 'Hits: %s', number_format( $hits ) ),
-        'href'   => '#',
-    ) );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-oc-hits',
+            'parent' => 'uwb-oc-stats',
+            'title'  => sprintf( 'Hits: %s', number_format( $hits ) ),
+            'href'   => '#',
+        ) );
 
-    $wp_admin_bar->add_node( array(
-        'id'     => 'uwb-oc-misses',
-        'parent' => 'uwb-oc-stats',
-        'title'  => sprintf( 'Misses: %s', number_format( $misses ) ),
-        'href'   => '#',
-    ) );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-oc-misses',
+            'parent' => 'uwb-oc-stats',
+            'title'  => sprintf( 'Misses: %s', number_format( $misses ) ),
+            'href'   => '#',
+        ) );
 
-    $wp_admin_bar->add_node( array(
-        'id'     => 'uwb-oc-total',
-        'parent' => 'uwb-oc-stats',
-        'title'  => sprintf( 'Total Requests: %s', number_format( $total_req ) ),
-        'href'   => '#',
-    ) );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-oc-total',
+            'parent' => 'uwb-oc-stats',
+            'title'  => sprintf( 'Total Requests: %s', number_format( $total_req ) ),
+            'href'   => '#',
+        ) );
+    }
 
     // Add sub-node: Settings
     $wp_admin_bar->add_node( array(
