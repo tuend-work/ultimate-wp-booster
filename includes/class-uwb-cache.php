@@ -36,10 +36,7 @@ class Uwb_Cache {
      */
     public function clean_expired_cache() {
         $lifespan_hours = floatval( get_option( 'uwb_cache_lifespan', 10 ) );
-        if ( $lifespan_hours <= 0 ) {
-            return; // Unlimited lifespan
-        }
-        $lifespan_seconds = intval( $lifespan_hours * 3600 );
+        $lifespan_seconds = $lifespan_hours > 0 ? intval( $lifespan_hours * 3600 ) : 0;
         $cache_dir = self::get_cache_dir();
 
         if ( file_exists( $cache_dir ) && is_dir( $cache_dir ) ) {
@@ -73,9 +70,24 @@ class Uwb_Cache {
                     $filename === 'index.html_gzip' || 
                     $filename === 'index-https.html_gzip' 
                 ) {
-                    $file_time = @filemtime( $path );
-                    if ( $file_time && ( $now - $file_time ) >= $lifespan_seconds ) {
-                        @unlink( $path );
+                    // Check if this file is in a logged-in user folder (e.g. parent folder name starts with "user-")
+                    $parent_folder = basename( dirname( $path ) );
+                    $is_user_cache = ( strpos( $parent_folder, 'user-' ) === 0 );
+
+                    if ( $is_user_cache ) {
+                        // User cache is always capped at 10 minutes (600 seconds)
+                        $file_lifespan = 600;
+                    } else {
+                        // Guest cache uses global lifespan
+                        $file_lifespan = $lifespan_seconds;
+                    }
+
+                    // If file_lifespan is 0, it means unlimited lifespan, so do not delete
+                    if ( $file_lifespan > 0 ) {
+                        $file_time = @filemtime( $path );
+                        if ( $file_time && ( $now - $file_time ) >= $file_lifespan ) {
+                            @unlink( $path );
+                        }
                     }
                 }
             }
