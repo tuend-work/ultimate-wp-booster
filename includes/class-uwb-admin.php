@@ -62,7 +62,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_excluded_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_ignored_query', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_enabled', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', 'esc_url_raw' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', array( $this, 'sanitize_sitemap_list' ) );
         register_setting( 'uwb_settings_group', 'uwb_priority_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_batch_size', 'intval' );
 
@@ -89,6 +89,59 @@ class Uwb_Admin {
         return $val;
     }
 
+    public function sanitize_sitemap_list( $value ) {
+        $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', (string) $value ) ) ) );
+        $urls  = array();
+
+        foreach ( $lines as $line ) {
+            $url = esc_url_raw( $line );
+            if ( ! empty( $url ) ) {
+                $urls[] = $url;
+            }
+        }
+
+        if ( empty( $urls ) ) {
+            $urls = $this->get_default_preload_sitemaps();
+        }
+
+        return implode( "\n", array_values( array_unique( $urls ) ) );
+    }
+
+    private function get_default_preload_sitemaps() {
+        return array(
+            home_url( '/important-sitemap.xml' ),
+            home_url( '/wp-sitemap.xml' ),
+        );
+    }
+
+    private function get_preload_sitemap_setting_value() {
+        $value = get_option( 'uwb_preload_sitemap', '' );
+        if ( empty( $value ) ) {
+            return implode( "\n", $this->get_default_preload_sitemaps() );
+        }
+
+        return $value;
+    }
+
+    private function migrate_default_important_sitemap() {
+        if ( get_option( 'uwb_preload_sitemap_defaults_migrated' ) ) {
+            return;
+        }
+
+        $important_sitemap = home_url( '/important-sitemap.xml' );
+        $value = get_option( 'uwb_preload_sitemap', '' );
+        $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', (string) $value ) ) ) );
+
+        if ( empty( $lines ) ) {
+            $lines = $this->get_default_preload_sitemaps();
+        } elseif ( ! in_array( $important_sitemap, $lines, true ) ) {
+            array_unshift( $lines, $important_sitemap );
+        }
+
+        update_option( 'uwb_preload_sitemap', implode( "\n", array_values( array_unique( $lines ) ) ) );
+        update_option( 'uwb_preload_sitemap_defaults_migrated', 1 );
+    }
+
     public function admin_init_sync() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
@@ -101,6 +154,7 @@ class Uwb_Admin {
         require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
         Uwb_Activator::copy_advanced_cache_dropin();
         Uwb_Activator::copy_object_cache_dropin();
+        $this->migrate_default_important_sitemap();
         // Sync config JSON file to keep core options (like timezone) up to date
         Uwb_Cache::write_config_file();
     }
@@ -662,15 +716,15 @@ class Uwb_Admin {
                             </div>
 
                             <div class="uwb-form-group">
-                                <label for="uwb_preload_sitemap">Sitemap XML URL</label>
-                                <input type="text" name="uwb_preload_sitemap" id="uwb_preload_sitemap" placeholder="<?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?>" value="<?php echo esc_attr( get_option( 'uwb_preload_sitemap', '' ) ); ?>" />
-                                <p class="description">The preloader will extract URLs from this sitemap. If left empty, it defaults to: <code><?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?></code>.</p>
+                                <label for="uwb_preload_sitemap">Sitemap XML URLs</label>
+                                <textarea name="uwb_preload_sitemap" id="uwb_preload_sitemap" rows="5" placeholder="<?php echo esc_attr( home_url( '/important-sitemap.xml' ) . "\n" . home_url( '/wp-sitemap.xml' ) ); ?>"><?php echo esc_textarea( $this->get_preload_sitemap_setting_value() ); ?></textarea>
+                                <p class="description">The preloader will extract URLs from these sitemaps, one sitemap per line. The default first sitemap is <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
                             </div>
 
                             <div class="uwb-form-group">
                                 <label for="uwb_priority_urls">Priority URLs (Preloaded first)</label>
                                 <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( get_option( 'uwb_priority_urls', '' ) ); ?></textarea>
-                                <p class="description">URLs or matching keywords (one per line) that should be crawled first in the queue.</p>
+                                <p class="description">Important URLs or matching keywords, one per line. Valid URLs and paths are also published at <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
                             </div>
 
                             <div class="uwb-form-group">

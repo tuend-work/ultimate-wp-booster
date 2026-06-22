@@ -28,6 +28,102 @@ class Uwb_Preloader {
         add_action( 'wp_ajax_uwb_process_url_now', array( $this, 'ajax_process_url_now' ) );
         add_action( 'wp_ajax_uwb_add_to_exclude', array( $this, 'ajax_add_to_exclude' ) );
         add_action( 'wp_ajax_uwb_add_to_priority', array( $this, 'ajax_add_to_priority' ) );
+
+        // Public important sitemap generated from Priority URLs.
+        add_action( 'init', array( $this, 'maybe_output_important_sitemap' ), 0 );
+    }
+
+    public function maybe_output_important_sitemap() {
+        $request_path = isset( $_SERVER['REQUEST_URI'] ) ? wp_parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) : '';
+        $sitemap_path = wp_parse_url( home_url( '/important-sitemap.xml' ), PHP_URL_PATH );
+        if ( $request_path !== $sitemap_path ) {
+            return;
+        }
+
+        $urls = $this->get_priority_url_sitemap_entries();
+
+        status_header( 200 );
+        header( 'Content-Type: application/xml; charset=UTF-8' );
+        nocache_headers();
+
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        foreach ( $urls as $url ) {
+            echo "\t<url>\n";
+            echo "\t\t<loc>" . esc_url( $url ) . "</loc>\n";
+            echo "\t</url>\n";
+        }
+        echo '</urlset>';
+        exit;
+    }
+
+    private function get_priority_url_sitemap_entries() {
+        $priority_raw = get_option( 'uwb_priority_urls', '' );
+        $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $priority_raw ) ) ) );
+        $urls = array();
+
+        foreach ( $lines as $line ) {
+            $url = $this->normalize_user_url( $line );
+            if ( $url && filter_var( $url, FILTER_VALIDATE_URL ) ) {
+                $urls[] = $url;
+            }
+        }
+
+        return array_values( array_unique( $urls ) );
+    }
+
+    private function normalize_user_url( $value ) {
+        $value = trim( (string) $value );
+        if ( $value === '' ) {
+            return '';
+        }
+
+        if ( preg_match( '#^https?://#i', $value ) ) {
+            return $value;
+        }
+
+        if ( strpos( $value, '/' ) === 0 ) {
+            return home_url( $value );
+        }
+
+        if ( preg_match( '#^(www\.|[a-z0-9.-]+\.[a-z]{2,}/)#i', $value ) ) {
+            $scheme = wp_parse_url( home_url( '/' ), PHP_URL_SCHEME );
+            if ( empty( $scheme ) ) {
+                $scheme = is_ssl() ? 'https' : 'http';
+            }
+
+            return $scheme . '://' . $value;
+        }
+
+        if ( strpos( $value, '.' ) === false ) {
+            return '';
+        }
+
+        return home_url( '/' . ltrim( $value, '/' ) );
+    }
+
+    private function get_preload_sitemap_urls() {
+        $raw = get_option( 'uwb_preload_sitemap', '' );
+        if ( empty( $raw ) ) {
+            $raw = home_url( '/important-sitemap.xml' ) . "\n" . home_url( '/wp-sitemap.xml' );
+        }
+
+        $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $raw ) ) ) );
+        $urls = array();
+
+        foreach ( $lines as $line ) {
+            $url = $this->normalize_user_url( $line );
+            if ( $url && filter_var( $url, FILTER_VALIDATE_URL ) ) {
+                $urls[] = $url;
+            }
+        }
+
+        return array_values( array_unique( $urls ) );
+    }
+
+    private function is_important_sitemap_url( $url ) {
+        $path = wp_parse_url( $url, PHP_URL_PATH );
+        return strtolower( basename( (string) $path ) ) === 'important-sitemap.xml';
     }
 
     /**
@@ -393,10 +489,7 @@ class Uwb_Preloader {
         set_transient( 'uwb_populating_queue', 1, 60 ); // lock for 60 seconds
 
         // Retrieve settings
-        $sitemap_url = get_option( 'uwb_preload_sitemap', '' );
-        if ( empty( $sitemap_url ) ) {
-            $sitemap_url = home_url( '/wp-sitemap.xml' );
-        }
+        $sitemap_urls = $this->get_preload_sitemap_urls();
 
         // Fetch URL exclusions
         $exclusions_raw = get_option( 'uwb_excluded_urls', '' );
@@ -406,14 +499,23 @@ class Uwb_Preloader {
         $priority_raw = get_option( 'uwb_priority_urls', '' );
         $priority_urls = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $priority_raw ) ) ) );
 
-        // 1. Collect priority URLs (Homepage + Public Taxonomy Terms)
+        // 1. Collect priority URLs (manual important URLs + Homepage + Public Taxonomy Terms)
+        $manual_priority_urls = $this->get_priority_url_sitemap_entries();
         $collected_priority_urls = $this->collect_public_taxonomy_urls();
 
-        // 2. Parse Sitemap
-        $parsed = $this->parse_sitemap( $sitemap_url );
+        // 2. Parse Sitemaps
+        $parsed = array(
+            'priority' => array(),
+            'normal'   => array(),
+        );
+        foreach ( $sitemap_urls as $sitemap_url ) {
+            $sitemap_result = $this->parse_sitemap( $sitemap_url, 0, $this->is_important_sitemap_url( $sitemap_url ) );
+            $parsed['priority'] = array_merge( $parsed['priority'], $sitemap_result['priority'] );
+            $parsed['normal']   = array_merge( $parsed['normal'], $sitemap_result['normal'] );
+        }
         
         // Merge all raw URLs and normalize them to prevent duplicates
-        $raw_urls = array_merge( $collected_priority_urls, $parsed['priority'], $parsed['normal'] );
+        $raw_urls = array_merge( $manual_priority_urls, $collected_priority_urls, $parsed['priority'], $parsed['normal'] );
         $normalized_urls = array();
         foreach ( $raw_urls as $url ) {
             $normalized_urls[] = $this->normalize_url( $url );
@@ -422,7 +524,7 @@ class Uwb_Preloader {
 
         if ( empty( $urls ) ) {
             delete_transient( 'uwb_populating_queue' );
-            return new WP_Error( 'no_urls', 'No URLs found in sitemap or taxonomy terms.' );
+            return new WP_Error( 'no_urls', 'No URLs found in sitemaps, important URLs, or taxonomy terms.' );
         }
 
         // 3. Empty the queue first
