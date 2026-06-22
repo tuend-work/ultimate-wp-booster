@@ -133,8 +133,13 @@ function uwb_advanced_cache_run() {
                              strpos( $_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip' ) !== false;
 
             header( 'X-Ultimate-WP-Booster-Serving-Static: Yes' );
-            header( 'Pragma: public' );
-            header( 'Cache-Control: max-age=3600, public' );
+            if ( $logged_in_cookie_hash !== '' ) {
+                header( 'Cache-Control: no-cache, no-store, must-revalidate, private' );
+                header( 'Pragma: no-cache' );
+            } else {
+                header( 'Pragma: public' );
+                header( 'Cache-Control: max-age=3600, public' );
+            }
             header( 'Content-Type: text/html; charset=UTF-8' );
 
             if ( $supports_gzip && file_exists( $gzip_file ) && filesize( $gzip_file ) > 0 ) {
