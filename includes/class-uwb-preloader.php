@@ -126,6 +126,15 @@ class Uwb_Preloader {
         return strtolower( basename( (string) $path ) ) === 'important-sitemap.xml';
     }
 
+    private function is_xml_url( $url ) {
+        $path = wp_parse_url( $url, PHP_URL_PATH );
+        if ( empty( $path ) ) {
+            return false;
+        }
+
+        return strtolower( substr( $path, -4 ) ) === '.xml';
+    }
+
     /**
      * Parse sitemap and return list of URLs
      */
@@ -170,7 +179,8 @@ class Uwb_Preloader {
         }
 
         // 1. Check if it's a sitemap index
-        if ( isset( $xml->sitemap ) ) {
+        $has_sitemap_index = isset( $xml->sitemap );
+        if ( $has_sitemap_index ) {
             foreach ( $xml->sitemap as $sub_sitemap ) {
                 if ( isset( $sub_sitemap->loc ) ) {
                     $sub_url = trim( (string) $sub_sitemap->loc );
@@ -206,7 +216,7 @@ class Uwb_Preloader {
         }
 
         // Standard sitemap parser failsafe for basic xml
-        if ( empty( $raw_urls ) ) {
+        if ( empty( $raw_urls ) && ! $has_sitemap_index ) {
             // RegEx fallback if standard XML parsing failed due to namespaces
             preg_match_all( '/<loc>(https?:\/\/[^<]+)<\/loc>/i', $xml_content, $matches );
             if ( ! empty( $matches[1] ) ) {
@@ -248,6 +258,10 @@ class Uwb_Preloader {
         $home_url_no_slash = rtrim( $home_url, '/' );
 
         foreach ( array_unique( $raw_urls ) as $url ) {
+            if ( $this->is_xml_url( $url ) ) {
+                continue;
+            }
+
             if ( $is_priority_sitemap ) {
                 $result['priority'][] = $url;
             } else {
@@ -518,7 +532,10 @@ class Uwb_Preloader {
         $raw_urls = array_merge( $manual_priority_urls, $collected_priority_urls, $parsed['priority'], $parsed['normal'] );
         $normalized_urls = array();
         foreach ( $raw_urls as $url ) {
-            $normalized_urls[] = $this->normalize_url( $url );
+            $normalized_url = $this->normalize_url( $url );
+            if ( ! $this->is_xml_url( $normalized_url ) ) {
+                $normalized_urls[] = $normalized_url;
+            }
         }
         $urls = array_values( array_unique( $normalized_urls ) );
 
@@ -720,6 +737,9 @@ class Uwb_Preloader {
 
         $where = array( '1=1' );
         $params = array();
+
+        $where[]  = 'url NOT LIKE %s';
+        $params[] = '%.xml%';
 
         if ( $status && in_array( $status, array( 'pending', 'processing', 'completed', 'failed' ), true ) ) {
             $where[]  = 'status = %s';
