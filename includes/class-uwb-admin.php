@@ -678,73 +678,69 @@ class Uwb_Admin {
                             <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter by status, search, sort columns, and take actions on individual URLs.</p>
 
                             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:20px;">
-                                <!-- Status Block -->
-                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
-                                    <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
-                                        Cache Status
-                                    </h3>
-                                    <div style="margin-top:12px;">
-                                        <?php
-                                        $oc_active = wp_using_ext_object_cache();
-                                        $oc_dropin = file_exists( WP_CONTENT_DIR . '/object-cache.php' );
-                                        if ( $oc_active ) {
-                                            echo '<div style="display:inline-flex; align-items:center; gap:8px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px;"><span style="width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active</div>';
-                                            // Detect backend
-                                            $backend = 'Unknown';
-                                            if ( class_exists('Redis') || class_exists('Predis\Client') || defined('WP_REDIS_HOST') || get_option('uwb_redis_enabled') ) {
-                                                $backend = 'Redis';
-                                            } elseif ( class_exists('Memcached') || class_exists('Memcache') ) {
-                                                $backend = 'Memcached';
-                                            } elseif ( function_exists('apcu_fetch') ) {
-                                                $backend = 'APCu';
-                                            }
-                                            echo '<p style="margin-top:12px; font-size:13px; color:var(--uwb-text-muted);">Backend: <strong>' . esc_html( $backend ) . '</strong></p>';
-                                        } else {
-                                            echo '<div style="display:inline-flex; align-items:center; gap:8px; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px;"><span style="width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;"></span> Inactive</div>';
-                                        }
-                                        ?>
-                                    </div>
-                                    <div style="margin-top:16px; border-top:1px solid var(--uwb-border); padding-top:16px;">
-                                        <h4 style="margin:0 0 8px 0; font-size:13.5px; color:var(--uwb-text);">Drop-in File</h4>
-                                        <?php if ( $oc_dropin ) : ?>
-                                            <p style="font-size:13px; color:#065f46; margin:0;"><strong>✓</strong> <code>wp-content/object-cache.php</code> is installed.</p>
-                                        <?php else : ?>
-                                            <p style="font-size:13px; color:#92400e; margin:0;"><strong>✗</strong> <code>wp-content/object-cache.php</code> not found.</p>
-                                            <p style="font-size:12px; color:var(--uwb-text-muted); margin-top:6px; line-height:1.4;">To enable persistent object caching, configure connection above, select Enabled, and click Save Changes.</p>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-
-                                <!-- Connection & Tools Block -->
+                                <!-- Cache Status & Connection Test Block -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; display:flex; flex-direction:column; justify-content:space-between;">
                                     <div>
                                         <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                                            Redis Connection Test
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                                            Cache Status & Connection
                                         </h3>
-                                        <div style="margin-top:12px; font-size:13px; line-height:1.5;">
-                                            <?php
-                                            $curr_conn_type = get_option('uwb_redis_conn_type', 'tcp');
-                                            $curr_host = get_option('uwb_redis_host', '127.0.0.1');
-                                            $curr_port = get_option('uwb_redis_port', 6379);
-                                            $curr_socket = get_option('uwb_redis_socket', '');
-                                            $curr_db = get_option('uwb_redis_db', 0);
-                                            if ( $curr_conn_type === 'socket' ) {
-                                                $conn_str = esc_html( $curr_socket );
-                                            } else {
-                                                $conn_str = esc_html( $curr_host . ':' . $curr_port );
-                                            }
-                                            ?>
-                                            <p style="margin:0 0 8px 0;"><strong>Saved Connection:</strong> <code><?php echo $conn_str; ?></code> (DB: <?php echo intval( $curr_db ); ?>)</p>
-                                            <p style="margin:0 0 12px 0;"><strong>PHP Redis Extension:</strong> <code><?php echo class_exists('Redis') ? 'Available ✓' : 'Not Installed ✗'; ?></code></p>
+                                        
+                                        <div style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
+                                            <!-- Status Info -->
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <span style="font-weight:600; font-size:13.5px; color:var(--uwb-text);">Status:</span>
+                                                <?php
+                                                $oc_active = wp_using_ext_object_cache();
+                                                $oc_dropin = file_exists( WP_CONTENT_DIR . '/object-cache.php' );
+                                                if ( $oc_active ) {
+                                                    echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active (Redis)</div>';
+                                                } else {
+                                                    echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span> Inactive</div>';
+                                                }
+                                                ?>
+                                            </div>
+
+                                            <!-- Drop-in Info -->
+                                            <div style="border-top:1px solid var(--uwb-border); padding-top:12px; display:flex; align-items:center; justify-content:space-between; font-size:13px;">
+                                                <span style="font-weight:600; color:var(--uwb-text);">Drop-in File:</span>
+                                                <?php if ( $oc_dropin ) : ?>
+                                                    <span style="color:#059669; font-weight:600;">✓ Installed</span>
+                                                <?php else : ?>
+                                                    <span style="color:#d97706; font-weight:600;">✗ Not Found</span>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Connection Info -->
+                                            <div style="border-top:1px solid var(--uwb-border); padding-top:12px; display:flex; flex-direction:column; gap:6px; font-size:13px;">
+                                                <?php
+                                                $curr_conn_type = get_option('uwb_redis_conn_type', 'tcp');
+                                                $curr_host = get_option('uwb_redis_host', '127.0.0.1');
+                                                $curr_port = get_option('uwb_redis_port', 6379);
+                                                $curr_socket = get_option('uwb_redis_socket', '');
+                                                $curr_db = get_option('uwb_redis_db', 0);
+                                                if ( $curr_conn_type === 'socket' ) {
+                                                    $conn_str = esc_html( $curr_socket );
+                                                } else {
+                                                    $conn_str = esc_html( $curr_host . ':' . $curr_port );
+                                                }
+                                                ?>
+                                                <div style="display:flex; justify-content:space-between;">
+                                                    <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
+                                                    <code><?php echo $conn_str; ?> (DB <?php echo intval( $curr_db ); ?>)</code>
+                                                </div>
+                                                <div style="display:flex; justify-content:space-between;">
+                                                    <span style="font-weight:600; color:var(--uwb-text);">PHP Extension:</span>
+                                                    <span><?php echo class_exists('Redis') ? 'Available ✓' : 'Not Installed ✗'; ?></span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div id="redis-test-result" style="display:none; padding:10px 14px; border-radius:8px; font-size:12.5px; font-weight:600; margin-bottom:12px;"></div>
+                                        <div id="redis-test-result" style="display:none; padding:10px 14px; border-radius:8px; font-size:12.5px; font-weight:600; margin-top:12px;"></div>
                                     </div>
 
-                                    <div style="display:flex; gap:12px;">
-                                        <button type="button" id="btn-test-redis" class="button" style="border:1px solid var(--uwb-border); padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; background:#fff; cursor:pointer; color:var(--uwb-text); transition:all 0.2s;">Test Connection</button>
-                                        <button type="button" id="btn-flush-redis" class="button" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; cursor:pointer; transition:all 0.2s;">Flush Cache</button>
+                                    <div style="display:flex; gap:12px; margin-top:16px; border-top:1px solid var(--uwb-border); padding-top:12px;">
+                                        <button type="button" id="btn-test-redis" class="button" style="border:1px solid var(--uwb-border); padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; background:#fff; cursor:pointer; color:var(--uwb-text); transition:all 0.2s; flex:1;">Test Connection</button>
+                                        <button type="button" id="btn-flush-redis" class="button" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; cursor:pointer; transition:all 0.2s; flex:1;">Flush Cache</button>
                                     </div>
                                 </div>
 
