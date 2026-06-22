@@ -67,13 +67,26 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_preload_batch_size', 'intval' );
 
         // Redis Object Cache Settings
-        register_setting( 'uwb_settings_group', 'uwb_redis_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_enabled', array( $this, 'sanitize_object_cache_enabled' ) );
         register_setting( 'uwb_settings_group', 'uwb_redis_conn_type', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_host', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_port', 'intval' );
         register_setting( 'uwb_redis_socket', 'uwb_redis_socket', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_password', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_db', 'intval' );
+    }
+
+    public function sanitize_object_cache_enabled( $val ) {
+        $val = intval( $val );
+        if ( $val === 1 && ! ( extension_loaded( 'redis' ) || class_exists( 'Redis' ) ) ) {
+            add_settings_error( 'uwb_redis_enabled', 'redis_missing', 'Không thể kích hoạt Redis Object Cache do PHP Redis extension chưa được cài đặt trên máy chủ.', 'error' );
+            return 0;
+        }
+        if ( $val === 2 && ! extension_loaded( 'memcached' ) ) {
+            add_settings_error( 'uwb_redis_enabled', 'memcached_missing', 'Không thể kích hoạt Memcached Object Cache do PHP Memcached extension chưa được cài đặt trên máy chủ.', 'error' );
+            return 0;
+        }
+        return $val;
     }
 
     public function admin_init_sync() {
@@ -441,6 +454,7 @@ class Uwb_Admin {
                 </div>
 
                 <div class="uwb-content-panel">
+                    <?php settings_errors(); ?>
                     <form method="post" action="options.php">
                         <?php settings_fields( 'uwb_settings_group' ); ?>
 
@@ -717,34 +731,55 @@ class Uwb_Admin {
                                                 $curr_socket = get_option('uwb_redis_socket', '');
                                                 $curr_db = get_option('uwb_redis_db', 0);
                                                 
-                                                if ( $oc_type === 2 ) {
-                                                    if ( intval( $curr_port ) === 6379 ) {
-                                                        $curr_port = 11211;
-                                                    }
-                                                    $conn_str = esc_html( $curr_host . ':' . $curr_port );
-                                                    $ext_available = extension_loaded('memcached');
-                                                    $ext_label = 'Memcached';
+                                                if ( $oc_type === 0 ) {
+                                                    $redis_available = extension_loaded('redis') || class_exists('Redis');
+                                                    $mc_available = extension_loaded('memcached');
+                                                    ?>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
+                                                        <span style="color:var(--uwb-text-muted);">Disabled</span>
+                                                    </div>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">Redis Extension:</span>
+                                                        <span><?php echo $redis_available ? 'Available ✓' : 'Not Installed ✗'; ?></span>
+                                                    </div>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">Memcached Extension:</span>
+                                                        <span><?php echo $mc_available ? 'Available ✓' : 'Not Installed ✗'; ?></span>
+                                                    </div>
+                                                    <?php
                                                 } else {
-                                                    if ( intval( $curr_port ) === 11211 ) {
-                                                        $curr_port = 6379;
-                                                    }
-                                                    if ( $curr_conn_type === 'socket' ) {
-                                                        $conn_str = esc_html( $curr_socket );
-                                                    } else {
+                                                    if ( $oc_type === 2 ) {
+                                                        if ( intval( $curr_port ) === 6379 ) {
+                                                            $curr_port = 11211;
+                                                        }
                                                         $conn_str = esc_html( $curr_host . ':' . $curr_port );
+                                                        $ext_available = extension_loaded('memcached');
+                                                        $ext_label = 'Memcached';
+                                                    } else {
+                                                        if ( intval( $curr_port ) === 11211 ) {
+                                                            $curr_port = 6379;
+                                                        }
+                                                        if ( $curr_conn_type === 'socket' ) {
+                                                            $conn_str = esc_html( $curr_socket );
+                                                        } else {
+                                                            $conn_str = esc_html( $curr_host . ':' . $curr_port );
+                                                        }
+                                                        $ext_available = extension_loaded('redis') || class_exists('Redis');
+                                                        $ext_label = 'Redis';
                                                     }
-                                                    $ext_available = extension_loaded('redis') || class_exists('Redis');
-                                                    $ext_label = 'Redis';
+                                                    ?>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
+                                                        <code><?php echo $conn_str; ?><?php if ($oc_type !== 2) { echo ' (DB ' . intval( $curr_db ) . ')'; } ?></code>
+                                                    </div>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">PHP Extension:</span>
+                                                        <span><?php echo $ext_available ? $ext_label . ' Available ✓' : $ext_label . ' Not Installed ✗'; ?></span>
+                                                    </div>
+                                                    <?php
                                                 }
                                                 ?>
-                                                <div style="display:flex; justify-content:space-between;">
-                                                    <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
-                                                    <code><?php echo $conn_str; ?><?php if ($oc_type !== 2) { echo ' (DB ' . intval( $curr_db ) . ')'; } ?></code>
-                                                </div>
-                                                <div style="display:flex; justify-content:space-between;">
-                                                    <span style="font-weight:600; color:var(--uwb-text);">PHP Extension:</span>
-                                                    <span><?php echo $ext_available ? $ext_label . ' Available ✓' : $ext_label . ' Not Installed ✗'; ?></span>
-                                                </div>
                                             </div>
                                         </div>
                                         <div id="redis-test-result" style="display:none; padding:10px 14px; border-radius:8px; font-size:12.5px; font-weight:600; margin-top:12px;"></div>
