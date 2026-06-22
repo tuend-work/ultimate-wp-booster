@@ -596,9 +596,15 @@ class Uwb_Admin {
                                 </div>
 
                                 <!-- Password Setting -->
-                                <div id="uwb-oc-password-group" class="uwb-form-group" style="margin-bottom:0;">
+                                <div id="uwb-oc-password-group" class="uwb-form-group" style="margin-bottom:20px;">
                                     <label for="uwb_redis_password">Redis Password (Optional)</label>
                                     <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" />
+                                </div>
+
+                                <!-- Test Connection Button for Settings -->
+                                <div id="uwb-oc-settings-test-group" style="border-top:1px solid var(--uwb-border); padding-top:20px; display:none;">
+                                    <button type="button" id="btn-test-redis-settings" class="button" style="border:1px solid var(--uwb-border); padding:10px 20px; border-radius:8px; font-weight:600; font-size:13px; background:#fff; cursor:pointer; color:var(--uwb-text); transition:all 0.2s;">Test Connection</button>
+                                    <div id="redis-test-result-settings" style="display:none; padding:12px 16px; border-radius:8px; font-size:13px; font-weight:600; margin-top:16px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -1182,6 +1188,7 @@ class Uwb_Admin {
                     $('#redis-socket-settings').hide();
                     $('#uwb-oc-db-group').hide();
                     $('#uwb-oc-password-group').hide();
+                    $('#uwb-oc-settings-test-group').hide();
                 } else if (ocType === '2') {
                     // Memcached: show Host/Port, hide others
                     $('#uwb-oc-conn-type-group').hide();
@@ -1194,6 +1201,7 @@ class Uwb_Admin {
                     $('#redis-socket-settings').hide();
                     $('#uwb-oc-db-group').hide();
                     $('#uwb-oc-password-group').hide();
+                    $('#uwb-oc-settings-test-group').show();
                 } else {
                     // Redis
                     $('#uwb-oc-conn-type-group').show();
@@ -1205,6 +1213,7 @@ class Uwb_Admin {
                         $('#uwb_redis_port').val('6379');
                     }
                     toggleRedisFields();
+                    $('#uwb-oc-settings-test-group').show();
                 }
             }
             $('#uwb_redis_enabled').on('change', toggleObjectCacheFields);
@@ -1309,6 +1318,65 @@ class Uwb_Admin {
                 e.preventDefault();
                 var $btn = $(this);
                 var $result = $('#redis-test-result');
+                
+                $btn.prop('disabled', true).text('Testing...');
+                $result.hide().removeClass('notice-success notice-error').css({'background': '', 'color': '', 'border': ''});
+                
+                var ocType = $('#uwb_redis_enabled').val();
+                var connType = $('#uwb_redis_conn_type').val();
+                var host = $('#uwb_redis_host').val();
+                var port = $('#uwb_redis_port').val();
+                var socket = $('#uwb_redis_socket').val();
+                var password = $('#uwb_redis_password').val();
+                var db = $('#uwb_redis_db').val();
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'uwb_test_redis_connection',
+                        nonce: nonce,
+                        type: ocType,
+                        conn_type: connType,
+                        host: host,
+                        port: port,
+                        socket: socket,
+                        password: password,
+                        db: db
+                    },
+                    success: function(res) {
+                        $btn.prop('disabled', false).text('Test Connection');
+                        $result.show();
+                        if (res.success) {
+                            $result.css({
+                                'background': '#d1fae5',
+                                'color': '#065f46',
+                                'border': '1px solid #6ee7b7'
+                            }).text(res.data.message);
+                        } else {
+                            $result.css({
+                                'background': '#fee2e2',
+                                'color': '#991b1b',
+                                'border': '1px solid #fca5a5'
+                            }).text(res.data.message);
+                        }
+                    },
+                    error: function() {
+                        $btn.prop('disabled', false).text('Test Connection');
+                        $result.show().css({
+                            'background': '#fee2e2',
+                            'color': '#991b1b',
+                            'border': '1px solid #fca5a5'
+                        }).text('Server error occurred during the test.');
+                    }
+                });
+            });
+
+            // Test Redis Connection (Settings Page)
+            $('#btn-test-redis-settings').on('click', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var $result = $('#redis-test-result-settings');
                 
                 $btn.prop('disabled', true).text('Testing...');
                 $result.hide().removeClass('notice-success notice-error').css({'background': '', 'color': '', 'border': ''});
