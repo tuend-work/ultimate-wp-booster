@@ -310,6 +310,40 @@ class Uwb_Preloader {
     }
 
     /**
+     * Normalize URL path and trailing slash to prevent duplicates
+     */
+    private function normalize_url( $url ) {
+        $parsed = wp_parse_url( $url );
+        if ( ! $parsed || empty( $parsed['host'] ) ) {
+            return $url;
+        }
+
+        $scheme = isset( $parsed['scheme'] ) ? $parsed['scheme'] : 'http';
+        $host   = $parsed['host'];
+        $port   = isset( $parsed['port'] ) ? ':' . $parsed['port'] : '';
+        $path   = isset( $parsed['path'] ) ? $parsed['path'] : '/';
+        $query  = isset( $parsed['query'] ) ? '?' . $parsed['query'] : '';
+        $fragment = isset( $parsed['fragment'] ) ? '#' . $parsed['fragment'] : '';
+
+        // If path is root or empty, make it '/'
+        if ( $path === '' || $path === '/' ) {
+            $path = '/';
+        } else {
+            // Apply WordPress trailing slash settings if it's a directory/route (no file extension)
+            $filename = basename( $path );
+            if ( strpos( $filename, '.' ) === false ) {
+                if ( function_exists( 'user_trailingslashit' ) ) {
+                    $path = user_trailingslashit( $path );
+                } else {
+                    $path = rtrim( $path, '/' ) . '/';
+                }
+            }
+        }
+
+        return $scheme . '://' . $host . $port . $path . $query . $fragment;
+    }
+
+    /**
      * Get home URL and all public taxonomy term URLs
      * @return array List of URLs
      */
@@ -319,7 +353,6 @@ class Uwb_Preloader {
         // 1. Homepage
         $home_url = home_url( '/' );
         $urls[] = $home_url;
-        $urls[] = rtrim( $home_url, '/' );
 
         // 2. Public Taxonomy Terms
         if ( function_exists( 'get_taxonomies' ) && function_exists( 'get_terms' ) ) {
@@ -378,7 +411,14 @@ class Uwb_Preloader {
 
         // 2. Parse Sitemap
         $parsed = $this->parse_sitemap( $sitemap_url );
-        $urls = array_values( array_unique( array_merge( $collected_priority_urls, $parsed['priority'], $parsed['normal'] ) ) );
+        
+        // Merge all raw URLs and normalize them to prevent duplicates
+        $raw_urls = array_merge( $collected_priority_urls, $parsed['priority'], $parsed['normal'] );
+        $normalized_urls = array();
+        foreach ( $raw_urls as $url ) {
+            $normalized_urls[] = $this->normalize_url( $url );
+        }
+        $urls = array_values( array_unique( $normalized_urls ) );
 
         if ( empty( $urls ) ) {
             delete_transient( 'uwb_populating_queue' );
