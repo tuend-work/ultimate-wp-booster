@@ -22,14 +22,14 @@ defined( 'ABSPATH' ) || exit;
 
 // Load dynamic settings from Ultimate WP Booster config file
 if ( defined( 'WP_CONTENT_DIR' ) ) {
-    $uwb_config_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
+    $uwb_config_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
     if ( file_exists( $uwb_config_file ) ) {
-        $uwb_config_data = @json_decode( @file_get_contents( $uwb_config_file ), true );
+        $uwb_config_data = include $uwb_config_file;
         if ( is_array( $uwb_config_data ) ) {
             if ( empty( $uwb_config_data['redis_enabled'] ) ) {
                 define( 'WP_REDIS_DISABLED', true );
             } else {
-                // Map connection settings to Till KrÃ¼ss's constants
+                // Map connection settings to Till Krüss's constants
                 if ( ! defined( 'WP_REDIS_SCHEME' ) && ! empty( $uwb_config_data['redis_conn_type'] ) ) {
                     define( 'WP_REDIS_SCHEME', $uwb_config_data['redis_conn_type'] === 'socket' ? 'unix' : 'tcp' );
                 }

@@ -28,7 +28,7 @@ function uwb_advanced_cache_run() {
     }
 
     // 3. Load config file
-    $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
+    $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
     $config      = array(
         'cache_lifespan'  => 36000,
         'cache_logged_in' => false,
@@ -37,12 +37,9 @@ function uwb_advanced_cache_run() {
     );
 
     if ( file_exists( $config_path ) ) {
-        $json_data = @file_get_contents( $config_path );
-        if ( $json_data ) {
-            $parsed_config = @json_decode( $json_data, true );
-            if ( is_array( $parsed_config ) ) {
-                $config = array_merge( $config, $parsed_config );
-            }
+        $parsed_config = include $config_path;
+        if ( is_array( $parsed_config ) ) {
+            $config = array_merge( $config, $parsed_config );
         }
     }
 
@@ -198,7 +195,7 @@ function uwb_advanced_cache_shutdown() {
     // Re-read config
     $config_path = isset( $GLOBALS['uwb_config_path'] )
         ? $GLOBALS['uwb_config_path']
-        : WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.json';
+        : WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
 
     $config          = isset( $GLOBALS['uwb_config'] ) ? $GLOBALS['uwb_config'] : array();
     $cache_logged_in = ! empty( $config['cache_logged_in'] );

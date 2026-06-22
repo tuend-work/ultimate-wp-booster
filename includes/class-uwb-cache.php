@@ -114,22 +114,22 @@ class Uwb_Cache {
             @mkdir( $cache_dir, 0755, true );
         }
 
-        // Create .htaccess to deny direct web access to the config JSON file
-        $htaccess_path = $cache_dir . '/.htaccess';
-        if ( ! file_exists( $htaccess_path ) ) {
-            $htaccess_content = "<Files \"ultimate-wp-booster-config.json\">\n" .
-                                "    <IfModule mod_authz_core.c>\n" .
-                                "        Require all denied\n" .
-                                "    </IfModule>\n" .
-                                "    <IfModule !mod_authz_core.c>\n" .
-                                "        Order deny,allow\n" .
-                                "        Deny from all\n" .
-                                "    </IfModule>\n" .
-                                "</Files>\n";
-            @file_put_contents( $htaccess_path, $htaccess_content );
+        // Clean up old JSON file if it exists
+        $old_json_path = $cache_dir . '/ultimate-wp-booster-config.json';
+        if ( file_exists( $old_json_path ) ) {
+            @unlink( $old_json_path );
         }
 
-        $config_path = $cache_dir . '/ultimate-wp-booster-config.json';
+        // Also clean up htaccess rule for json if it was created
+        $htaccess_path = $cache_dir . '/.htaccess';
+        if ( file_exists( $htaccess_path ) ) {
+            $htaccess_content = @file_get_contents( $htaccess_path );
+            if ( $htaccess_content && strpos( $htaccess_content, 'ultimate-wp-booster-config.json' ) !== false ) {
+                @unlink( $htaccess_path );
+            }
+        }
+
+        $config_path = $cache_dir . '/ultimate-wp-booster-config.php';
         
         $lifespan_hours = floatval( get_option( 'uwb_cache_lifespan', 10 ) );
         $lifespan_seconds = intval( $lifespan_hours * 3600 );
@@ -162,7 +162,11 @@ class Uwb_Cache {
             'redis_db'               => intval( get_option( 'uwb_redis_db', 0 ) )
         );
 
-        @file_put_contents( $config_path, json_encode( $config, JSON_PRETTY_PRINT ) );
+        $config_content = "<?php\n" .
+                           "defined( 'ABSPATH' ) or die( 'Forbidden' );\n" .
+                           "return " . var_export( $config, true ) . ";\n";
+
+        @file_put_contents( $config_path, $config_content );
 
         // Auto-sync advanced-cache.php drop-in file to wp-content/
         require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
