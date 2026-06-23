@@ -1799,7 +1799,13 @@ class Uwb_Admin {
                     url: ajaxurl, type: 'POST',
                     data: { action: 'uwb_add_to_priority', nonce: nonce, id: id },
                     success: function(res) {
-                        if (res.success) { showToast(res.data.message); loadUrlTable(); }
+                        if (res.success) { 
+                            showToast(res.data.message); 
+                            if (res.data.urls !== undefined) {
+                                $('#uwb_priority_urls').val(res.data.urls);
+                            }
+                            loadUrlTable(); 
+                        }
                         else { $btn.prop('disabled', false).text('Important'); showToast(res.data.message, true); }
                     },
                     error: function() { $btn.prop('disabled', false).text('Important'); showToast('Error.', true); }

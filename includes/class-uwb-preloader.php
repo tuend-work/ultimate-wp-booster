@@ -998,15 +998,17 @@ class Uwb_Preloader {
             $new_priority = max( 1, intval( $max_priority ) + 1 );
             $wpdb->update( $this->table_name, array( 'priority' => $new_priority ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
 
-            wp_send_json_success( array( 'message' => "Removed {$path} from Important URLs.", 'path' => $path ) );
+            $updated_urls = implode( "\n", $normalized_lines );
+            wp_send_json_success( array( 'message' => "Removed {$path} from Important URLs.", 'path' => $path, 'urls' => $updated_urls ) );
         } else {
             // Add to list
             $normalized_lines[] = $path;
-            update_option( 'uwb_priority_urls', implode( "\n", $normalized_lines ) );
+            $updated_urls = implode( "\n", $normalized_lines );
+            update_option( 'uwb_priority_urls', $updated_urls );
             // Mark as priority in the queue (set priority to 0)
             $wpdb->update( $this->table_name, array( 'priority' => 0 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
 
-            wp_send_json_success( array( 'message' => "Added {$path} to Important URLs.", 'path' => $path ) );
+            wp_send_json_success( array( 'message' => "Added {$path} to Important URLs.", 'path' => $path, 'urls' => $updated_urls ) );
         }
     }
 }
