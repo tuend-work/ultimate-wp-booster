@@ -793,7 +793,7 @@ class Uwb_Admin {
                                     <div>
                                         <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
-                                            Cache Status & Connection
+                                            Object Cache Status
                                         </h3>
                                         
                                         <div style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
