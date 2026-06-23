@@ -548,7 +548,7 @@ class Uwb_Admin {
                         Cache Settings
                     </div>
                     <div class="uwb-nav-item" data-tab="preload_settings">
-                        Preload Cache
+                        Preload Settings
                     </div>
                 </div>
 
