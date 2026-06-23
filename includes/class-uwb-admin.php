@@ -759,7 +759,11 @@ class Uwb_Admin {
                                     </div>
                                 </div>
                             </div>
-
+                            <div class="uwb-form-group">
+                                <label for="uwb_preload_batch_size">Preload Batch Size</label>
+                                <input type="number" min="1" max="50" name="uwb_preload_batch_size" id="uwb_preload_batch_size" value="<?php echo esc_attr( get_option( 'uwb_preload_batch_size', 5 ) ); ?>" />
+                                <p class="description">The number of URLs to crawl per batch to minimize CPU and server overhead.</p>
+                            </div>
                             <div class="uwb-form-group">
                                 <label for="uwb_preload_sitemap">Sitemap XML URLs</label>
                                 <textarea name="uwb_preload_sitemap" id="uwb_preload_sitemap" rows="5" placeholder="<?php echo esc_attr( home_url( '/important-sitemap.xml' ) . "\n" . home_url( '/wp-sitemap.xml' ) ); ?>"><?php echo esc_textarea( $this->get_preload_sitemap_setting_value() ); ?></textarea>
@@ -771,11 +775,7 @@ class Uwb_Admin {
                                 <p class="description">Important URLs or matching keywords, one per line. Valid URLs and paths are also published at <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
                             </div>
 
-                            <div class="uwb-form-group">
-                                <label for="uwb_preload_batch_size">Preload Batch Size</label>
-                                <input type="number" min="1" max="50" name="uwb_preload_batch_size" id="uwb_preload_batch_size" value="<?php echo esc_attr( get_option( 'uwb_preload_batch_size', 5 ) ); ?>" />
-                                <p class="description">The number of URLs to crawl per batch to minimize CPU and server overhead.</p>
-                            </div>
+
                         </div>
 
 
