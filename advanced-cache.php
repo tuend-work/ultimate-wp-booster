@@ -45,11 +45,46 @@ function uwb_advanced_cache_run() {
 
     $cache_logged_in = (bool) $config['cache_logged_in'];
 
-    // 4. Check query string bypass
+    // 4. Check query string bypass & caching
+    $active_cache_query_params = array();
     if ( ! empty( $_SERVER['QUERY_STRING'] ) ) {
         parse_str( $_SERVER['QUERY_STRING'], $query_params );
+        $allowed_cache_queries = isset( $config['cache_query_strings'] ) ? $config['cache_query_strings'] : array();
+        
         foreach ( $query_params as $param => $val ) {
-            if ( ! in_array( $param, $config['ignored_query'], true ) ) {
+            if ( in_array( $param, $config['ignored_query'], true ) ) {
+                continue;
+            }
+            if ( in_array( $param, $allowed_cache_queries, true ) ) {
+                $active_cache_query_params[$param] = $val;
+                continue;
+            }
+            // If it's not ignored and not allowed to be cached, bypass cache
+            return;
+        }
+    }
+
+    // 4.1 Check excluded cookies
+    if ( ! empty( $_COOKIE ) && ! empty( $config['exclude_cookies'] ) ) {
+        foreach ( $_COOKIE as $key => $val ) {
+            foreach ( $config['exclude_cookies'] as $cookie_pattern ) {
+                $cookie_pattern = trim( $cookie_pattern );
+                if ( empty( $cookie_pattern ) ) continue;
+                $regex = str_replace( '\*', '.*', preg_quote( $cookie_pattern, '#' ) );
+                if ( preg_match( '#^' . $regex . '$#i', $key ) ) {
+                    return;
+                }
+            }
+        }
+    }
+
+    // 4.2 Check excluded User Agent(s)
+    if ( ! empty( $_SERVER['HTTP_USER_AGENT'] ) && ! empty( $config['exclude_user_agents'] ) ) {
+        $ua = $_SERVER['HTTP_USER_AGENT'];
+        foreach ( $config['exclude_user_agents'] as $ua_pattern ) {
+            $ua_pattern = trim( $ua_pattern );
+            if ( empty( $ua_pattern ) ) continue;
+            if ( stripos( $ua, $ua_pattern ) !== false ) {
                 return;
             }
         }
@@ -104,7 +139,13 @@ function uwb_advanced_cache_run() {
          ( isset( $_SERVER['SERVER_PORT'] ) && $_SERVER['SERVER_PORT'] == 443 ) ) {
         $is_https = true;
     }
-    $filename = $is_https ? 'index-https.html' : 'index.html';
+    
+    $q_suffix = '';
+    if ( ! empty( $active_cache_query_params ) ) {
+        ksort( $active_cache_query_params );
+        $q_suffix = '-q-' . md5( http_build_query( $active_cache_query_params ) );
+    }
+    $filename = $is_https ? "index-https{$q_suffix}.html" : "index{$q_suffix}.html";
 
     // 9. Build cache directory path (per-user subdirectory for logged-in users)
     $base_cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket/' . $host;

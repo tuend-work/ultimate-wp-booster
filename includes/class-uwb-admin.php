@@ -12,7 +12,6 @@ class Uwb_Admin {
         add_action( 'admin_init', array( $this, 'register_settings' ) );
         add_action( 'admin_init', array( $this, 'admin_init_sync' ) );
 
-        // Sync config JSON file when options are saved
         $options_to_sync = array(
             'uwb_cache_lifespan',
             'uwb_excluded_urls',
@@ -27,7 +26,11 @@ class Uwb_Admin {
             'uwb_redis_socket',
             'uwb_redis_password',
             'uwb_redis_db',
-            'uwb_cache_404'
+            'uwb_cache_404',
+            'uwb_exclude_cookies',
+            'uwb_exclude_user_agents',
+            'uwb_always_purge_urls',
+            'uwb_cache_query_strings'
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
@@ -68,6 +71,10 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_preload_batch_size', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_preload_links', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_404', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_exclude_cookies', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_exclude_user_agents', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_always_purge_urls', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_query_strings', 'sanitize_textarea_field' );
 
         // Redis Object Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_redis_enabled', array( $this, 'sanitize_object_cache_enabled' ) );
@@ -600,34 +607,11 @@ class Uwb_Admin {
                                 </div>
                             </div>
 
-                            <!-- Group 2: Browser Cache Settings -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                                    Browser Cache Settings
-                                </h3>
-
-                                <div class="uwb-form-group">
-                                    <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
-                                    <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                        <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
-                                        <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
-                                    </select>
-                                    <p class="description">Allow guests' browsers to cache static HTML pages locally, bypassing requests to the server for repeat visits.</p>
-                                </div>
-
-                                <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="margin-bottom:0;">
-                                    <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Hours)</label>
-                                    <input type="number" step="0.01" min="0.01" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 1.0 ) ); ?>" />
-                                    <p class="description" style="margin-bottom:0;">The amount of time (in hours) guest browsers are instructed to cache pages. Default is <code>1.0</code> hour.</p>
-                                </div>
-                            </div>
-
                             <!-- Group 3: Exclusion & Bypass Rules -->
                             <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                 <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                    Exclusion & Bypass Rules
+                                    Force & Exclusion Rules
                                 </h3>
 
                                 <div class="uwb-form-group">
@@ -641,15 +625,51 @@ class Uwb_Admin {
                                     </p>
                                 </div>
 
-                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div class="uwb-form-group">
                                     <label for="uwb_ignored_query">Ignored Query Parameters</label>
                                     <textarea name="uwb_ignored_query" id="uwb_ignored_query" rows="5"><?php 
                                         $ignored_query_val = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
                                         echo esc_textarea( $ignored_query_val ); 
                                     ?></textarea>
-                                    <p class="description" style="margin-bottom:0;">
+                                    <p class="description">
                                         Query parameters to ignore when deciding whether to serve the static cache (one per line).<br>
                                         Marketing parameters like <code>utm_source</code>, <code>fbclid</code>, and <code>gclid</code> are ignored by default to ensure ad campaign clicks still get fast static pages.
+                                    </p>
+                                </div>
+
+                                <div class="uwb-form-group">
+                                    <label for="uwb_exclude_cookies">Never Cache Cookies</label>
+                                    <textarea name="uwb_exclude_cookies" id="uwb_exclude_cookies" rows="4" placeholder="wordpress_no_cache_&#10;custom_cookie_*"><?php echo esc_textarea( get_option( 'uwb_exclude_cookies', '' ) ); ?></textarea>
+                                    <p class="description">
+                                        Specify cookie names or patterns that should bypass cache when present in the request (one per line).<br>
+                                        Supports wildcards, e.g. <code>woocommerce_items_in_cart_*</code>
+                                    </p>
+                                </div>
+
+                                <div class="uwb-form-group">
+                                    <label for="uwb_exclude_user_agents">Never Cache User Agent(s)</label>
+                                    <textarea name="uwb_exclude_user_agents" id="uwb_exclude_user_agents" rows="4" placeholder="GTmetrix&#10;PingdomLinkCheck"><?php echo esc_textarea( get_option( 'uwb_exclude_user_agents', '' ) ); ?></textarea>
+                                    <p class="description">
+                                        Specify user agent substrings that should bypass cache (one per line). Case-insensitive.<br>
+                                        Examples: <code>GTmetrix</code>, <code>Pingdom</code>, etc.
+                                    </p>
+                                </div>
+
+                                <div class="uwb-form-group">
+                                    <label for="uwb_always_purge_urls">Always Purge URL</label>
+                                    <textarea name="uwb_always_purge_urls" id="uwb_always_purge_urls" rows="4" placeholder="/some-page/&#10;https://example.com/another-page/"><?php echo esc_textarea( get_option( 'uwb_always_purge_urls', '' ) ); ?></textarea>
+                                    <p class="description">
+                                        Specify URLs you always want purged from cache whenever you update any post or page (one per line).<br>
+                                        Supports absolute URLs or relative paths starting with <code>/</code>.
+                                    </p>
+                                </div>
+
+                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                    <label for="uwb_cache_query_strings">Cache Query String</label>
+                                    <textarea name="uwb_cache_query_strings" id="uwb_cache_query_strings" rows="4" placeholder="paged&#10;sort"><?php echo esc_textarea( get_option( 'uwb_cache_query_strings', '' ) ); ?></textarea>
+                                    <p class="description" style="margin-bottom:0;">
+                                        Cache for query strings enables you to force caching for specific GET parameters (one per line).<br>
+                                        Example: <code>paged</code> or <code>sort</code>.
                                     </p>
                                 </div>
                             </div>
@@ -719,7 +739,28 @@ class Uwb_Admin {
                                 </div>
                             </div>
                         </div>
+                            <!-- Group 2: Browser Cache Settings -->
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    Browser Cache Settings
+                                </h3>
 
+                                <div class="uwb-form-group">
+                                    <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
+                                    <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                        <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
+                                    </select>
+                                    <p class="description">Allow guests' browsers to cache static HTML pages locally, bypassing requests to the server for repeat visits.</p>
+                                </div>
+
+                                <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="margin-bottom:0;">
+                                    <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Hours)</label>
+                                    <input type="number" step="0.01" min="0.01" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 1.0 ) ); ?>" />
+                                    <p class="description" style="margin-bottom:0;">The amount of time (in hours) guest browsers are instructed to cache pages. Default is <code>1.0</code> hour.</p>
+                                </div>
+                            </div>
                         <!-- TAB 2: Preload Cache -->
                         <div id="tab-preload_settings" class="uwb-tab-content">
                             <h2 style="margin-top:0;">Preload Cache (Automatic Crawler)</h2>

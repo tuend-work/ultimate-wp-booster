@@ -64,12 +64,10 @@ class Uwb_Cache {
                 $this->delete_expired_files_recursive( $path, $lifespan_seconds );
             } else {
                 $filename = basename( $path );
-                if ( 
-                    $filename === 'index.html' || 
-                    $filename === 'index-https.html' || 
-                    $filename === 'index.html_gzip' || 
-                    $filename === 'index-https.html_gzip' 
-                ) {
+                $is_cache_file = ( strpos( $filename, 'index' ) === 0 ) && 
+                                 ( substr( $filename, -5 ) === '.html' || substr( $filename, -10 ) === '.html_gzip' );
+
+                if ( $is_cache_file ) {
                     // Check if this file is in a logged-in user folder (e.g. parent folder name starts with "user-")
                     $parent_folder = basename( dirname( $path ) );
                     $is_user_cache = ( strpos( $parent_folder, 'user-' ) === 0 );
@@ -148,6 +146,18 @@ class Uwb_Cache {
         $ignored_query_raw = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
         $ignored_queries = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $ignored_query_raw ) ) ) );
 
+        $exclude_cookies_raw = get_option( 'uwb_exclude_cookies', '' );
+        $exclude_cookies = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclude_cookies_raw ) ) ) );
+
+        $exclude_uas_raw = get_option( 'uwb_exclude_user_agents', '' );
+        $exclude_uas = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclude_uas_raw ) ) ) );
+
+        $always_purge_raw = get_option( 'uwb_always_purge_urls', '' );
+        $always_purges = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $always_purge_raw ) ) ) );
+
+        $cache_qs_raw = get_option( 'uwb_cache_query_strings', '' );
+        $cache_qs = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $cache_qs_raw ) ) ) );
+
         $config = array(
             'cache_lifespan'         => $lifespan_seconds,
             'cache_logged_in'        => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
@@ -155,6 +165,10 @@ class Uwb_Cache {
             'browser_cache_lifespan' => $browser_cache_seconds,
             'excluded_urls'          => array_values( $exclusions ),
             'ignored_query'          => array_values( $ignored_queries ),
+            'exclude_cookies'        => array_values( $exclude_cookies ),
+            'exclude_user_agents'    => array_values( $exclude_uas ),
+            'always_purge_urls'      => array_values( $always_purges ),
+            'cache_query_strings'    => array_values( $cache_qs ),
             'timezone'               => $timezone,
             'cache_404'              => intval( get_option( 'uwb_cache_404', 0 ) ),
             'redis_enabled'          => intval( get_option( 'uwb_redis_enabled', 0 ) ),
@@ -214,18 +228,13 @@ class Uwb_Cache {
         }
 
         if ( file_exists( $dir_path ) && is_dir( $dir_path ) ) {
-            $files = array(
-                'index-https.html',
-                'index-https.html_gzip',
-                'index.html',
-                'index.html_gzip'
-            );
-
             // 1. Delete files in the main directory
-            foreach ( $files as $file ) {
-                $file_path = $dir_path . '/' . $file;
-                if ( file_exists( $file_path ) ) {
-                    @unlink( $file_path );
+            $files_to_delete = glob( $dir_path . '/index*.html*' );
+            if ( is_array( $files_to_delete ) ) {
+                foreach ( $files_to_delete as $file_path ) {
+                    if ( file_exists( $file_path ) ) {
+                        @unlink( $file_path );
+                    }
                 }
             }
 
@@ -233,10 +242,12 @@ class Uwb_Cache {
             $subdirs = glob( $dir_path . '/user-*', GLOB_ONLYDIR );
             if ( is_array( $subdirs ) ) {
                 foreach ( $subdirs as $subdir ) {
-                    foreach ( $files as $file ) {
-                        $file_path = $subdir . '/' . $file;
-                        if ( file_exists( $file_path ) ) {
-                            @unlink( $file_path );
+                    $user_files = glob( $subdir . '/index*.html*' );
+                    if ( is_array( $user_files ) ) {
+                        foreach ( $user_files as $file_path ) {
+                            if ( file_exists( $file_path ) ) {
+                                @unlink( $file_path );
+                            }
                         }
                     }
                     // Remove empty user directory
@@ -307,6 +318,22 @@ class Uwb_Cache {
         $archive_link = get_post_type_archive_link( $post->post_type );
         if ( $archive_link ) {
             $this->purge_url( $archive_link );
+        }
+
+        // 7. Purge always purge URLs
+        $always_purge_raw = get_option( 'uwb_always_purge_urls', '' );
+        if ( ! empty( $always_purge_raw ) ) {
+            $always_purge_lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $always_purge_raw ) ) ) );
+            foreach ( $always_purge_lines as $url_line ) {
+                if ( empty( $url_line ) ) {
+                    continue;
+                }
+                // If it's a relative URL/path, prepend home_url()
+                if ( strpos( $url_line, 'http://' ) !== 0 && strpos( $url_line, 'https://' ) !== 0 ) {
+                    $url_line = home_url( '/' . ltrim( $url_line, '/' ) );
+                }
+                $this->purge_url( $url_line );
+            }
         }
     }
 
