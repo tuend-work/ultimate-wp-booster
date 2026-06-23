@@ -209,6 +209,8 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             // Deactivate plugin if active to avoid file lock issues (especially on Windows)
             $was_active = false;
             if ( is_plugin_active( $this->basename ) ) {
+                // Temporarily remove deactivation hook so drop-ins and config are not deleted during update
+                remove_action( 'deactivate_' . $this->basename, array( 'Uwb_Deactivator', 'deactivate' ) );
                 deactivate_plugins( $this->basename );
                 $was_active = true;
             }

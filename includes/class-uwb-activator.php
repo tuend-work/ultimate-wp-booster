@@ -83,7 +83,10 @@ class Uwb_Activator {
         // 4. Enable WP_CACHE in wp-config.php
         self::toggle_wp_cache( true );
 
-        // 5. Schedule expired cache cleanup cron
+        // 5. Copy object-cache.php drop-in if configured
+        self::copy_object_cache_dropin();
+
+        // 6. Schedule expired cache cleanup cron
         if ( ! wp_next_scheduled( 'uwb_clean_expired_cache' ) ) {
             wp_schedule_event( time(), 'hourly', 'uwb_clean_expired_cache' );
         }
