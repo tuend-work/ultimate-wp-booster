@@ -738,7 +738,7 @@ class Uwb_Admin {
                                     <div id="redis-test-result-settings" style="display:none; padding:12px 16px; border-radius:8px; font-size:13px; font-weight:600; margin-top:16px;"></div>
                                 </div>
                             </div>
-                        </div>
+                            
                             <!-- Group 2: Browser Cache Settings -->
                             <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                 <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
@@ -761,6 +761,7 @@ class Uwb_Admin {
                                     <p class="description" style="margin-bottom:0;">The amount of time (in hours) guest browsers are instructed to cache pages. Default is <code>1.0</code> hour.</p>
                                 </div>
                             </div>
+                        </div>
                         <!-- TAB 2: Preload Cache -->
                         <div id="tab-preload_settings" class="uwb-tab-content">
                             <h2 style="margin-top:0;">Preload Cache (Automatic Crawler)</h2>
