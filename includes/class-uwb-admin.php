@@ -716,14 +716,7 @@ class Uwb_Admin {
                             <h2 style="margin-top:0;">Preload Cache (Automatic Crawler)</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Automatically crawl URLs in your sitemap to pre-generate static cache files before visitors arrive.</p>
 
-                             <div class="uwb-form-group">
-                                <label for="uwb_preload_links">Preload Links</label>
-                                <select name="uwb_preload_links" id="uwb_preload_links" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                    <option value="0" <?php selected( get_option( 'uwb_preload_links', 0 ), 0 ); ?>>Disabled</option>
-                                    <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
-                                </select>
-                                <p class="description">Link preloading improves the perceived load time by downloading a page when a user hovers over the link. <a href="https://instant.page" target="_blank" rel="noopener noreferrer">More info</a></p>
-                            </div>
+
 
                             <div class="uwb-form-group">
                                 <label for="uwb_cache_404">Cache 404 Pages</label>
@@ -780,6 +773,7 @@ class Uwb_Admin {
                                     </div>
                                 </div>
                             </div>
+ 
                             <div class="uwb-form-group">
                                 <label for="uwb_preload_batch_size">Preload Batch Size</label>
                                 <input type="number" min="1" max="50" name="uwb_preload_batch_size" id="uwb_preload_batch_size" value="<?php echo esc_attr( get_option( 'uwb_preload_batch_size', 5 ) ); ?>" />
@@ -795,7 +789,14 @@ class Uwb_Admin {
                                 <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( get_option( 'uwb_priority_urls', '' ) ); ?></textarea>
                                 <p class="description">Important URLs or matching keywords, one per line. Valid URLs and paths are also published at <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
                             </div>
-
+                           <div class="uwb-form-group">
+                                <label for="uwb_preload_links">Preload Links</label>
+                                <select name="uwb_preload_links" id="uwb_preload_links" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                    <option value="0" <?php selected( get_option( 'uwb_preload_links', 0 ), 0 ); ?>>Disabled</option>
+                                    <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
+                                </select>
+                                <p class="description">Link preloading improves the perceived load time by downloading a page when a user hovers over the link. <a href="https://instant.page" target="_blank" rel="noopener noreferrer">More info</a></p>
+                            </div>
 
                         </div>
 
