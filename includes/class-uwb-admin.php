@@ -232,7 +232,7 @@ class Uwb_Admin {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                background: linear-gradient(135deg, <?php echo esc_attr( $header_bg_start ); ?> 0%, <?php echo esc_attr( $header_bg_end ); ?> 100%);
+                background: <?php echo esc_attr( $header_bg_start ); ?>;
                 padding: 24px 32px;
                 border-radius: 16px;
                 box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
