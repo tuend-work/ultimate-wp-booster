@@ -26,7 +26,8 @@ class Uwb_Admin {
             'uwb_redis_port',
             'uwb_redis_socket',
             'uwb_redis_password',
-            'uwb_redis_db'
+            'uwb_redis_db',
+            'uwb_cache_404'
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
@@ -66,6 +67,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_priority_urls', array( $this, 'sanitize_priority_urls' ) );
         register_setting( 'uwb_settings_group', 'uwb_preload_batch_size', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_preload_links', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_404', 'intval' );
 
         // Redis Object Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_redis_enabled', array( $this, 'sanitize_object_cache_enabled' ) );
@@ -721,6 +723,15 @@ class Uwb_Admin {
                                     <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
                                 </select>
                                 <p class="description">Link preloading improves the perceived load time by downloading a page when a user hovers over the link. <a href="https://instant.page" target="_blank" rel="noopener noreferrer">More info</a></p>
+                            </div>
+
+                            <div class="uwb-form-group">
+                                <label for="uwb_cache_404">Cache 404 Pages</label>
+                                <select name="uwb_cache_404" id="uwb_cache_404" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                    <option value="0" <?php selected( get_option( 'uwb_cache_404', 0 ), 0 ); ?>>Disabled</option>
+                                    <option value="1" <?php selected( get_option( 'uwb_cache_404', 0 ), 1 ); ?>>Enabled</option>
+                                </select>
+                                <p class="description">Enable this to generate static cache files for 404 Not Found error pages.</p>
                             </div>
 
                             <div class="uwb-form-group">

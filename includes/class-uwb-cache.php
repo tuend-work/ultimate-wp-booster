@@ -156,6 +156,7 @@ class Uwb_Cache {
             'excluded_urls'          => array_values( $exclusions ),
             'ignored_query'          => array_values( $ignored_queries ),
             'timezone'               => $timezone,
+            'cache_404'              => intval( get_option( 'uwb_cache_404', 0 ) ),
             'redis_enabled'          => intval( get_option( 'uwb_redis_enabled', 0 ) ),
             'redis_conn_type'        => get_option( 'uwb_redis_conn_type', 'tcp' ),
             'redis_host'             => get_option( 'uwb_redis_host', '127.0.0.1' ),

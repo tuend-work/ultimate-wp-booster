@@ -180,24 +180,36 @@ function uwb_advanced_cache_shutdown() {
     $html = ob_get_clean();
     if ( empty( $html ) ) return;
 
-    // Determine if we should cache
-    $should_cache = true;
-    if ( http_response_code() !== 200 ) {
-        $should_cache = false;
-    }
-    if ( strlen( $html ) < 200 ) {
-        $should_cache = false;
-    }
-    if ( is_admin() || is_search() || is_feed() || is_trackback() || is_robots() || is_404() ) {
-        $should_cache = false;
-    }
-
     // Re-read config
     $config_path = isset( $GLOBALS['uwb_config_path'] )
         ? $GLOBALS['uwb_config_path']
         : WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
 
-    $config          = isset( $GLOBALS['uwb_config'] ) ? $GLOBALS['uwb_config'] : array();
+    $config = isset( $GLOBALS['uwb_config'] ) ? $GLOBALS['uwb_config'] : array();
+    if ( empty( $config ) && file_exists( $config_path ) ) {
+        $parsed_config = include $config_path;
+        if ( is_array( $parsed_config ) ) {
+            $config = $parsed_config;
+        }
+    }
+
+    $cache_404 = ! empty( $config['cache_404'] );
+
+    // Determine if we should cache
+    $should_cache = true;
+    $response_code = http_response_code();
+    if ( $response_code !== 200 && ! ( $cache_404 && $response_code === 404 ) ) {
+        $should_cache = false;
+    }
+    if ( strlen( $html ) < 200 ) {
+        $should_cache = false;
+    }
+    
+    $is_special_page = is_admin() || is_search() || is_feed() || is_trackback() || is_robots();
+    if ( $is_special_page || ( is_404() && ! $cache_404 ) ) {
+        $should_cache = false;
+    }
+
     $cache_logged_in = ! empty( $config['cache_logged_in'] );
     $timezone_str    = isset( $config['timezone'] ) && ! is_numeric( $config['timezone'] ) ? $config['timezone'] : 'UTC';
     $timezone_offset = isset( $config['timezone'] ) && is_numeric( $config['timezone'] ) ? floatval( $config['timezone'] ) * 3600 : 0;
