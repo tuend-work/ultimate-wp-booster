@@ -204,12 +204,13 @@ class Uwb_Admin {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+                background: linear-gradient(135deg, #1d2327 0%, #2c3338 100%);
                 padding: 24px 32px;
                 border-radius: 16px;
-                box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2), 0 4px 6px -2px rgba(79, 70, 229, 0.1);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
                 color: #ffffff;
                 margin-bottom: 24px;
+                border-left: 4px solid var(--uwb-primary);
             }
 
             .uwb-header-title h1 {
