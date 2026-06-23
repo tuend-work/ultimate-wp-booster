@@ -118,6 +118,12 @@ function uwb_advanced_cache_run() {
     $uri_path       = rawurldecode( $uri_parts[0] );
     $normalized_uri = trim( $uri_path, '/' );
 
+    // 6.1 Check XML Sitemap Caching bypass
+    $is_xml = ( substr( strtolower( $normalized_uri ), -4 ) === '.xml' );
+    if ( $is_xml && empty( $config['cache_xml_sitemaps'] ) ) {
+        return;
+    }
+
     // 7. Check excluded URLs
     if ( ! empty( $config['excluded_urls'] ) ) {
         $absolute_uri = ( $normalized_uri === '' ) ? '/' : '/' . $normalized_uri;
@@ -185,7 +191,11 @@ function uwb_advanced_cache_run() {
                     header( 'Pragma: no-cache' );
                 }
             }
-            header( 'Content-Type: text/html; charset=UTF-8' );
+            if ( isset( $is_xml ) && $is_xml ) {
+                header( 'Content-Type: text/xml; charset=UTF-8' );
+            } else {
+                header( 'Content-Type: text/html; charset=UTF-8' );
+            }
 
             if ( $supports_gzip && file_exists( $gzip_file ) && filesize( $gzip_file ) > 0 ) {
                 header( 'Content-Encoding: gzip' );
@@ -295,7 +305,16 @@ function uwb_advanced_cache_shutdown() {
 
     // Only append comments to HTML responses and non-admin requests
     $is_html = true;
-    if ( is_admin() || is_feed() || is_trackback() || is_robots() ) {
+    $is_xml_response = false;
+    if ( function_exists( 'headers_list' ) ) {
+        foreach ( headers_list() as $header ) {
+            if ( stripos( $header, 'Content-Type:' ) === 0 && stripos( $header, 'xml' ) !== false ) {
+                $is_xml_response = true;
+                break;
+            }
+        }
+    }
+    if ( is_admin() || is_feed() || is_trackback() || is_robots() || $is_xml_response ) {
         $is_html = false;
     }
 

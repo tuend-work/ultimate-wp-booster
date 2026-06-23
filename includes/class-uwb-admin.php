@@ -30,7 +30,8 @@ class Uwb_Admin {
             'uwb_exclude_cookies',
             'uwb_exclude_user_agents',
             'uwb_always_purge_urls',
-            'uwb_cache_query_strings'
+            'uwb_cache_query_strings',
+            'uwb_cache_xml_sitemaps'
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
@@ -75,6 +76,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_exclude_user_agents', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_always_purge_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_cache_query_strings', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_xml_sitemaps', 'intval' );
 
         // Redis Object Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_redis_enabled', array( $this, 'sanitize_object_cache_enabled' ) );
@@ -597,13 +599,22 @@ class Uwb_Admin {
                                     </p>
                                 </div>
 
-                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div class="uwb-form-group">
                                     <label for="uwb_cache_404">Cache 404 Pages</label>
                                     <select name="uwb_cache_404" id="uwb_cache_404" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                         <option value="0" <?php selected( get_option( 'uwb_cache_404', 0 ), 0 ); ?>>Disabled</option>
                                         <option value="1" <?php selected( get_option( 'uwb_cache_404', 0 ), 1 ); ?>>Enabled</option>
                                     </select>
-                                    <p class="description" style="margin-bottom:0;">Enable this to generate static cache files for 404 Not Found error pages.</p>
+                                    <p class="description">Enable this to generate static cache files for 404 Not Found error pages.</p>
+                                </div>
+
+                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                    <label for="uwb_cache_xml_sitemaps">Cache XML Sitemaps</label>
+                                    <select name="uwb_cache_xml_sitemaps" id="uwb_cache_xml_sitemaps" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                        <option value="0" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 0 ); ?>>Disabled</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 1 ); ?>>Enabled</option>
+                                    </select>
+                                    <p class="description" style="margin-bottom:0;">Enable this to generate static cache files for XML sitemaps (e.g. <code>/sitemap.xml</code>). Served as <code>text/xml</code>.</p>
                                 </div>
                             </div>
 

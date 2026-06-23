@@ -169,6 +169,7 @@ class Uwb_Cache {
             'exclude_user_agents'    => array_values( $exclude_uas ),
             'always_purge_urls'      => array_values( $always_purges ),
             'cache_query_strings'    => array_values( $cache_qs ),
+            'cache_xml_sitemaps'     => intval( get_option( 'uwb_cache_xml_sitemaps', 0 ) ),
             'timezone'               => $timezone,
             'cache_404'              => intval( get_option( 'uwb_cache_404', 0 ) ),
             'redis_enabled'          => intval( get_option( 'uwb_redis_enabled', 0 ) ),
