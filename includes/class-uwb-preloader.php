@@ -1025,10 +1025,70 @@ class Uwb_Preloader {
             return;
         }
 
+        // Build exclusion list (WooCommerce pages + user defined exclusions)
+        $wc_exclude = array( 'cart', 'checkout', 'my-account', 'wp-login.php' );
+        if ( class_exists( 'WooCommerce' ) ) {
+            $cart_id = wc_get_page_id( 'cart' );
+            $checkout_id = wc_get_page_id( 'checkout' );
+            $myaccount_id = wc_get_page_id( 'myaccount' );
+            if ( $cart_id > 0 ) {
+                $cart_url = get_permalink( $cart_id );
+                if ( $cart_url ) {
+                    $wc_exclude[] = trim( wp_parse_url( $cart_url, PHP_URL_PATH ), '/' );
+                }
+            }
+            if ( $checkout_id > 0 ) {
+                $checkout_url = get_permalink( $checkout_id );
+                if ( $checkout_url ) {
+                    $wc_exclude[] = trim( wp_parse_url( $checkout_url, PHP_URL_PATH ), '/' );
+                }
+            }
+            if ( $myaccount_id > 0 ) {
+                $myaccount_url = get_permalink( $myaccount_id );
+                if ( $myaccount_url ) {
+                    $wc_exclude[] = trim( wp_parse_url( $myaccount_url, PHP_URL_PATH ), '/' );
+                }
+            }
+        }
+        
+        $exclusions_raw = get_option( 'uwb_excluded_urls', '' );
+        $excluded_patterns = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclusions_raw ) ) ) );
+        
+        $all_excludes = array_merge( $wc_exclude, $excluded_patterns );
+        $all_excludes = array_values( array_unique( array_filter( $all_excludes ) ) );
+
         ?>
         <script id="uwb-preload-links-js">
         document.addEventListener('DOMContentLoaded', () => {
             const preloaded = new Set();
+            const excludes = <?php echo json_encode( $all_excludes ); ?>;
+            
+            const isExcluded = (url) => {
+                // 1. Ignore query parameters to prevent dynamic action hits (e.g. add-to-cart)
+                if (url.search) return true;
+                
+                // 2. Ignore non-HTML file extensions
+                if (url.pathname.match(/\.(wp-admin|xml|json|zip|pdf|jpg|jpeg|png|gif|svg|webp|mp4|mp3|ogg|wav)$/i)) return true;
+                
+                // 3. Check against exclusions list
+                const path = url.pathname.replace(/^\/|\/$/g, ''); // strip leading/trailing slashes
+                const fullPath = url.pathname;
+                for (let pattern of excludes) {
+                    pattern = pattern.replace(/^\/|\/$/g, '');
+                    if (pattern === '') continue;
+                    
+                    if (pattern.includes('*')) {
+                        const regexStr = '^' + pattern.replace(/[-\/\\^$+?.()|[\]{}]/g, '\\$&').replace(/\\\*/g, '.*') + '$';
+                        const regex = new RegExp(regexStr, 'i');
+                        if (regex.test(path) || regex.test(fullPath) || regex.test(url.href)) return true;
+                    } else {
+                        if (path === pattern || fullPath === '/' + pattern || path.includes(pattern) || url.href.includes(pattern)) return true;
+                    }
+                }
+                
+                return false;
+            };
+
             const preload = (url) => {
                 if (preloaded.has(url)) return;
                 preloaded.add(url);
@@ -1045,8 +1105,9 @@ class Uwb_Preloader {
                 try {
                     const url = new URL(a.href, window.location.href);
                     if (url.origin !== window.location.origin) return;
-                    if (url.pathname.match(/\.(wp-admin|xml|json|zip|pdf|jpg|jpeg|png|gif|svg|webp|mp4|mp3|ogg|wav)$/i)) return;
                     if (url.hash && url.pathname === window.location.pathname) return;
+                    
+                    if (isExcluded(url)) return;
                     
                     preload(url.href);
                 } catch(err) {}
