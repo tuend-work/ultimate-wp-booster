@@ -179,11 +179,39 @@ class Uwb_Admin {
      * Enqueue styled assets for premium dashboard
      */
     private function render_assets() {
+        global $_wp_admin_css_colors;
+        $color_scheme = get_user_option( 'admin_color' );
+        if ( empty( $color_scheme ) ) {
+            $color_scheme = 'fresh';
+        }
+
+        $primary_color = '#6366f1';
+        $primary_dark = '#4f46e5';
+        $header_bg_start = '#1d2327';
+        $header_bg_end = '#2c3338';
+
+        if ( ! empty( $_wp_admin_css_colors ) && isset( $_wp_admin_css_colors[ $color_scheme ] ) ) {
+            $colors = $_wp_admin_css_colors[ $color_scheme ]->colors;
+            if ( isset( $colors[0] ) ) {
+                $header_bg_start = $colors[0];
+            }
+            if ( isset( $colors[1] ) ) {
+                $header_bg_end = $colors[1];
+            }
+            if ( isset( $colors[2] ) ) {
+                $primary_color = $colors[2];
+            }
+            if ( isset( $colors[3] ) ) {
+                $primary_dark = $colors[3];
+            } else if ( isset( $colors[2] ) ) {
+                $primary_dark = $colors[2];
+            }
+        }
         ?>
         <style>
             :root {
-                --uwb-primary: #6366f1;
-                --uwb-primary-dark: #4f46e5;
+                --uwb-primary: <?php echo esc_attr( $primary_color ); ?>;
+                --uwb-primary-dark: <?php echo esc_attr( $primary_dark ); ?>;
                 --uwb-success: #10b981;
                 --uwb-warning: #f59e0b;
                 --uwb-danger: #ef4444;
@@ -204,7 +232,7 @@ class Uwb_Admin {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                background: linear-gradient(135deg, #1d2327 0%, #2c3338 100%);
+                background: linear-gradient(135deg, <?php echo esc_attr( $header_bg_start ); ?> 0%, <?php echo esc_attr( $header_bg_end ); ?> 100%);
                 padding: 24px 32px;
                 border-radius: 16px;
                 box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
