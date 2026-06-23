@@ -31,6 +31,9 @@ class Uwb_Preloader {
 
         // Public important sitemap generated from Priority URLs.
         add_action( 'init', array( $this, 'maybe_output_important_sitemap' ), 0 );
+
+        // Link Preloading
+        add_action( 'wp_footer', array( $this, 'maybe_output_preload_links_script' ) );
     }
 
     public function maybe_output_important_sitemap() {
@@ -1010,5 +1013,49 @@ class Uwb_Preloader {
 
             wp_send_json_success( array( 'message' => "Added {$path} to Important URLs.", 'path' => $path, 'urls' => $updated_urls ) );
         }
+    }
+
+    public function maybe_output_preload_links_script() {
+        if ( is_admin() || is_customize_preview() ) {
+            return;
+        }
+
+        $enabled = intval( get_option( 'uwb_preload_links', 0 ) );
+        if ( $enabled !== 1 ) {
+            return;
+        }
+
+        ?>
+        <script id="uwb-preload-links-js">
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloaded = new Set();
+            const preload = (url) => {
+                if (preloaded.has(url)) return;
+                preloaded.add(url);
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = url;
+                document.head.appendChild(link);
+            };
+
+            const handle = (e) => {
+                const a = e.target.closest('a');
+                if (!a || !a.href) return;
+                
+                try {
+                    const url = new URL(a.href, window.location.href);
+                    if (url.origin !== window.location.origin) return;
+                    if (url.pathname.match(/\.(wp-admin|xml|json|zip|pdf|jpg|jpeg|png|gif|svg|webp|mp4|mp3|ogg|wav)$/i)) return;
+                    if (url.hash && url.pathname === window.location.pathname) return;
+                    
+                    preload(url.href);
+                } catch(err) {}
+            };
+
+            document.addEventListener('mouseover', handle, { passive: true });
+            document.addEventListener('touchstart', handle, { passive: true });
+        });
+        </script>
+        <?php
     }
 }

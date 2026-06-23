@@ -65,6 +65,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', array( $this, 'sanitize_sitemap_list' ) );
         register_setting( 'uwb_settings_group', 'uwb_priority_urls', array( $this, 'sanitize_priority_urls' ) );
         register_setting( 'uwb_settings_group', 'uwb_preload_batch_size', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_links', 'intval' );
 
         // Redis Object Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_redis_enabled', array( $this, 'sanitize_object_cache_enabled' ) );
@@ -712,6 +713,15 @@ class Uwb_Admin {
                         <div id="tab-preload_settings" class="uwb-tab-content">
                             <h2 style="margin-top:0;">Preload Cache (Automatic Crawler)</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Automatically crawl URLs in your sitemap to pre-generate static cache files before visitors arrive.</p>
+
+                             <div class="uwb-form-group">
+                                <label for="uwb_preload_links">Preload Links</label>
+                                <select name="uwb_preload_links" id="uwb_preload_links" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                    <option value="0" <?php selected( get_option( 'uwb_preload_links', 0 ), 0 ); ?>>Disabled</option>
+                                    <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
+                                </select>
+                                <p class="description">Link preloading improves the perceived load time by downloading a page when a user hovers over the link. <a href="https://instant.page" target="_blank" rel="noopener noreferrer">More info</a></p>
+                            </div>
 
                             <div class="uwb-form-group">
                                 <label for="uwb_preload_enabled">Enable Automatic Preloading</label>
