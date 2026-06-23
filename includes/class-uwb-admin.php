@@ -47,6 +47,7 @@ class Uwb_Admin {
         // Redis AJAX hooks
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
         add_action( 'wp_ajax_uwb_flush_redis_cache', array( $this, 'ajax_flush_redis_cache' ) );
+        add_action( 'admin_init', array( $this, 'handle_import_export' ) );
     }
 
     public function add_plugin_menu() {
@@ -185,6 +186,117 @@ class Uwb_Admin {
         $this->migrate_default_important_sitemap();
         // Sync config JSON file to keep core options (like timezone) up to date
         Uwb_Cache::write_config_file();
+    }
+
+    public function handle_import_export() {
+        if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        // 1. Handle Export
+        if ( isset( $_POST['uwb_export_settings'] ) ) {
+            check_admin_referer( 'uwb_import_export_action', 'uwb_import_export_nonce' );
+
+            $options_to_export = array(
+                'uwb_cache_lifespan',
+                'uwb_excluded_urls',
+                'uwb_cache_logged_in',
+                'uwb_browser_cache_enabled',
+                'uwb_browser_cache_lifespan',
+                'uwb_ignored_query',
+                'uwb_redis_enabled',
+                'uwb_redis_conn_type',
+                'uwb_redis_host',
+                'uwb_redis_port',
+                'uwb_redis_socket',
+                'uwb_redis_password',
+                'uwb_redis_db',
+                'uwb_cache_404',
+                'uwb_exclude_cookies',
+                'uwb_exclude_user_agents',
+                'uwb_always_purge_urls',
+                'uwb_cache_query_strings',
+                'uwb_cache_xml_sitemaps',
+                'uwb_preload_enabled',
+                'uwb_preload_sitemap',
+                'uwb_priority_urls',
+                'uwb_preload_batch_size',
+                'uwb_preload_links'
+            );
+
+            $export_data = array();
+            foreach ( $options_to_export as $opt ) {
+                $export_data[ $opt ] = get_option( $opt );
+            }
+
+            $json = json_encode( $export_data, JSON_PRETTY_PRINT );
+
+            header( 'Content-disposition: attachment; filename=ultimate-wp-booster-settings.json' );
+            header( 'Content-type: application/json' );
+            echo $json;
+            exit;
+        }
+
+        // 2. Handle Import
+        if ( isset( $_POST['uwb_import_settings'] ) ) {
+            check_admin_referer( 'uwb_import_export_action', 'uwb_import_export_nonce' );
+
+            if ( ! empty( $_FILES['uwb_import_file']['tmp_name'] ) ) {
+                $file = $_FILES['uwb_import_file']['tmp_name'];
+                $json_content = file_get_contents( $file );
+                $settings = json_decode( $json_content, true );
+
+                if ( is_array( $settings ) ) {
+                    $options_to_import = array(
+                        'uwb_cache_lifespan',
+                        'uwb_excluded_urls',
+                        'uwb_cache_logged_in',
+                        'uwb_browser_cache_enabled',
+                        'uwb_browser_cache_lifespan',
+                        'uwb_ignored_query',
+                        'uwb_redis_enabled',
+                        'uwb_redis_conn_type',
+                        'uwb_redis_host',
+                        'uwb_redis_port',
+                        'uwb_redis_socket',
+                        'uwb_redis_password',
+                        'uwb_redis_db',
+                        'uwb_cache_404',
+                        'uwb_exclude_cookies',
+                        'uwb_exclude_user_agents',
+                        'uwb_always_purge_urls',
+                        'uwb_cache_query_strings',
+                        'uwb_cache_xml_sitemaps',
+                        'uwb_preload_enabled',
+                        'uwb_preload_sitemap',
+                        'uwb_priority_urls',
+                        'uwb_preload_batch_size',
+                        'uwb_preload_links'
+                    );
+
+                    foreach ( $options_to_import as $opt ) {
+                        if ( isset( $settings[ $opt ] ) ) {
+                            update_option( $opt, $settings[ $opt ] );
+                        }
+                    }
+
+                    // Force sync config file
+                    Uwb_Cache::write_config_file();
+
+                    add_action( 'admin_notices', function() {
+                        echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Cấu hình đã được nhập thành công!</p></div>';
+                    } );
+                } else {
+                    add_action( 'admin_notices', function() {
+                        echo '<div class="notice notice-error is-dismissible"><p><strong>Ultimate WP Booster:</strong> Tệp JSON không hợp lệ hoặc bị lỗi!</p></div>';
+                    } );
+                }
+            } else {
+                add_action( 'admin_notices', function() {
+                    echo '<div class="notice notice-error is-dismissible"><p><strong>Ultimate WP Booster:</strong> Vui lòng chọn tệp tin JSON trước khi nhấn Import!</p></div>';
+                } );
+            }
+        }
     }
 
     /**
@@ -561,6 +673,9 @@ class Uwb_Admin {
                     </div>
                     <div class="uwb-nav-item" data-tab="preload_settings">
                         Preload Settings
+                    </div>
+                    <div class="uwb-nav-item" data-tab="import_export">
+                        Import / Export
                     </div>
                 </div>
 
@@ -1166,6 +1281,36 @@ class Uwb_Admin {
                             <input type="submit" name="submit" id="submit" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:8px 20px; height:auto; font-weight:600; border-radius:6px; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);" value="Save Changes" />
                         </div>
                     </form>
+
+                    <!-- TAB 4: Import & Export Settings -->
+                    <div id="tab-import_export" class="uwb-tab-content">
+                        <h2 style="margin-top:0;">Import & Export Settings</h2>
+                        <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Export current settings to a JSON file or import settings from a previously saved JSON file.</p>
+                        
+                        <form method="post" action="" enctype="multipart/form-data">
+                            <?php wp_nonce_field( 'uwb_import_export_action', 'uwb_import_export_nonce' ); ?>
+                            
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                <h3 style="margin-top:0; margin-bottom:12px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    Export Settings
+                                </h3>
+                                <p class="description" style="margin-bottom:16px;">Download all your current plugin settings as a <code>.json</code> file.</p>
+                                <button type="submit" name="uwb_export_settings" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">Export Settings (JSON)</button>
+                            </div>
+
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
+                                <h3 style="margin-top:0; margin-bottom:12px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Import Settings
+                                </h3>
+                                <p class="description" style="margin-bottom:16px;">Choose a valid plugin settings <code>.json</code> file to import.</p>
+                                
+                                <input type="file" name="uwb_import_file" id="uwb_import_file" accept=".json" style="margin-bottom:16px; display:block;" />
+                                <button type="submit" name="uwb_import_settings" class="button" style="padding:10px 20px; height:auto; border-radius:8px; font-weight:600; border:1px solid var(--uwb-border); background:#fff; cursor:pointer; color:var(--uwb-text);">Import Settings (JSON)</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1183,7 +1328,7 @@ class Uwb_Admin {
                 $('#tab-' + tabId).addClass('active');
 
                 // Hide submit row on non-settings tabs
-                if (['url_status'].indexOf(tabId) !== -1) {
+                if (['url_status', 'import_export'].indexOf(tabId) !== -1) {
                     $('#uwb-submit-row').hide();
                 } else {
                     $('#uwb-submit-row').show();
