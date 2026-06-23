@@ -63,7 +63,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_ignored_query', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', array( $this, 'sanitize_sitemap_list' ) );
-        register_setting( 'uwb_settings_group', 'uwb_priority_urls', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_priority_urls', array( $this, 'sanitize_priority_urls' ) );
         register_setting( 'uwb_settings_group', 'uwb_preload_batch_size', 'intval' );
 
         // Redis Object Cache Settings
@@ -105,6 +105,22 @@ class Uwb_Admin {
         }
 
         return implode( "\n", array_values( array_unique( $urls ) ) );
+    }
+
+    public function sanitize_priority_urls( $val ) {
+        $val = sanitize_textarea_field( $val );
+        $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $val ) ) ) );
+        
+        $preloader = new Uwb_Preloader();
+        $normalized_lines = array();
+        foreach ( $lines as $line ) {
+            $normalized_line = $preloader->normalize_url_by_permalink_settings( $line );
+            if ( ! empty( $normalized_line ) ) {
+                $normalized_lines[] = $normalized_line;
+            }
+        }
+        
+        return implode( "\n", array_unique( $normalized_lines ) );
     }
 
     private function get_default_preload_sitemaps() {
@@ -722,7 +738,7 @@ class Uwb_Admin {
                             </div>
 
                             <div class="uwb-form-group">
-                                <label for="uwb_priority_urls">Priority URLs (Preloaded first)</label>
+                                <label for="uwb_priority_urls">Important URLs (Preloaded first)</label>
                                 <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( get_option( 'uwb_priority_urls', '' ) ); ?></textarea>
                                 <p class="description">Important URLs or matching keywords, one per line. Valid URLs and paths are also published at <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
                             </div>
@@ -1023,7 +1039,7 @@ class Uwb_Admin {
                                 <table id="uwb-url-table" style="width:100%; border-collapse:collapse; font-size:13px;">
                                     <thead>
                                         <tr style="background:#f8fafc; border-bottom:1px solid var(--uwb-border);">
-                                            <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Priority <span class="uwb-sort-icon">↑</span></th>
+                                            <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Important <span class="uwb-sort-icon">↑</span></th>
                                             <th class="uwb-sortable" data-col="url" style="padding:12px 14px; text-align:left; font-weight:700; cursor:pointer; user-select:none;">URL <span class="uwb-sort-icon">↕</span></th>
                                             <th class="uwb-sortable" data-col="status" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Status <span class="uwb-sort-icon">↕</span></th>
                                             <th class="uwb-sortable" data-col="attempts" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none;">Tries <span class="uwb-sort-icon">↕</span></th>
@@ -1575,7 +1591,7 @@ class Uwb_Admin {
                     var html = '';
                     $.each(rows, function(i, r) {
                         var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
-                        var priorityLabel = (r.priority == 0) ? '<span style="color:#f59e0b; font-weight:700;">★ High</span>' : '<span style="color:#94a3b8; font-size:11.5px;">Normal (#' + r.priority + ')</span>';
+                        var priorityLabel = (r.priority == 0) ? '<span style="color:#f59e0b; font-weight:700;">★ Important</span>' : '<span style="color:#94a3b8; font-size:11.5px;">Normal (#' + r.priority + ')</span>';
                         var lastAttempt = r.last_attempt ? r.last_attempt : '—';
                         html += '<tr style="background:' + rowBg + '; border-bottom:1px solid #f1f5f9; transition:background 0.15s;" onmouseover="this.style.background=\'#eef2ff\'" onmouseout="this.style.background=\'' + rowBg + '\'">';
                         html += '<td style="padding:10px 14px; text-align:center;">' + priorityLabel + '</td>';
@@ -1586,7 +1602,12 @@ class Uwb_Admin {
                         html += '<td style="padding:10px 14px; text-align:center; white-space:nowrap;">';
                         html += '<button class="uwb-act-process" data-id="' + r.id + '" style="background:#6366f1; color:#fff; border:none; border-radius:5px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; margin:2px;" title="Process this URL now">▶ Now</button>';
                         html += '<button class="uwb-act-exclude" data-id="' + r.id + '" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:5px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; margin:2px;" title="Add to Exclude list">✕ Exclude</button>';
-                        html += '<button class="uwb-act-priority" data-id="' + r.id + '" style="background:#fef9c3; border:1px solid #fcd34d; color:#92400e; border-radius:5px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; margin:2px;" title="Add to Priority URLs">★ Priority</button>';
+                        
+                        var isImportant = (r.priority == 0);
+                        var btnText = isImportant ? '★ Important' : '☆ Important';
+                        var btnStyle = isImportant ? 'background:#fef9c3; border:1px solid #fcd34d; color:#92400e;' : 'background:#f1f5f9; border:1px solid #cbd5e1; color:#475569;';
+                        var btnTitle = isImportant ? 'Remove from Important URLs' : 'Add to Important URLs';
+                        html += '<button class="uwb-act-priority" data-id="' + r.id + '" style="' + btnStyle + ' border-radius:5px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; margin:2px;" title="' + btnTitle + '">' + btnText + '</button>';
                         html += '</td></tr>';
                     });
                     $tbody.html(html);
@@ -1769,7 +1790,7 @@ class Uwb_Admin {
                 });
             });
 
-            // Row action: Add to Priority
+            // Row action: Add to Important / Remove from Important
             $(document).on('click', '.uwb-act-priority', function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
@@ -1778,11 +1799,10 @@ class Uwb_Admin {
                     url: ajaxurl, type: 'POST',
                     data: { action: 'uwb_add_to_priority', nonce: nonce, id: id },
                     success: function(res) {
-                        $btn.prop('disabled', false).text('★ Priority');
                         if (res.success) { showToast(res.data.message); loadUrlTable(); }
-                        else { showToast(res.data.message, true); }
+                        else { $btn.prop('disabled', false).text('Important'); showToast(res.data.message, true); }
                     },
-                    error: function() { $btn.prop('disabled', false).text('★ Priority'); showToast('Error.', true); }
+                    error: function() { $btn.prop('disabled', false).text('Important'); showToast('Error.', true); }
                 });
             });
 

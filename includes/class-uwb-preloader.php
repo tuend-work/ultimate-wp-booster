@@ -102,6 +102,67 @@ class Uwb_Preloader {
         return home_url( '/' . ltrim( $value, '/' ) );
     }
 
+    public function normalize_url_by_permalink_settings( $url_or_path ) {
+        $url_or_path = trim( (string) $url_or_path );
+        if ( empty( $url_or_path ) ) {
+            return '';
+        }
+
+        // If it contains wildcards or regex symbols, leave it as is
+        if ( preg_match( '/[\*\?\(\)\|\[\]]/', $url_or_path ) ) {
+            return $url_or_path;
+        }
+
+        $parsed = wp_parse_url( $url_or_path );
+        if ( ! $parsed ) {
+            return $url_or_path;
+        }
+
+        $path = isset( $parsed['path'] ) ? $parsed['path'] : '';
+        
+        // If path is empty, and it has host/scheme, it's root
+        if ( empty( $path ) ) {
+            if ( isset( $parsed['host'] ) ) {
+                $path = '/';
+            } else {
+                return $url_or_path;
+            }
+        }
+
+        // Apply permalink trailing slash rules if it's not a file
+        $filename = basename( $path );
+        if ( strpos( $filename, '.' ) === false && $path !== '/' ) {
+            if ( function_exists( 'user_trailingslashit' ) ) {
+                $path = user_trailingslashit( $path );
+            } else {
+                global $wp_rewrite;
+                if ( isset( $wp_rewrite->use_trailing_slashes ) && ! $wp_rewrite->use_trailing_slashes ) {
+                    $path = rtrim( $path, '/' );
+                } else {
+                    $path = rtrim( $path, '/' ) . '/';
+                }
+            }
+        }
+
+        // Reconstruct
+        $scheme   = isset( $parsed['scheme'] ) ? $parsed['scheme'] : '';
+        $host     = isset( $parsed['host'] ) ? $parsed['host'] : '';
+        $port     = isset( $parsed['port'] ) ? ':' . $parsed['port'] : '';
+        $query    = isset( $parsed['query'] ) ? '?' . $parsed['query'] : '';
+        $fragment = isset( $parsed['fragment'] ) ? '#' . $parsed['fragment'] : '';
+
+        if ( $scheme && $host ) {
+            return $scheme . '://' . $host . $port . $path . $query . $fragment;
+        }
+
+        // If it's a relative path, ensure it starts with /
+        if ( strpos( $path, '/' ) !== 0 && ! empty( $path ) ) {
+            $path = '/' . $path;
+        }
+
+        return $path . $query . $fragment;
+    }
+
     private function get_preload_sitemap_urls() {
         $raw = get_option( 'uwb_preload_sitemap', '' );
         if ( empty( $raw ) ) {
@@ -909,18 +970,43 @@ class Uwb_Preloader {
         if ( ! $item ) wp_send_json_error( array( 'message' => 'Not found.' ) );
 
         $path = wp_parse_url( $item->url, PHP_URL_PATH );
-        $path = '/' . trim( $path, '/' );
+        if ( empty( $path ) ) {
+            $path = '/';
+        }
+        $path = $this->normalize_url_by_permalink_settings( $path );
 
         $existing = get_option( 'uwb_priority_urls', '' );
         $lines    = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $existing ) ) ) );
 
-        if ( ! in_array( $path, $lines, true ) ) {
-            $lines[]   = $path;
-            update_option( 'uwb_priority_urls', implode( "\n", $lines ) );
-            // Also mark as priority in the queue (set priority to 0)
-            $wpdb->update( $this->table_name, array( 'priority' => 0 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
+        // Ensure all existing lines are also normalized for robust comparison
+        $normalized_lines = array();
+        foreach ( $lines as $line ) {
+            $normalized_line = $this->normalize_url_by_permalink_settings( $line );
+            if ( ! empty( $normalized_line ) ) {
+                $normalized_lines[] = $normalized_line;
+            }
         }
+        $normalized_lines = array_unique( $normalized_lines );
 
-        wp_send_json_success( array( 'message' => "Added {$path} to priority URLs.", 'path' => $path ) );
+        if ( in_array( $path, $normalized_lines, true ) ) {
+            // Remove from list
+            $normalized_lines = array_diff( $normalized_lines, array( $path ) );
+            update_option( 'uwb_priority_urls', implode( "\n", $normalized_lines ) );
+
+            // Reset priority in the queue: move to the end of the normal queue
+            $max_priority = $wpdb->get_var( "SELECT MAX(priority) FROM {$this->table_name}" );
+            $new_priority = max( 1, intval( $max_priority ) + 1 );
+            $wpdb->update( $this->table_name, array( 'priority' => $new_priority ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
+
+            wp_send_json_success( array( 'message' => "Removed {$path} from Important URLs.", 'path' => $path ) );
+        } else {
+            // Add to list
+            $normalized_lines[] = $path;
+            update_option( 'uwb_priority_urls', implode( "\n", $normalized_lines ) );
+            // Mark as priority in the queue (set priority to 0)
+            $wpdb->update( $this->table_name, array( 'priority' => 0 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
+
+            wp_send_json_success( array( 'message' => "Added {$path} to Important URLs.", 'path' => $path ) );
+        }
     }
 }
