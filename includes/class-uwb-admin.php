@@ -734,7 +734,6 @@ class Uwb_Admin {
                             <div class="uwb-form-group">
                                 <label for="uwb_preload_sitemap">Sitemap XML URLs</label>
                                 <textarea name="uwb_preload_sitemap" id="uwb_preload_sitemap" rows="5" placeholder="<?php echo esc_attr( home_url( '/important-sitemap.xml' ) . "\n" . home_url( '/wp-sitemap.xml' ) ); ?>"><?php echo esc_textarea( $this->get_preload_sitemap_setting_value() ); ?></textarea>
-                                <p class="description">The preloader will extract URLs from these sitemaps, one sitemap per line. The default first sitemap is <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
                             </div>
 
                             <div class="uwb-form-group">
