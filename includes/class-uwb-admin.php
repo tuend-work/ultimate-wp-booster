@@ -578,16 +578,25 @@ class Uwb_Admin {
                                     <p class="description">The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.</p>
                                 </div>
 
-                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div class="uwb-form-group">
                                     <label for="uwb_cache_logged_in">Cache for Logged-in Users</label>
                                     <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                         <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
                                         <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
                                     </select>
-                                    <p class="description" style="margin-bottom:0;">
+                                    <p class="description">
                                         Enable this to serve static cached pages to logged-in users. Capped at a maximum of 10 minutes (600 seconds) to prevent <code>wpnonce</code> expiration. <br>
                                         <strong>Warning:</strong> Personalized content (like user profile names or WooCommerce carts) may be cached and incorrectly displayed to other users if not configured carefully.
                                     </p>
+                                </div>
+
+                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                    <label for="uwb_cache_404">Cache 404 Pages</label>
+                                    <select name="uwb_cache_404" id="uwb_cache_404" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                        <option value="0" <?php selected( get_option( 'uwb_cache_404', 0 ), 0 ); ?>>Disabled</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_cache_404', 0 ), 1 ); ?>>Enabled</option>
+                                    </select>
+                                    <p class="description" style="margin-bottom:0;">Enable this to generate static cache files for 404 Not Found error pages.</p>
                                 </div>
                             </div>
 
@@ -715,17 +724,6 @@ class Uwb_Admin {
                         <div id="tab-preload_settings" class="uwb-tab-content">
                             <h2 style="margin-top:0;">Preload Cache (Automatic Crawler)</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Automatically crawl URLs in your sitemap to pre-generate static cache files before visitors arrive.</p>
-
-
-
-                            <div class="uwb-form-group">
-                                <label for="uwb_cache_404">Cache 404 Pages</label>
-                                <select name="uwb_cache_404" id="uwb_cache_404" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                    <option value="0" <?php selected( get_option( 'uwb_cache_404', 0 ), 0 ); ?>>Disabled</option>
-                                    <option value="1" <?php selected( get_option( 'uwb_cache_404', 0 ), 1 ); ?>>Enabled</option>
-                                </select>
-                                <p class="description">Enable this to generate static cache files for 404 Not Found error pages.</p>
-                            </div>
 
                             <div class="uwb-form-group">
                                 <label for="uwb_preload_enabled">Enable Automatic Preloading</label>
