@@ -231,7 +231,8 @@ class Uwb_Admin {
 
             $json = json_encode( $export_data, JSON_PRETTY_PRINT );
 
-            header( 'Content-disposition: attachment; filename=ultimate-wp-booster-settings.json' );
+            $filename = 'ultimate-wp-booster-settings-' . date( 'H-i-s-d-m-Y' ) . '.json';
+            header( 'Content-disposition: attachment; filename=' . $filename );
             header( 'Content-type: application/json' );
             echo $json;
             exit;
