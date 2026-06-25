@@ -432,7 +432,7 @@ class Uwb_Preloader {
             // No items left to preload, unschedule cron
             wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
             update_option( 'uwb_preload_running', 0 );
-            return 0;
+            return array( 'count' => 0, 'urls' => array() );
         }
 
         // Mark them as processing first to avoid race conditions
@@ -496,7 +496,10 @@ class Uwb_Preloader {
             update_option( 'uwb_preload_last_run_urls', $processed_urls );
         }
 
-        return $processed_count;
+        return array(
+            'count' => $processed_count,
+            'urls'  => wp_list_pluck( $processed_urls, 'url' )
+        );
     }
 
     /**
