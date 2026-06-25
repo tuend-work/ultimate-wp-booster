@@ -11,7 +11,7 @@ if ( strpos( __FILE__, '/plugins/' ) !== false || strpos( __FILE__, '\\plugins\\
  * Target path: wp-content/advanced-cache.php
  */
 
-defined( 'ABSPATH' ) || defined( 'WP_CACHE' ) or die( 'No script kiddies please!' );
+defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 // Main Cache Handler Execution
 uwb_advanced_cache_run();
@@ -28,8 +28,7 @@ function uwb_advanced_cache_run() {
     }
 
     // 3. Load config file
-    $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
-    $config_path = $wp_content_dir . '/cache/ultimate-wp-booster-config.php';
+    $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
     $config      = array(
         'cache_lifespan'  => 36000,
         'cache_logged_in' => false,
@@ -155,7 +154,7 @@ function uwb_advanced_cache_run() {
     $filename = $is_https ? "index-https{$q_suffix}.html" : "index{$q_suffix}.html";
 
     // 9. Build cache directory path (per-user subdirectory for logged-in users)
-    $base_cache_dir = $wp_content_dir . '/cache/wp-rocket/' . $host;
+    $base_cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket/' . $host;
     if ( $normalized_uri !== '' ) {
         $base_cache_dir .= '/' . $normalized_uri;
     }
@@ -224,19 +223,37 @@ function uwb_advanced_cache_run() {
     }
 }
 
-function uwb_advanced_cache_ob_callback( $buffer ) {
+function uwb_advanced_cache_ob_callback( $buffer, $phase = 0 ) {
+    if ( ! isset( $GLOBALS['uwb_accumulated_html'] ) ) {
+        $GLOBALS['uwb_accumulated_html'] = '';
+    }
+
+    if ( ( $phase & PHP_OUTPUT_HANDLER_CLEAN ) || ( $phase & PHP_OUTPUT_HANDLER_CLEANABLE ) === PHP_OUTPUT_HANDLER_CLEANABLE ) {
+        $GLOBALS['uwb_accumulated_html'] = '';
+        $GLOBALS['uwb_do_not_cache'] = true;
+        return $buffer;
+    }
+
+    $GLOBALS['uwb_accumulated_html'] .= $buffer;
     return $buffer;
 }
 
 function uwb_advanced_cache_shutdown() {
-    $html = ob_get_clean();
+    if ( ! empty( $GLOBALS['uwb_do_not_cache'] ) ) {
+        return;
+    }
+
+    if ( ! isset( $GLOBALS['uwb_accumulated_html'] ) ) {
+        return;
+    }
+
+    $html = $GLOBALS['uwb_accumulated_html'];
     if ( empty( $html ) ) return;
 
     // Re-read config
-    $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
     $config_path = isset( $GLOBALS['uwb_config_path'] )
         ? $GLOBALS['uwb_config_path']
-        : $wp_content_dir . '/cache/ultimate-wp-booster-config.php';
+        : WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
 
     $config = isset( $GLOBALS['uwb_config'] ) ? $GLOBALS['uwb_config'] : array();
     if ( empty( $config ) && file_exists( $config_path ) ) {
@@ -359,8 +376,6 @@ function uwb_advanced_cache_shutdown() {
 
         $html .= $comment_to_append;
     }
-
-    echo $html;
 
     if ( ! $should_cache ) return;
 
