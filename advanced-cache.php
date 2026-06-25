@@ -239,21 +239,35 @@ function uwb_advanced_cache_ob_callback( $buffer, $phase = 0 ) {
 }
 
 function uwb_advanced_cache_shutdown() {
+    $debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
+
     if ( ! empty( $GLOBALS['uwb_do_not_cache'] ) ) {
+        if ( $debug ) {
+            error_log( 'UWB: Caching bypassed: Globals uwb_do_not_cache is set (buffer was cleaned/discarded).' );
+        }
         return;
     }
 
     if ( ! isset( $GLOBALS['uwb_accumulated_html'] ) ) {
+        if ( $debug ) {
+            error_log( 'UWB: Caching bypassed: Globals uwb_accumulated_html is not set.' );
+        }
         return;
     }
 
     $html = $GLOBALS['uwb_accumulated_html'];
-    if ( empty( $html ) ) return;
+    if ( empty( $html ) ) {
+        if ( $debug ) {
+            error_log( 'UWB: Caching bypassed: HTML buffer is empty.' );
+        }
+        return;
+    }
 
     // Re-read config
+    $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
     $config_path = isset( $GLOBALS['uwb_config_path'] )
         ? $GLOBALS['uwb_config_path']
-        : WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
+        : $wp_content_dir . '/cache/ultimate-wp-booster-config.php';
 
     $config = isset( $GLOBALS['uwb_config'] ) ? $GLOBALS['uwb_config'] : array();
     if ( empty( $config ) && file_exists( $config_path ) ) {
@@ -270,14 +284,23 @@ function uwb_advanced_cache_shutdown() {
     $response_code = http_response_code();
     if ( $response_code !== 200 && ! ( $cache_404 && $response_code === 404 ) ) {
         $should_cache = false;
+        if ( $debug ) {
+            error_log( "UWB: Caching bypassed: Response code is {$response_code} (cache_404 is " . ($cache_404 ? 'on' : 'off') . ")." );
+        }
     }
     if ( strlen( $html ) < 200 ) {
         $should_cache = false;
+        if ( $debug ) {
+            error_log( "UWB: Caching bypassed: HTML length (" . strlen( $html ) . ") is less than 200 characters." );
+        }
     }
     
     $is_special_page = is_admin() || is_search() || is_feed() || is_trackback() || is_robots();
     if ( $is_special_page || ( is_404() && ! $cache_404 ) ) {
         $should_cache = false;
+        if ( $debug ) {
+            error_log( "UWB: Caching bypassed: Special page matched: is_admin=" . (is_admin()?'yes':'no') . ", is_search=" . (is_search()?'yes':'no') . ", is_feed=" . (is_feed()?'yes':'no') . ", is_trackback=" . (is_trackback()?'yes':'no') . ", is_robots=" . (is_robots()?'yes':'no') . ", is_404=" . (is_404()?'yes':'no') );
+        }
     }
 
     $cache_logged_in = ! empty( $config['cache_logged_in'] );
@@ -296,15 +319,24 @@ function uwb_advanced_cache_shutdown() {
 
     if ( ! $cache_logged_in && $logged_in_segment !== '' ) {
         $should_cache = false;
+        if ( $debug ) {
+            error_log( "UWB: Caching bypassed: User is logged in but cache_logged_in is disabled." );
+        }
     }
     if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
         $should_cache = false;
+        if ( $debug ) {
+            error_log( "UWB: Caching bypassed: is_user_logged_in() is true but cache_logged_in is disabled." );
+        }
     }
 
     $cache_file = isset( $GLOBALS['uwb_cache_file'] ) ? $GLOBALS['uwb_cache_file'] : '';
     $cache_dir  = isset( $GLOBALS['uwb_cache_dir'] ) ? $GLOBALS['uwb_cache_dir'] : '';
     if ( ! $cache_file || ! $cache_dir ) {
         $should_cache = false;
+        if ( $debug ) {
+            error_log( "UWB: Caching bypassed: cache_file or cache_dir is not set." );
+        }
     }
 
     // Gather Object Cache statistics
@@ -379,14 +411,42 @@ function uwb_advanced_cache_shutdown() {
 
     if ( ! $should_cache ) return;
 
-    if ( ! file_exists( $cache_dir ) ) @mkdir( $cache_dir, 0755, true );
-    if ( ! is_dir( $cache_dir ) || ! is_writable( $cache_dir ) ) return;
+    if ( ! file_exists( $cache_dir ) ) {
+        $mkdir_ok = @mkdir( $cache_dir, 0755, true );
+        if ( ! $mkdir_ok && $debug ) {
+            error_log( "UWB: Failed to create cache directory: {$cache_dir}" );
+        }
+    }
+    if ( ! is_dir( $cache_dir ) ) {
+        if ( $debug ) {
+            error_log( "UWB: Cache path exists but is not a directory: {$cache_dir}" );
+        }
+        return;
+    }
+    if ( ! is_writable( $cache_dir ) ) {
+        if ( $debug ) {
+            error_log( "UWB: Cache directory is not writable: {$cache_dir}" );
+        }
+        return;
+    }
 
-    @file_put_contents( $cache_file, $html );
+    $write_bytes = @file_put_contents( $cache_file, $html );
+    if ( $write_bytes === false ) {
+        if ( $debug ) {
+            error_log( "UWB: Failed to write cache file: {$cache_file}" );
+        }
+    } else {
+        if ( $debug ) {
+            error_log( "UWB: Successfully cached file: {$cache_file} ({$write_bytes} bytes)" );
+        }
+    }
 
     $gzip_file    = $cache_file . '_gzip';
     $gzipped_html = gzencode( $html, 9 );
     if ( $gzipped_html !== false ) {
-        @file_put_contents( $gzip_file, $gzipped_html );
+        $write_gzip_bytes = @file_put_contents( $gzip_file, $gzipped_html );
+        if ( $write_gzip_bytes === false && $debug ) {
+            error_log( "UWB: Failed to write gzip cache file: {$gzip_file}" );
+        }
     }
 }
