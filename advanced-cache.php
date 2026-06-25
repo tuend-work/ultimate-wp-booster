@@ -11,7 +11,7 @@ if ( strpos( __FILE__, '/plugins/' ) !== false || strpos( __FILE__, '\\plugins\\
  * Target path: wp-content/advanced-cache.php
  */
 
-defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
+defined( 'ABSPATH' ) || defined( 'WP_CACHE' ) or die( 'No script kiddies please!' );
 
 // Main Cache Handler Execution
 uwb_advanced_cache_run();
@@ -28,7 +28,8 @@ function uwb_advanced_cache_run() {
     }
 
     // 3. Load config file
-    $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
+    $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
+    $config_path = $wp_content_dir . '/cache/ultimate-wp-booster-config.php';
     $config      = array(
         'cache_lifespan'  => 36000,
         'cache_logged_in' => false,
@@ -154,7 +155,7 @@ function uwb_advanced_cache_run() {
     $filename = $is_https ? "index-https{$q_suffix}.html" : "index{$q_suffix}.html";
 
     // 9. Build cache directory path (per-user subdirectory for logged-in users)
-    $base_cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket/' . $host;
+    $base_cache_dir = $wp_content_dir . '/cache/wp-rocket/' . $host;
     if ( $normalized_uri !== '' ) {
         $base_cache_dir .= '/' . $normalized_uri;
     }
@@ -232,9 +233,10 @@ function uwb_advanced_cache_shutdown() {
     if ( empty( $html ) ) return;
 
     // Re-read config
+    $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
     $config_path = isset( $GLOBALS['uwb_config_path'] )
         ? $GLOBALS['uwb_config_path']
-        : WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
+        : $wp_content_dir . '/cache/ultimate-wp-booster-config.php';
 
     $config = isset( $GLOBALS['uwb_config'] ) ? $GLOBALS['uwb_config'] : array();
     if ( empty( $config ) && file_exists( $config_path ) ) {
