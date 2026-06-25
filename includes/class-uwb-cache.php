@@ -73,8 +73,8 @@ class Uwb_Cache {
                     $is_user_cache = ( strpos( $parent_folder, 'user-' ) === 0 );
 
                     if ( $is_user_cache ) {
-                        // User cache is always capped at 10 minutes (600 seconds)
-                        $file_lifespan = 600;
+                        $user_lifespan_mins = intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) );
+                        $file_lifespan = $user_lifespan_mins * 60;
                     } else {
                         // Guest cache uses global lifespan
                         $file_lifespan = $lifespan_seconds;
@@ -163,26 +163,27 @@ class Uwb_Cache {
         $cache_qs = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $cache_qs_raw ) ) ) );
 
         $config = array(
-            'cache_lifespan'         => $lifespan_seconds,
-            'cache_logged_in'        => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
-            'browser_cache_enabled'  => intval( get_option( 'uwb_browser_cache_enabled', 1 ) ),
-            'browser_cache_lifespan' => $browser_cache_seconds,
-            'excluded_urls'          => array_values( $exclusions ),
-            'ignored_query'          => array_values( $ignored_queries ),
-            'exclude_cookies'        => array_values( $exclude_cookies ),
-            'exclude_user_agents'    => array_values( $exclude_uas ),
-            'always_purge_urls'      => array_values( $always_purges ),
-            'cache_query_strings'    => array_values( $cache_qs ),
-            'cache_xml_sitemaps'     => intval( get_option( 'uwb_cache_xml_sitemaps', 0 ) ),
-            'timezone'               => $timezone,
-            'cache_404'              => intval( get_option( 'uwb_cache_404', 0 ) ),
-            'redis_enabled'          => intval( get_option( 'uwb_redis_enabled', 0 ) ),
-            'redis_conn_type'        => get_option( 'uwb_redis_conn_type', 'tcp' ),
-            'redis_host'             => get_option( 'uwb_redis_host', '127.0.0.1' ),
-            'redis_port'             => intval( get_option( 'uwb_redis_port', 6379 ) ),
-            'redis_socket'           => get_option( 'uwb_redis_socket', '/var/run/redis/redis.sock' ),
-            'redis_password'         => get_option( 'uwb_redis_password', '' ),
-            'redis_db'               => intval( get_option( 'uwb_redis_db', 0 ) )
+            'cache_lifespan'           => $lifespan_seconds,
+            'cache_logged_in'          => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
+            'cache_logged_in_lifespan' => intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ) * 60,
+            'browser_cache_enabled'    => intval( get_option( 'uwb_browser_cache_enabled', 1 ) ),
+            'browser_cache_lifespan'   => $browser_cache_seconds,
+            'excluded_urls'            => array_values( $exclusions ),
+            'ignored_query'            => array_values( $ignored_queries ),
+            'exclude_cookies'          => array_values( $exclude_cookies ),
+            'exclude_user_agents'      => array_values( $exclude_uas ),
+            'always_purge_urls'        => array_values( $always_purges ),
+            'cache_query_strings'      => array_values( $cache_qs ),
+            'cache_xml_sitemaps'       => intval( get_option( 'uwb_cache_xml_sitemaps', 0 ) ),
+            'timezone'                 => $timezone,
+            'cache_404'                => intval( get_option( 'uwb_cache_404', 0 ) ),
+            'redis_enabled'            => intval( get_option( 'uwb_redis_enabled', 0 ) ),
+            'redis_conn_type'          => get_option( 'uwb_redis_conn_type', 'tcp' ),
+            'redis_host'               => get_option( 'uwb_redis_host', '127.0.0.1' ),
+            'redis_port'               => intval( get_option( 'uwb_redis_port', 6379 ) ),
+            'redis_socket'             => get_option( 'uwb_redis_socket', '/var/run/redis/redis.sock' ),
+            'redis_password'           => get_option( 'uwb_redis_password', '' ),
+            'redis_db'                 => intval( get_option( 'uwb_redis_db', 0 ) )
         );
 
         $config_content = "<?php\n" .

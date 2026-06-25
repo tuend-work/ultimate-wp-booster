@@ -16,6 +16,7 @@ class Uwb_Admin {
             'uwb_cache_lifespan',
             'uwb_excluded_urls',
             'uwb_cache_logged_in',
+            'uwb_cache_logged_in_lifespan',
             'uwb_browser_cache_enabled',
             'uwb_browser_cache_lifespan',
             'uwb_ignored_query',
@@ -63,6 +64,7 @@ class Uwb_Admin {
     public function register_settings() {
         register_setting( 'uwb_settings_group', 'uwb_cache_lifespan', 'floatval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_logged_in', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_logged_in_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_lifespan', 'floatval' );
         register_setting( 'uwb_settings_group', 'uwb_excluded_urls', 'sanitize_textarea_field' );
@@ -201,6 +203,7 @@ class Uwb_Admin {
                 'uwb_cache_lifespan',
                 'uwb_excluded_urls',
                 'uwb_cache_logged_in',
+                'uwb_cache_logged_in_lifespan',
                 'uwb_browser_cache_enabled',
                 'uwb_browser_cache_lifespan',
                 'uwb_ignored_query',
@@ -251,6 +254,7 @@ class Uwb_Admin {
                         'uwb_cache_lifespan',
                         'uwb_excluded_urls',
                         'uwb_cache_logged_in',
+                        'uwb_cache_logged_in_lifespan',
                         'uwb_browser_cache_enabled',
                         'uwb_browser_cache_lifespan',
                         'uwb_ignored_query',
@@ -709,9 +713,15 @@ class Uwb_Admin {
                                         <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
                                     </select>
                                     <p class="description">
-                                        Enable this to serve static cached pages to logged-in users. Capped at a maximum of 10 minutes (600 seconds) to prevent <code>wpnonce</code> expiration. <br>
+                                        Enable this to serve static cached pages to logged-in users.<br>
                                         <strong>Warning:</strong> Personalized content (like user profile names or WooCommerce carts) may be cached and incorrectly displayed to other users if not configured carefully.
                                     </p>
+                                </div>
+
+                                <div class="uwb-form-group" id="uwb-logged-in-lifespan-group" style="<?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>">
+                                    <label for="uwb_cache_logged_in_lifespan">Logged-in User Cache Lifespan (Minutes)</label>
+                                    <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb_cache_logged_in_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" />
+                                    <p class="description">The lifespan of static cache files for logged-in users. Default is 10 minutes. Capping at a maximum of 10 minutes (600 seconds) is recommended to prevent <code>wpnonce</code> expiration.</p>
                                 </div>
 
                                 <div class="uwb-form-group">
@@ -1558,6 +1568,18 @@ class Uwb_Admin {
             }
             $('#uwb_browser_cache_enabled').on('change', toggleBrowserCacheFields);
             toggleBrowserCacheFields();
+
+            // Toggle Logged-in Cache Lifespan fields
+            function toggleLoggedInFields() {
+                var cacheLoggedIn = $('#uwb_cache_logged_in').val();
+                if (cacheLoggedIn === '1') {
+                    $('#uwb-logged-in-lifespan-group').slideDown(250);
+                } else {
+                    $('#uwb-logged-in-lifespan-group').slideUp(250);
+                }
+            }
+            $('#uwb_cache_logged_in').on('change', toggleLoggedInFields);
+            toggleLoggedInFields();
 
             // Copy Cron Job to clipboard
             $('.uwb-copy-cron').on('click', function(e) {
