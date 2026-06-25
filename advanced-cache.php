@@ -306,6 +306,11 @@ function uwb_advanced_cache_ob_callback( $buffer, $phase = 0 ) {
 function uwb_advanced_cache_shutdown() {
     $debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
+    // Force flush all active output buffers to ensure our callback is executed
+    while ( ob_get_level() > 0 ) {
+        @ob_end_flush();
+    }
+
     if ( ! empty( $GLOBALS['uwb_do_not_cache'] ) ) {
         if ( $debug ) {
             error_log( 'UWB: Caching bypassed: Globals uwb_do_not_cache is set (buffer was cleaned/discarded).' );
