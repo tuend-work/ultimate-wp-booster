@@ -17,13 +17,24 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 uwb_advanced_cache_run();
 
 function uwb_advanced_cache_run() {
+    $debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
+    if ( $debug ) {
+        error_log( "UWB: Advanced cache run initialized. URI: " . (isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '') . " Method: " . (isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '') );
+    }
+
     // 1. Only cache GET requests
     if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || $_SERVER['REQUEST_METHOD'] !== 'GET' ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: Request method is not GET." );
+        }
         return;
     }
 
     // 2. Do not cache command line/WP-CLI requests
     if ( php_sapi_name() === 'cli' ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: php_sapi_name() is cli." );
+        }
         return;
     }
 
@@ -60,6 +71,9 @@ function uwb_advanced_cache_run() {
                 continue;
             }
             // If it's not ignored and not allowed to be cached, bypass cache
+            if ( $debug ) {
+                error_log( "UWB: Run bypassed: Query string contains non-allowed parameter '{$param}'." );
+            }
             return;
         }
     }
@@ -72,6 +86,9 @@ function uwb_advanced_cache_run() {
                 if ( empty( $cookie_pattern ) ) continue;
                 $regex = str_replace( '\*', '.*', preg_quote( $cookie_pattern, '#' ) );
                 if ( preg_match( '#^' . $regex . '$#i', $key ) ) {
+                    if ( $debug ) {
+                        error_log( "UWB: Run bypassed: Excluded cookie matched: {$key}." );
+                    }
                     return;
                 }
             }
@@ -85,6 +102,9 @@ function uwb_advanced_cache_run() {
             $ua_pattern = trim( $ua_pattern );
             if ( empty( $ua_pattern ) ) continue;
             if ( stripos( $ua, $ua_pattern ) !== false ) {
+                if ( $debug ) {
+                    error_log( "UWB: Run bypassed: Excluded User Agent matched: {$ua_pattern}." );
+                }
                 return;
             }
         }
@@ -95,10 +115,16 @@ function uwb_advanced_cache_run() {
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
             if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products)/', $key ) ) {
+                if ( $debug ) {
+                    error_log( "UWB: Run bypassed: Logged-in/Bypass cookie key matched: {$key}." );
+                }
                 return;
             }
             if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
                 if ( ! $cache_logged_in ) {
+                    if ( $debug ) {
+                        error_log( "UWB: Run bypassed: User is logged in but cache_logged_in is false." );
+                    }
                     return;
                 }
                 $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
@@ -109,6 +135,9 @@ function uwb_advanced_cache_run() {
     // 6. Normalize host & URI
     $host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( $_SERVER['HTTP_HOST'] ) : '';
     if ( empty( $host ) ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: Host header is empty." );
+        }
         return;
     }
     $host = explode( ':', $host )[0];
@@ -121,6 +150,9 @@ function uwb_advanced_cache_run() {
     // 6.1 Check XML Sitemap Caching bypass
     $is_xml = ( substr( strtolower( $normalized_uri ), -4 ) === '.xml' );
     if ( $is_xml && empty( $config['cache_xml_sitemaps'] ) ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: Sitemap caching disabled for XML: {$normalized_uri}." );
+        }
         return;
     }
 
@@ -133,6 +165,9 @@ function uwb_advanced_cache_run() {
             $regex = str_replace( '\*', '.*', preg_quote( $pattern, '#' ) );
             if ( preg_match( '#^' . $regex . '$#i', $absolute_uri ) ||
                  preg_match( '#^' . $regex . '$#i', $uri_path ) ) {
+                if ( $debug ) {
+                    error_log( "UWB: Run bypassed: Excluded URL pattern matched: {$pattern}." );
+                }
                 return;
             }
         }
@@ -204,7 +239,18 @@ function uwb_advanced_cache_run() {
             } else {
                 @readfile( $cache_file );
             }
+            if ( $debug ) {
+                error_log( "UWB: Served static cache file: {$cache_file}" );
+            }
             exit;
+        } else {
+            if ( $debug ) {
+                error_log( "UWB: Cache file exists but expired: {$cache_file}" );
+            }
+        }
+    } else {
+        if ( $debug ) {
+            error_log( "UWB: Cache file does not exist: {$cache_file}" );
         }
     }
 
@@ -217,18 +263,37 @@ function uwb_advanced_cache_run() {
         $GLOBALS['uwb_config_path']       = $config_path;
         $GLOBALS['uwb_logged_in_segment'] = $logged_in_cookie_hash;
         $GLOBALS['uwb_config']            = $config;
+        $GLOBALS['uwb_accumulated_html']  = '';
 
-        ob_start( 'uwb_advanced_cache_ob_callback' );
+        $ob_ok = ob_start( 'uwb_advanced_cache_ob_callback' );
+        if ( $debug ) {
+            if ( ! $ob_ok ) {
+                error_log( "UWB: ob_start('uwb_advanced_cache_ob_callback') failed!" );
+            } else {
+                error_log( "UWB: Started output buffering using ob_start." );
+            }
+        }
         register_shutdown_function( 'uwb_advanced_cache_shutdown' );
     }
 }
 
 function uwb_advanced_cache_ob_callback( $buffer, $phase = 0 ) {
+    $debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
+    if ( $debug ) {
+        error_log( "UWB: Callback invoked. Phase: {$phase}, Buffer length: " . strlen( $buffer ) );
+    }
+
     if ( ! isset( $GLOBALS['uwb_accumulated_html'] ) ) {
         $GLOBALS['uwb_accumulated_html'] = '';
     }
 
-    if ( ( $phase & PHP_OUTPUT_HANDLER_CLEAN ) || ( $phase & PHP_OUTPUT_HANDLER_CLEANABLE ) === PHP_OUTPUT_HANDLER_CLEANABLE ) {
+    $is_clean = ( $phase & PHP_OUTPUT_HANDLER_CLEAN ) || 
+                ( $phase & PHP_OUTPUT_HANDLER_CLEANABLE ) === PHP_OUTPUT_HANDLER_CLEANABLE;
+
+    if ( $is_clean ) {
+        if ( $debug ) {
+            error_log( "UWB: Callback clean phase matched. Bypassing cache." );
+        }
         $GLOBALS['uwb_accumulated_html'] = '';
         $GLOBALS['uwb_do_not_cache'] = true;
         return $buffer;
