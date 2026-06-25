@@ -422,7 +422,9 @@ function uwb_advanced_cache_shutdown() {
     $oc_total = $oc_hits + $oc_misses;
     $oc_ratio = $oc_total > 0 ? round( ( $oc_hits / $oc_total ) * 100, 1 ) : 0;
     $oc_status = wp_using_ext_object_cache() ? 'Active (Redis)' : 'Inactive';
-    $oc_comment = " | Object Cache: {$oc_status} (Hits: {$oc_hits} | Misses: {$oc_misses} | Ratio: {$oc_ratio}%)";
+    $ua_str = isset( $_SERVER['HTTP_USER_AGENT'] ) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown UA';
+    $ua_clean = str_replace( '--', '- -', $ua_str );
+    $oc_comment = " | Object Cache: {$oc_status} (Hits: {$oc_hits} | Misses: {$oc_misses} | Ratio: {$oc_ratio}%) | User Agent: {$ua_clean}";
 
     // Only append comments to HTML responses and non-admin requests
     $is_html = true;
@@ -471,12 +473,12 @@ function uwb_advanced_cache_shutdown() {
         }
 
         if ( $should_cache ) {
-            $comment_to_append = "\n<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment} -->";
+            $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment} -->\n";
         } else {
-            $comment_to_append = "\n<!-- Dynamic Page{$oc_comment} -->";
+            $comment_to_append = "<!-- Dynamic Page{$oc_comment} -->\n";
         }
 
-        $html .= $comment_to_append;
+        $html = $comment_to_append . $html;
     }
 
     if ( ! $should_cache ) return;
