@@ -111,6 +111,10 @@ class Uwb_Cache {
         if ( ! file_exists( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
         }
+        $wp_rocket_dir = $cache_dir . '/wp-rocket';
+        if ( ! file_exists( $wp_rocket_dir ) ) {
+            @mkdir( $wp_rocket_dir, 0755, true );
+        }
 
         // Clean up old JSON file if it exists
         $old_json_path = $cache_dir . '/ultimate-wp-booster-config.json';
@@ -205,7 +209,9 @@ class Uwb_Cache {
     public function purge_all() {
         $cache_dir = self::get_cache_dir();
         if ( file_exists( $cache_dir ) ) {
-            $this->recursive_delete( $cache_dir );
+            $this->recursive_delete( $cache_dir, false );
+        } else {
+            @mkdir( $cache_dir, 0755, true );
         }
     }
 
@@ -359,7 +365,7 @@ class Uwb_Cache {
     /**
      * Recursively delete directory or files
      */
-    private function recursive_delete( $dir ) {
+    private function recursive_delete( $dir, $delete_self = true ) {
         if ( ! file_exists( $dir ) ) {
             return;
         }
@@ -377,13 +383,15 @@ class Uwb_Cache {
 
             $path = $dir . '/' . $item;
             if ( is_dir( $path ) ) {
-                $this->recursive_delete( $path );
+                $this->recursive_delete( $path, true );
             } else {
                 @unlink( $path );
             }
         }
 
-        @rmdir( $dir );
+        if ( $delete_self ) {
+            @rmdir( $dir );
+        }
     }
 
     /**
