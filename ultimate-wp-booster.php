@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.4.58
+ * Version:     1.4.59
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.4.58' );
+define( 'UWB_VERSION', '1.4.59' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -283,7 +283,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
     WP_CLI::add_command( 'uwb-preload', 'Uwb_CLI_Preload' );
 }
 
-// 8. Handle external cron trigger
 add_action( 'init', 'uwb_handle_external_cron_trigger' );
 function uwb_handle_external_cron_trigger() {
     if ( isset( $_GET['uwb_preload_key'] ) ) {
@@ -293,9 +292,28 @@ function uwb_handle_external_cron_trigger() {
         }
         if ( hash_equals( $saved_key, $_GET['uwb_preload_key'] ) ) {
             if ( class_exists( 'Uwb_Preloader' ) ) {
-                $preloader = new Uwb_Preloader();
-                $processed = $preloader->run_preload_batch();
-                echo "OK: Preloaded {$processed} URLs.";
+                global $wpdb;
+                $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
+
+                // Check if there are any pending or retriable failed URLs
+                $pending_count = intval( $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name} WHERE status = 'pending' OR (status = 'failed' AND attempts < 3)" ) );
+
+                if ( $pending_count === 0 ) {
+                    // Queue is completed! Show all completed preload URLs
+                    $completed_urls = $wpdb->get_col( "SELECT url FROM {$table_name} WHERE status = 'completed' ORDER BY priority ASC, id ASC" );
+                    header( 'Content-Type: text/plain; charset=UTF-8' );
+                    if ( empty( $completed_urls ) ) {
+                        echo "OK: Preload queue is empty or no URLs have been completed yet.";
+                    } else {
+                        foreach ( $completed_urls as $url ) {
+                            echo esc_url( $url ) . "\n";
+                        }
+                    }
+                } else {
+                    $preloader = new Uwb_Preloader();
+                    $processed = $preloader->run_preload_batch();
+                    echo "OK: Preloaded {$processed} URLs.";
+                }
             } else {
                 echo "ERROR: Preloader class not found.";
             }
