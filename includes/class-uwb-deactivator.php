@@ -22,8 +22,8 @@ class Uwb_Deactivator {
         require_once plugin_dir_path( __FILE__ ) . 'class-uwb-activator.php';
         Uwb_Activator::toggle_wp_cache( false );
 
-        // Remove object-cache.php drop-in if it's ours
-        Uwb_Activator::remove_object_cache_dropin();
+        // Do not remove object-cache.php drop-in on deactivation to prevent WP session loss
+        // Uwb_Activator::remove_object_cache_dropin();
 
         // 3. Clear scheduled cron jobs
         wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
