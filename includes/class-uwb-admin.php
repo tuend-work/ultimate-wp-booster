@@ -865,7 +865,7 @@ class Uwb_Admin {
                                 <!-- Password Setting -->
                                 <div id="uwb-oc-password-group" class="uwb-form-group" style="margin-bottom:20px;">
                                     <label for="uwb_redis_password">Redis Password (Optional)</label>
-                                    <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" />
+                                    <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" autocomplete="new-password" />
                                 </div>
 
                                 <!-- Test Connection Button for Settings -->
