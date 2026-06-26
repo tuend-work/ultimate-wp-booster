@@ -740,27 +740,21 @@ class Uwb_Admin {
                                     </p>
                                 </div>
 
-                                <div style="background: #ffffff; border: 1px solid var(--uwb-border); border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; max-width: 700px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                    <div class="uwb-form-group" style="margin-bottom:0; max-width: 100%;">
-                                        <label for="uwb_cache_logged_in">Cache for Logged-in Users</label>
-                                        <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
+                                    <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache for Logged-in Users</label>
+                                    <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
+                                        <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
                                             <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
                                             <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
                                         </select>
-                                        <p class="description">
-                                            Enable this to serve static cached pages to logged-in users.<br>
-                                            <strong>Warning:</strong> Personalized content may be cached if not configured carefully.
-                                        </p>
+                                        <div id="uwb-logged-in-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>"></div>
+                                        <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb-logged-in-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>" />
                                     </div>
-
-                                    <div class="uwb-form-group" id="uwb-logged-in-lifespan-group" style="<?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0; max-width: 100%;">
-                                        <label for="uwb_cache_logged_in_lifespan">Logged-in User Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb_cache_logged_in_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" />
-                                        <p class="description">
-                                            The lifespan of static cache files for logged-in users. Default is 10 minutes. Capping at 10 mins recommended to prevent nonce expiration.<br>
-                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">5</code> (5m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10</code> (10m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">15</code> (15m)
-                                        </p>
-                                    </div>
+                                    <p class="description">
+                                        Serve static cached pages to logged-in users. When enabled, enter lifespan in minutes (default is 10).<br>
+                                        <strong>Warning:</strong> Personalized content may be cached if not configured carefully.<br>
+                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">5</code> (5m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10</code> (10m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">15</code> (15m)
+                                    </p>
                                 </div>
 
                                 <div class="uwb-form-group">
@@ -772,64 +766,52 @@ class Uwb_Admin {
                                     <p class="description">Enable this to generate static cache files for 404 Not Found error pages.</p>
                                 </div>
 
-                                <div style="background: #ffffff; border: 1px solid var(--uwb-border); border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; max-width: 700px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                    <div class="uwb-form-group" style="margin-bottom:0; max-width: 100%;">
-                                        <label for="uwb_cache_xml_sitemaps">Cache XML Sitemaps</label>
-                                        <select name="uwb_cache_xml_sitemaps" id="uwb_cache_xml_sitemaps" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
+                                    <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache XML Sitemaps</label>
+                                    <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
+                                        <select name="uwb_cache_xml_sitemaps" id="uwb_cache_xml_sitemaps" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
                                             <option value="0" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 0 ); ?>>Disabled</option>
                                             <option value="1" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 1 ); ?>>Enabled</option>
                                         </select>
-                                        <p class="description">Enable this to generate static cache files for XML sitemaps (e.g. <code>/sitemap.xml</code>). Served as <code>text/xml</code>.</p>
+                                        <div id="uwb-xml-sitemaps-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?>"></div>
+                                        <input type="number" name="uwb_cache_xml_sitemaps_lifespan" id="uwb-xml-sitemaps-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?>" />
                                     </div>
-
-                                    <div class="uwb-form-group" id="uwb-xml-sitemaps-lifespan-group" style="<?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0; max-width: 100%;">
-                                        <label for="uwb_cache_xml_sitemaps_lifespan">XML Sitemap Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_cache_xml_sitemaps_lifespan" id="uwb_cache_xml_sitemaps_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) ); ?>" min="1" />
-                                        <p class="description">
-                                            The lifespan of static cache files for XML sitemaps. Enter <code>0</code> for unlimited lifespan.<br>
-                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                        </p>
-                                    </div>
+                                    <p class="description">
+                                        Generate static cache files for XML sitemaps (e.g. <code>/sitemap.xml</code>). Served as <code>text/xml</code>.<br>
+                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                    </p>
                                 </div>
 
-                                <div style="background: #ffffff; border: 1px solid var(--uwb-border); border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; max-width: 700px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                    <div class="uwb-form-group" style="margin-bottom:0; max-width: 100%;">
-                                        <label for="uwb_cache_php">Cache PHP Pages</label>
-                                        <select name="uwb_cache_php" id="uwb_cache_php" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
+                                    <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache PHP Pages</label>
+                                    <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
+                                        <select name="uwb_cache_php" id="uwb_cache_php" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
                                             <option value="0" <?php selected( get_option( 'uwb_cache_php', 0 ), 0 ); ?>>Disabled</option>
                                             <option value="1" <?php selected( get_option( 'uwb_cache_php', 0 ), 1 ); ?>>Enabled</option>
                                         </select>
-                                        <p class="description">Enable this to generate static cache files for requests ending with <code>.php</code> extension (except <code>index.php</code>).</p>
+                                        <div id="uwb-php-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?>"></div>
+                                        <input type="number" name="uwb_cache_php_lifespan" id="uwb-php-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?>" />
                                     </div>
-
-                                    <div class="uwb-form-group" id="uwb-php-lifespan-group" style="<?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0; max-width: 100%;">
-                                        <label for="uwb_cache_php_lifespan">PHP Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_cache_php_lifespan" id="uwb_cache_php_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 10 ) ); ?>" min="1" />
-                                        <p class="description">
-                                            The lifespan of static cache files for PHP pages. Enter <code>0</code> for unlimited lifespan.<br>
-                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                        </p>
-                                    </div>
+                                    <p class="description">
+                                        Generate static cache files for requests ending with <code>.php</code> extension (except <code>index.php</code>).<br>
+                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                    </p>
                                 </div>
 
-                                <div style="background: #ffffff; border: 1px solid var(--uwb-border); border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 0; max-width: 700px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                    <div class="uwb-form-group" style="margin-bottom:0; max-width: 100%;">
-                                        <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
-                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 0;">
+                                    <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Browser Caching (Guest)</label>
+                                    <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
+                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
                                             <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
                                             <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
                                         </select>
-                                        <p class="description">Allow guests' browsers to cache static HTML pages locally.</p>
+                                        <div id="uwb-browser-cache-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>"></div>
+                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb-browser-cache-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>" />
                                     </div>
-
-                                    <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0; max-width: 100%;">
-                                        <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 10 ) ); ?>" min="1" />
-                                        <p class="description">
-                                            The amount of time guest browsers are instructed to cache pages. Default is 60 minutes.<br>
-                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                        </p>
-                                    </div>
+                                    <p class="description">
+                                        Allow guests' browsers to cache static HTML pages locally.<br>
+                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                    </p>
                                 </div>
                             </div>
 
@@ -1635,9 +1617,11 @@ class Uwb_Admin {
             function toggleBrowserCacheFields() {
                 var browserCacheEnabled = $('#uwb_browser_cache_enabled').val();
                 if (browserCacheEnabled === '1') {
-                    $('#uwb-browser-cache-lifespan-group').slideDown(250);
+                    $('#uwb-browser-cache-lifespan-group').show();
+                    $('#uwb-browser-cache-divider').show();
                 } else {
-                    $('#uwb-browser-cache-lifespan-group').slideUp(250);
+                    $('#uwb-browser-cache-lifespan-group').hide();
+                    $('#uwb-browser-cache-divider').hide();
                 }
             }
             $('#uwb_browser_cache_enabled').on('change', toggleBrowserCacheFields);
@@ -1647,9 +1631,11 @@ class Uwb_Admin {
             function toggleLoggedInFields() {
                 var cacheLoggedIn = $('#uwb_cache_logged_in').val();
                 if (cacheLoggedIn === '1') {
-                    $('#uwb-logged-in-lifespan-group').slideDown(250);
+                    $('#uwb-logged-in-lifespan-group').show();
+                    $('#uwb-logged-in-divider').show();
                 } else {
-                    $('#uwb-logged-in-lifespan-group').slideUp(250);
+                    $('#uwb-logged-in-lifespan-group').hide();
+                    $('#uwb-logged-in-divider').hide();
                 }
             }
             $('#uwb_cache_logged_in').on('change', toggleLoggedInFields);
@@ -1659,9 +1645,11 @@ class Uwb_Admin {
             function toggleXMLFields() {
                 var cacheXML = $('#uwb_cache_xml_sitemaps').val();
                 if (cacheXML === '1') {
-                    $('#uwb-xml-sitemaps-lifespan-group').slideDown(250);
+                    $('#uwb-xml-sitemaps-lifespan-group').show();
+                    $('#uwb-xml-sitemaps-divider').show();
                 } else {
-                    $('#uwb-xml-sitemaps-lifespan-group').slideUp(250);
+                    $('#uwb-xml-sitemaps-lifespan-group').hide();
+                    $('#uwb-xml-sitemaps-divider').hide();
                 }
             }
             $('#uwb_cache_xml_sitemaps').on('change', toggleXMLFields);
@@ -1671,9 +1659,11 @@ class Uwb_Admin {
             function togglePHPFields() {
                 var cachePHP = $('#uwb_cache_php').val();
                 if (cachePHP === '1') {
-                    $('#uwb-php-lifespan-group').slideDown(250);
+                    $('#uwb-php-lifespan-group').show();
+                    $('#uwb-php-divider').show();
                 } else {
-                    $('#uwb-php-lifespan-group').slideUp(250);
+                    $('#uwb-php-lifespan-group').hide();
+                    $('#uwb-php-divider').hide();
                 }
             }
             $('#uwb_cache_php').on('change', togglePHPFields);
