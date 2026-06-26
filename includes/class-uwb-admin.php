@@ -792,7 +792,7 @@ class Uwb_Admin {
                                     </div>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0; max-width: 700px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; max-width: 700px;">
                                     <div class="uwb-form-group" style="margin-bottom:0;">
                                         <label for="uwb_cache_php">Cache PHP Pages</label>
                                         <select name="uwb_cache_php" id="uwb_cache_php" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
@@ -808,6 +808,26 @@ class Uwb_Admin {
                                         <p class="description">
                                             The lifespan of static cache files for PHP pages. Enter <code>0</code> for unlimited lifespan.<br>
                                             <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0; max-width: 700px;">
+                                    <div class="uwb-form-group" style="margin-bottom:0;">
+                                        <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
+                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                            <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
+                                            <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
+                                        </select>
+                                        <p class="description">Allow guests' browsers to cache static HTML pages locally.</p>
+                                    </div>
+
+                                    <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
+                                        <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Minutes)</label>
+                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 60 ) ); ?>" min="1" />
+                                        <p class="description">
+                                            The amount of time guest browsers are instructed to cache pages. Default is 60 minutes.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
                                         </p>
                                     </div>
                                 </div>
@@ -877,34 +897,6 @@ class Uwb_Admin {
                                         Cache for query strings enables you to force caching for specific GET parameters (one per line).<br>
                                         Example: <code>paged</code> or <code>sort</code>.
                                     </p>
-                                </div>
-                            </div>
-
-                            <!-- Group 2: Browser Cache Settings -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                                    Browser Cache Settings
-                                </h3>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0; max-width: 700px;">
-                                    <div class="uwb-form-group" style="margin-bottom:0;">
-                                        <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
-                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                            <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
-                                            <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
-                                        </select>
-                                        <p class="description">Allow guests' browsers to cache static HTML pages locally.</p>
-                                    </div>
-
-                                    <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
-                                        <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 60 ) ); ?>" min="1" />
-                                        <p class="description">
-                                            The amount of time guest browsers are instructed to cache pages. Default is 60 minutes.<br>
-                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                        </p>
-                                    </div>
                                 </div>
                             </div>
                         </div>
