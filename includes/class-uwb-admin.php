@@ -703,6 +703,9 @@ class Uwb_Admin {
                     <div class="uwb-nav-item" data-tab="cache_settings">
                         Cache Settings
                     </div>
+                    <div class="uwb-nav-item" data-tab="object_cache">
+                        Object Cache
+                    </div>
                     <div class="uwb-nav-item" data-tab="preload_settings">
                         Preload Settings
                     </div>
@@ -877,6 +880,40 @@ class Uwb_Admin {
                                 </div>
                             </div>
 
+                            <!-- Group 2: Browser Cache Settings -->
+                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    Browser Cache Settings
+                                </h3>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0; max-width: 700px;">
+                                    <div class="uwb-form-group" style="margin-bottom:0;">
+                                        <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
+                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                            <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
+                                            <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
+                                        </select>
+                                        <p class="description">Allow guests' browsers to cache static HTML pages locally.</p>
+                                    </div>
+
+                                    <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
+                                        <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Minutes)</label>
+                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 60 ) ); ?>" min="1" />
+                                        <p class="description">
+                                            The amount of time guest browsers are instructed to cache pages. Default is 60 minutes.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB: Object Cache -->
+                        <div id="tab-object_cache" class="uwb-tab-content">
+                            <h2 style="margin-top:0;">Object Cache Settings</h2>
+                            <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Configure database query object caching using Redis, Valkey, or Memcached.</p>
+
                             <!-- Group 4: Object Cache Settings -->
                             <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                 <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
@@ -941,35 +978,8 @@ class Uwb_Admin {
                                     <div id="redis-test-result-settings" style="display:none; padding:12px 16px; border-radius:8px; font-size:13px; font-weight:600; margin-top:16px;"></div>
                                 </div>
                             </div>
-                            
-                            <!-- Group 2: Browser Cache Settings -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                                    Browser Cache Settings
-                                </h3>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0; max-width: 700px;">
-                                    <div class="uwb-form-group" style="margin-bottom:0;">
-                                        <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
-                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                            <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
-                                            <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
-                                        </select>
-                                        <p class="description">Allow guests' browsers to cache static HTML pages locally.</p>
-                                    </div>
-
-                                    <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
-                                        <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 60 ) ); ?>" min="1" />
-                                        <p class="description">
-                                            The amount of time guest browsers are instructed to cache pages. Default is 60 minutes.<br>
-                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
+
                         <!-- TAB 2: Preload Cache -->
                         <div id="tab-preload_settings" class="uwb-tab-content">
                             <h2 style="margin-top:0;">Preload Cache (Automatic Crawler)</h2>
