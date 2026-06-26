@@ -740,8 +740,8 @@ class Uwb_Admin {
                                     </p>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; max-width: 700px;">
-                                    <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div style="background: #ffffff; border: 1px solid var(--uwb-border); border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; max-width: 700px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                    <div class="uwb-form-group" style="margin-bottom:0; max-width: 100%;">
                                         <label for="uwb_cache_logged_in">Cache for Logged-in Users</label>
                                         <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                             <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
@@ -753,7 +753,7 @@ class Uwb_Admin {
                                         </p>
                                     </div>
 
-                                    <div class="uwb-form-group" id="uwb-logged-in-lifespan-group" style="<?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
+                                    <div class="uwb-form-group" id="uwb-logged-in-lifespan-group" style="<?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0; max-width: 100%;">
                                         <label for="uwb_cache_logged_in_lifespan">Logged-in User Cache Lifespan (Minutes)</label>
                                         <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb_cache_logged_in_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" />
                                         <p class="description">
@@ -772,8 +772,8 @@ class Uwb_Admin {
                                     <p class="description">Enable this to generate static cache files for 404 Not Found error pages.</p>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; max-width: 700px;">
-                                    <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div style="background: #ffffff; border: 1px solid var(--uwb-border); border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; max-width: 700px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                    <div class="uwb-form-group" style="margin-bottom:0; max-width: 100%;">
                                         <label for="uwb_cache_xml_sitemaps">Cache XML Sitemaps</label>
                                         <select name="uwb_cache_xml_sitemaps" id="uwb_cache_xml_sitemaps" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                             <option value="0" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 0 ); ?>>Disabled</option>
@@ -782,7 +782,7 @@ class Uwb_Admin {
                                         <p class="description">Enable this to generate static cache files for XML sitemaps (e.g. <code>/sitemap.xml</code>). Served as <code>text/xml</code>.</p>
                                     </div>
 
-                                    <div class="uwb-form-group" id="uwb-xml-sitemaps-lifespan-group" style="<?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
+                                    <div class="uwb-form-group" id="uwb-xml-sitemaps-lifespan-group" style="<?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0; max-width: 100%;">
                                         <label for="uwb_cache_xml_sitemaps_lifespan">XML Sitemap Cache Lifespan (Minutes)</label>
                                         <input type="number" name="uwb_cache_xml_sitemaps_lifespan" id="uwb_cache_xml_sitemaps_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) ); ?>" min="1" />
                                         <p class="description">
@@ -792,8 +792,8 @@ class Uwb_Admin {
                                     </div>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; max-width: 700px;">
-                                    <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div style="background: #ffffff; border: 1px solid var(--uwb-border); border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; max-width: 700px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                    <div class="uwb-form-group" style="margin-bottom:0; max-width: 100%;">
                                         <label for="uwb_cache_php">Cache PHP Pages</label>
                                         <select name="uwb_cache_php" id="uwb_cache_php" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                             <option value="0" <?php selected( get_option( 'uwb_cache_php', 0 ), 0 ); ?>>Disabled</option>
@@ -802,7 +802,7 @@ class Uwb_Admin {
                                         <p class="description">Enable this to generate static cache files for requests ending with <code>.php</code> extension (except <code>index.php</code>).</p>
                                     </div>
 
-                                    <div class="uwb-form-group" id="uwb-php-lifespan-group" style="<?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
+                                    <div class="uwb-form-group" id="uwb-php-lifespan-group" style="<?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0; max-width: 100%;">
                                         <label for="uwb_cache_php_lifespan">PHP Cache Lifespan (Minutes)</label>
                                         <input type="number" name="uwb_cache_php_lifespan" id="uwb_cache_php_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 10 ) ); ?>" min="1" />
                                         <p class="description">
@@ -812,8 +812,8 @@ class Uwb_Admin {
                                     </div>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0; max-width: 700px;">
-                                    <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div style="background: #ffffff; border: 1px solid var(--uwb-border); border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 0; max-width: 700px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                    <div class="uwb-form-group" style="margin-bottom:0; max-width: 100%;">
                                         <label for="uwb_browser_cache_enabled">Enable Browser Caching (Guest)</label>
                                         <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                             <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
@@ -822,7 +822,7 @@ class Uwb_Admin {
                                         <p class="description">Allow guests' browsers to cache static HTML pages locally.</p>
                                     </div>
 
-                                    <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
+                                    <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0; max-width: 100%;">
                                         <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Minutes)</label>
                                         <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 10 ) ); ?>" min="1" />
                                         <p class="description">
