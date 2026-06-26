@@ -72,9 +72,18 @@ class Uwb_Cache {
                     $parent_folder = basename( dirname( $path ) );
                     $is_user_cache = ( strpos( $parent_folder, 'user-' ) === 0 );
 
+                    $is_xml_cache = ( stripos( $path, '.xml/' ) !== false || stripos( $path, '.xml\\' ) !== false );
+                    $is_php_cache = ( stripos( $path, '.php/' ) !== false || stripos( $path, '.php\\' ) !== false );
+
                     if ( $is_user_cache ) {
                         $user_lifespan_mins = intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) );
                         $file_lifespan = $user_lifespan_mins * 60;
+                    } elseif ( $is_xml_cache ) {
+                        $xml_lifespan_hours = floatval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) );
+                        $file_lifespan = intval( $xml_lifespan_hours * 3600 );
+                    } elseif ( $is_php_cache ) {
+                        $php_lifespan_hours = floatval( get_option( 'uwb_cache_php_lifespan', 10 ) );
+                        $file_lifespan = intval( $php_lifespan_hours * 3600 );
                     } else {
                         // Guest cache uses global lifespan
                         $file_lifespan = $lifespan_seconds;
@@ -162,6 +171,12 @@ class Uwb_Cache {
         $cache_qs_raw = get_option( 'uwb_cache_query_strings', '' );
         $cache_qs = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $cache_qs_raw ) ) ) );
 
+        $xml_lifespan_hours = floatval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) );
+        $xml_lifespan_seconds = intval( $xml_lifespan_hours * 3600 );
+
+        $php_lifespan_hours = floatval( get_option( 'uwb_cache_php_lifespan', 10 ) );
+        $php_lifespan_seconds = intval( $php_lifespan_hours * 3600 );
+
         $config = array(
             'cache_lifespan'           => $lifespan_seconds,
             'cache_logged_in'          => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
@@ -175,6 +190,9 @@ class Uwb_Cache {
             'always_purge_urls'        => array_values( $always_purges ),
             'cache_query_strings'      => array_values( $cache_qs ),
             'cache_xml_sitemaps'       => intval( get_option( 'uwb_cache_xml_sitemaps', 0 ) ),
+            'cache_xml_sitemaps_lifespan' => $xml_lifespan_seconds,
+            'cache_php'                => intval( get_option( 'uwb_cache_php', 0 ) ),
+            'cache_php_lifespan'       => $php_lifespan_seconds,
             'timezone'                 => $timezone,
             'cache_404'                => intval( get_option( 'uwb_cache_404', 0 ) ),
             'redis_enabled'            => intval( get_option( 'uwb_redis_enabled', 0 ) ),

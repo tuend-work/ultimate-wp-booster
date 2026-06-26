@@ -77,6 +77,18 @@ class Uwb_Activator {
             update_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
         }
 
+        if ( get_option( 'uwb_cache_xml_sitemaps_lifespan' ) === false ) {
+            update_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ); // 10 hours by default
+        }
+
+        if ( get_option( 'uwb_cache_php' ) === false ) {
+            update_option( 'uwb_cache_php', 0 ); // Disabled by default
+        }
+
+        if ( get_option( 'uwb_cache_php_lifespan' ) === false ) {
+            update_option( 'uwb_cache_php_lifespan', 10 ); // 10 hours by default
+        }
+
         // 3. Copy advanced-cache.php drop-in
         self::copy_advanced_cache_dropin();
 

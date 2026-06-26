@@ -80,6 +80,9 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_always_purge_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_cache_query_strings', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_cache_xml_sitemaps', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_xml_sitemaps_lifespan', 'floatval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_php', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_php_lifespan', 'floatval' );
 
         // Redis Object Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_redis_enabled', array( $this, 'sanitize_object_cache_enabled' ) );
@@ -733,13 +736,34 @@ class Uwb_Admin {
                                     <p class="description">Enable this to generate static cache files for 404 Not Found error pages.</p>
                                 </div>
 
-                                <div class="uwb-form-group" style="margin-bottom:0;">
+                                <div class="uwb-form-group">
                                     <label for="uwb_cache_xml_sitemaps">Cache XML Sitemaps</label>
                                     <select name="uwb_cache_xml_sitemaps" id="uwb_cache_xml_sitemaps" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                         <option value="0" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 0 ); ?>>Disabled</option>
                                         <option value="1" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 1 ); ?>>Enabled</option>
                                     </select>
-                                    <p class="description" style="margin-bottom:0;">Enable this to generate static cache files for XML sitemaps (e.g. <code>/sitemap.xml</code>). Served as <code>text/xml</code>.</p>
+                                    <p class="description">Enable this to generate static cache files for XML sitemaps (e.g. <code>/sitemap.xml</code>). Served as <code>text/xml</code>.</p>
+                                </div>
+
+                                <div class="uwb-form-group" id="uwb-xml-sitemaps-lifespan-group" style="<?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?>">
+                                    <label for="uwb_cache_xml_sitemaps_lifespan">XML Sitemap Cache Lifespan (Hours)</label>
+                                    <input type="number" step="0.1" name="uwb_cache_xml_sitemaps_lifespan" id="uwb_cache_xml_sitemaps_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) ); ?>" min="0.1" />
+                                    <p class="description">The lifespan of static cache files for XML sitemaps. Enter <code>0</code> for unlimited lifespan (uses global setting if empty).</p>
+                                </div>
+
+                                <div class="uwb-form-group">
+                                    <label for="uwb_cache_php">Cache PHP Pages</label>
+                                    <select name="uwb_cache_php" id="uwb_cache_php" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                        <option value="0" <?php selected( get_option( 'uwb_cache_php', 0 ), 0 ); ?>>Disabled</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_cache_php', 0 ), 1 ); ?>>Enabled</option>
+                                    </select>
+                                    <p class="description">Enable this to generate static cache files for requests ending with <code>.php</code> extension (except <code>index.php</code>).</p>
+                                </div>
+
+                                <div class="uwb-form-group" id="uwb-php-lifespan-group" style="<?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
+                                    <label for="uwb_cache_php_lifespan">PHP Cache Lifespan (Hours)</label>
+                                    <input type="number" step="0.1" name="uwb_cache_php_lifespan" id="uwb_cache_php_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 10 ) ); ?>" min="0.1" />
+                                    <p class="description" style="margin-bottom:0;">The lifespan of static cache files for PHP pages. Enter <code>0</code> for unlimited lifespan.</p>
                                 </div>
                             </div>
 
@@ -1580,6 +1604,30 @@ class Uwb_Admin {
             }
             $('#uwb_cache_logged_in').on('change', toggleLoggedInFields);
             toggleLoggedInFields();
+
+            // Toggle XML Sitemap Cache fields
+            function toggleXMLFields() {
+                var cacheXML = $('#uwb_cache_xml_sitemaps').val();
+                if (cacheXML === '1') {
+                    $('#uwb-xml-sitemaps-lifespan-group').slideDown(250);
+                } else {
+                    $('#uwb-xml-sitemaps-lifespan-group').slideUp(250);
+                }
+            }
+            $('#uwb_cache_xml_sitemaps').on('change', toggleXMLFields);
+            toggleXMLFields();
+
+            // Toggle PHP Cache fields
+            function togglePHPFields() {
+                var cachePHP = $('#uwb_cache_php').val();
+                if (cachePHP === '1') {
+                    $('#uwb-php-lifespan-group').slideDown(250);
+                } else {
+                    $('#uwb-php-lifespan-group').slideUp(250);
+                }
+            }
+            $('#uwb_cache_php').on('change', togglePHPFields);
+            togglePHPFields();
 
             // Copy Cron Job to clipboard
             $('.uwb-copy-cron').on('click', function(e) {

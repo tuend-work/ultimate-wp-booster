@@ -156,6 +156,18 @@ function uwb_advanced_cache_run() {
         return;
     }
 
+    // 6.2 Check PHP Caching bypass
+    $is_php = ( substr( strtolower( $normalized_uri ), -4 ) === '.php' && strtolower( $normalized_uri ) !== 'index.php' );
+    if ( $is_php && empty( $config['cache_php'] ) ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: PHP caching disabled for PHP: {$normalized_uri}." );
+        }
+        return;
+    }
+
+    $GLOBALS['uwb_is_php'] = $is_php;
+    $GLOBALS['uwb_is_xml'] = $is_xml;
+
     // 7. Check excluded URLs
     if ( ! empty( $config['excluded_urls'] ) ) {
         $absolute_uri = ( $normalized_uri === '' ) ? '/' : '/' . $normalized_uri;
@@ -201,8 +213,12 @@ function uwb_advanced_cache_run() {
         $file_time = @filemtime( $cache_file );
         $lifespan  = intval( $config['cache_lifespan'] );
 
-        // Cache logged-in users for the configured duration (default 10 minutes / 600 seconds)
-        if ( $logged_in_cookie_hash !== '' ) {
+        if ( $is_xml ) {
+            $lifespan = isset( $config['cache_xml_sitemaps_lifespan'] ) ? intval( $config['cache_xml_sitemaps_lifespan'] ) : $lifespan;
+        } elseif ( $is_php ) {
+            $lifespan = isset( $config['cache_php_lifespan'] ) ? intval( $config['cache_php_lifespan'] ) : $lifespan;
+        } elseif ( $logged_in_cookie_hash !== '' ) {
+            // Cache logged-in users for the configured duration (default 10 minutes / 600 seconds)
             $logged_in_lifespan = isset( $config['cache_logged_in_lifespan'] ) ? intval( $config['cache_logged_in_lifespan'] ) : 600;
             $lifespan = ( $lifespan === 0 ) ? $logged_in_lifespan : min( $lifespan, $logged_in_lifespan );
         }
@@ -382,11 +398,20 @@ function uwb_advanced_cache_shutdown() {
     }
     $lifespan = isset( $config['cache_lifespan'] ) ? intval( $config['cache_lifespan'] ) : 36000;
 
-    $logged_in_segment = isset( $GLOBALS['uwb_logged_in_segment'] ) ? $GLOBALS['uwb_logged_in_segment'] : '';
-    // Cache logged-in users for the configured duration (default 10 minutes / 600 seconds)
-    if ( $logged_in_segment !== '' ) {
-        $logged_in_lifespan = isset( $config['cache_logged_in_lifespan'] ) ? intval( $config['cache_logged_in_lifespan'] ) : 600;
-        $lifespan = ( $lifespan === 0 ) ? $logged_in_lifespan : min( $lifespan, $logged_in_lifespan );
+    $is_xml = ! empty( $GLOBALS['uwb_is_xml'] );
+    $is_php = ! empty( $GLOBALS['uwb_is_php'] );
+
+    if ( $is_xml ) {
+        $lifespan = isset( $config['cache_xml_sitemaps_lifespan'] ) ? intval( $config['cache_xml_sitemaps_lifespan'] ) : $lifespan;
+    } elseif ( $is_php ) {
+        $lifespan = isset( $config['cache_php_lifespan'] ) ? intval( $config['cache_php_lifespan'] ) : $lifespan;
+    } else {
+        $logged_in_segment = isset( $GLOBALS['uwb_logged_in_segment'] ) ? $GLOBALS['uwb_logged_in_segment'] : '';
+        // Cache logged-in users for the configured duration (default 10 minutes / 600 seconds)
+        if ( $logged_in_segment !== '' ) {
+            $logged_in_lifespan = isset( $config['cache_logged_in_lifespan'] ) ? intval( $config['cache_logged_in_lifespan'] ) : 600;
+            $lifespan = ( $lifespan === 0 ) ? $logged_in_lifespan : min( $lifespan, $logged_in_lifespan );
+        }
     }
 
     if ( ! $cache_logged_in && $logged_in_segment !== '' ) {
