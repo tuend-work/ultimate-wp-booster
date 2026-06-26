@@ -35,8 +35,8 @@ class Uwb_Cache {
      * Clean expired cache files from the disk
      */
     public function clean_expired_cache() {
-        $lifespan_hours = floatval( get_option( 'uwb_cache_lifespan', 10 ) );
-        $lifespan_seconds = $lifespan_hours > 0 ? intval( $lifespan_hours * 3600 ) : 0;
+        $lifespan_minutes = intval( get_option( 'uwb_cache_lifespan', 0 ) );
+        $lifespan_seconds = $lifespan_minutes * 60;
         $cache_dir = self::get_cache_dir();
 
         if ( file_exists( $cache_dir ) && is_dir( $cache_dir ) ) {
@@ -79,10 +79,10 @@ class Uwb_Cache {
                         $user_lifespan_mins = intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) );
                         $file_lifespan = $user_lifespan_mins * 60;
                     } elseif ( $is_xml_cache ) {
-                        $xml_lifespan_minutes = intval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 600 ) );
+                        $xml_lifespan_minutes = intval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) );
                         $file_lifespan = $xml_lifespan_minutes * 60;
                     } elseif ( $is_php_cache ) {
-                        $php_lifespan_minutes = intval( get_option( 'uwb_cache_php_lifespan', 600 ) );
+                        $php_lifespan_minutes = intval( get_option( 'uwb_cache_php_lifespan', 10 ) );
                         $file_lifespan = $php_lifespan_minutes * 60;
                     } else {
                         // Guest cache uses global lifespan
@@ -142,7 +142,7 @@ class Uwb_Cache {
 
         $config_path = $cache_dir . '/ultimate-wp-booster-config.php';
         
-        $lifespan_minutes = intval( get_option( 'uwb_cache_lifespan', 600 ) );
+        $lifespan_minutes = intval( get_option( 'uwb_cache_lifespan', 0 ) );
         $lifespan_seconds = $lifespan_minutes * 60;
 
         $exclusions_raw = get_option( 'uwb_excluded_urls', '' );
@@ -153,7 +153,7 @@ class Uwb_Cache {
             $timezone = get_option( 'gmt_offset', 0 );
         }
 
-        $browser_cache_minutes = intval( get_option( 'uwb_browser_cache_lifespan', 60 ) );
+        $browser_cache_minutes = intval( get_option( 'uwb_browser_cache_lifespan', 10 ) );
         $browser_cache_seconds = $browser_cache_minutes * 60;
 
         $ignored_query_raw = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
@@ -171,10 +171,10 @@ class Uwb_Cache {
         $cache_qs_raw = get_option( 'uwb_cache_query_strings', '' );
         $cache_qs = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $cache_qs_raw ) ) ) );
 
-        $xml_lifespan_minutes = intval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 600 ) );
+        $xml_lifespan_minutes = intval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) );
         $xml_lifespan_seconds = $xml_lifespan_minutes * 60;
 
-        $php_lifespan_minutes = intval( get_option( 'uwb_cache_php_lifespan', 600 ) );
+        $php_lifespan_minutes = intval( get_option( 'uwb_cache_php_lifespan', 10 ) );
         $php_lifespan_seconds = $php_lifespan_minutes * 60;
 
         $config = array(

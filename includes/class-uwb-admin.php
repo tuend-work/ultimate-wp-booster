@@ -733,7 +733,7 @@ class Uwb_Admin {
                                 
                                 <div class="uwb-form-group">
                                     <label for="uwb_cache_lifespan">Cache Lifespan (Minutes)</label>
-                                    <input type="number" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 600 ) ); ?>" />
+                                    <input type="number" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 0 ) ); ?>" />
                                     <p class="description">
                                         The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.<br>
                                         <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">720</code> (12h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">4320</code> (3d) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
@@ -784,7 +784,7 @@ class Uwb_Admin {
 
                                     <div class="uwb-form-group" id="uwb-xml-sitemaps-lifespan-group" style="<?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
                                         <label for="uwb_cache_xml_sitemaps_lifespan">XML Sitemap Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_cache_xml_sitemaps_lifespan" id="uwb_cache_xml_sitemaps_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 600 ) ); ?>" min="1" />
+                                        <input type="number" name="uwb_cache_xml_sitemaps_lifespan" id="uwb_cache_xml_sitemaps_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) ); ?>" min="1" />
                                         <p class="description">
                                             The lifespan of static cache files for XML sitemaps. Enter <code>0</code> for unlimited lifespan.<br>
                                             <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
@@ -804,7 +804,7 @@ class Uwb_Admin {
 
                                     <div class="uwb-form-group" id="uwb-php-lifespan-group" style="<?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
                                         <label for="uwb_cache_php_lifespan">PHP Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_cache_php_lifespan" id="uwb_cache_php_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 600 ) ); ?>" min="1" />
+                                        <input type="number" name="uwb_cache_php_lifespan" id="uwb_cache_php_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 10 ) ); ?>" min="1" />
                                         <p class="description">
                                             The lifespan of static cache files for PHP pages. Enter <code>0</code> for unlimited lifespan.<br>
                                             <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
@@ -824,7 +824,7 @@ class Uwb_Admin {
 
                                     <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
                                         <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Minutes)</label>
-                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 60 ) ); ?>" min="1" />
+                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 10 ) ); ?>" min="1" />
                                         <p class="description">
                                             The amount of time guest browsers are instructed to cache pages. Default is 60 minutes.<br>
                                             <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)

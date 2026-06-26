@@ -46,7 +46,7 @@ class Uwb_Activator {
 
         // 2. Set default options
         if ( get_option( 'uwb_cache_lifespan' ) === false ) {
-            update_option( 'uwb_cache_lifespan', 600 ); // 600 minutes (10 hours)
+            update_option( 'uwb_cache_lifespan', 0 ); // 0 minutes (unlimited)
         }
 
         if ( get_option( 'uwb_preload_enabled' ) === false ) {
@@ -70,7 +70,7 @@ class Uwb_Activator {
         }
 
         if ( get_option( 'uwb_browser_cache_lifespan' ) === false ) {
-            update_option( 'uwb_browser_cache_lifespan', 60 ); // 60 minutes (1 hour)
+            update_option( 'uwb_browser_cache_lifespan', 10 ); // 10 minutes
         }
 
         if ( get_option( 'uwb_ignored_query' ) === false ) {
@@ -78,7 +78,7 @@ class Uwb_Activator {
         }
 
         if ( get_option( 'uwb_cache_xml_sitemaps_lifespan' ) === false ) {
-            update_option( 'uwb_cache_xml_sitemaps_lifespan', 600 ); // 600 minutes by default
+            update_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ); // 10 minutes by default
         }
 
         if ( get_option( 'uwb_cache_php' ) === false ) {
@@ -86,7 +86,7 @@ class Uwb_Activator {
         }
 
         if ( get_option( 'uwb_cache_php_lifespan' ) === false ) {
-            update_option( 'uwb_cache_php_lifespan', 600 ); // 600 minutes by default
+            update_option( 'uwb_cache_php_lifespan', 10 ); // 10 minutes by default
         }
 
         // 3. Copy advanced-cache.php drop-in
