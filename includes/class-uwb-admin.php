@@ -32,7 +32,10 @@ class Uwb_Admin {
             'uwb_exclude_user_agents',
             'uwb_always_purge_urls',
             'uwb_cache_query_strings',
-            'uwb_cache_xml_sitemaps'
+            'uwb_cache_xml_sitemaps',
+            'uwb_cache_xml_sitemaps_lifespan',
+            'uwb_cache_php',
+            'uwb_cache_php_lifespan'
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
@@ -62,11 +65,11 @@ class Uwb_Admin {
     }
 
     public function register_settings() {
-        register_setting( 'uwb_settings_group', 'uwb_cache_lifespan', 'floatval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_logged_in', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_logged_in_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_enabled', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_browser_cache_lifespan', 'floatval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_excluded_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_ignored_query', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_enabled', 'intval' );
@@ -80,9 +83,9 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_always_purge_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_cache_query_strings', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_cache_xml_sitemaps', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_cache_xml_sitemaps_lifespan', 'floatval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_xml_sitemaps_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_php', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_cache_php_lifespan', 'floatval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_php_lifespan', 'intval' );
 
         // Redis Object Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_redis_enabled', array( $this, 'sanitize_object_cache_enabled' ) );
@@ -183,6 +186,28 @@ class Uwb_Admin {
         $row = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM {$table_name} LIKE %s", 'priority' ) );
         if ( $row && strpos( strtolower( $row->Type ), 'tinyint' ) !== false ) {
             $wpdb->query( "ALTER TABLE {$table_name} MODIFY COLUMN priority int(11) NOT NULL DEFAULT 0" );
+        }
+
+        // Migrate options from hours to minutes for older versions
+        $migrated_hours_to_mins = get_option( 'uwb_hours_to_minutes_migrated_v2' );
+        if ( ! $migrated_hours_to_mins ) {
+            $cache_lifespan = get_option( 'uwb_cache_lifespan' );
+            if ( $cache_lifespan !== false && floatval( $cache_lifespan ) < 48 ) {
+                update_option( 'uwb_cache_lifespan', floatval( $cache_lifespan ) * 60 );
+            }
+            $browser_lifespan = get_option( 'uwb_browser_cache_lifespan' );
+            if ( $browser_lifespan !== false && floatval( $browser_lifespan ) < 48 ) {
+                update_option( 'uwb_browser_cache_lifespan', floatval( $browser_lifespan ) * 60 );
+            }
+            $xml_lifespan = get_option( 'uwb_cache_xml_sitemaps_lifespan' );
+            if ( $xml_lifespan !== false && floatval( $xml_lifespan ) < 48 ) {
+                update_option( 'uwb_cache_xml_sitemaps_lifespan', floatval( $xml_lifespan ) * 60 );
+            }
+            $php_lifespan = get_option( 'uwb_cache_php_lifespan' );
+            if ( $php_lifespan !== false && floatval( $php_lifespan ) < 48 ) {
+                update_option( 'uwb_cache_php_lifespan', floatval( $php_lifespan ) * 60 );
+            }
+            update_option( 'uwb_hours_to_minutes_migrated_v2', 1 );
         }
 
         require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
@@ -704,9 +729,12 @@ class Uwb_Admin {
                                 </h3>
                                 
                                 <div class="uwb-form-group">
-                                    <label for="uwb_cache_lifespan">Cache Lifespan (Hours)</label>
-                                    <input type="number" step="0.1" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 10 ) ); ?>" />
-                                    <p class="description">The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.</p>
+                                    <label for="uwb_cache_lifespan">Cache Lifespan (Minutes)</label>
+                                    <input type="number" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 600 ) ); ?>" />
+                                    <p class="description">
+                                        The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.<br>
+                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">720</code> (12h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">4320</code> (3d) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                    </p>
                                 </div>
 
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; max-width: 700px;">
@@ -725,7 +753,10 @@ class Uwb_Admin {
                                     <div class="uwb-form-group" id="uwb-logged-in-lifespan-group" style="<?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
                                         <label for="uwb_cache_logged_in_lifespan">Logged-in User Cache Lifespan (Minutes)</label>
                                         <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb_cache_logged_in_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" />
-                                        <p class="description">The lifespan of static cache files for logged-in users. Default is 10 minutes. Capping at 10 mins recommended to prevent nonce expiration.</p>
+                                        <p class="description">
+                                            The lifespan of static cache files for logged-in users. Default is 10 minutes. Capping at 10 mins recommended to prevent nonce expiration.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">5</code> (5m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10</code> (10m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">15</code> (15m)
+                                        </p>
                                     </div>
                                 </div>
 
@@ -749,9 +780,12 @@ class Uwb_Admin {
                                     </div>
 
                                     <div class="uwb-form-group" id="uwb-xml-sitemaps-lifespan-group" style="<?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
-                                        <label for="uwb_cache_xml_sitemaps_lifespan">XML Sitemap Cache Lifespan (Hours)</label>
-                                        <input type="number" step="0.1" name="uwb_cache_xml_sitemaps_lifespan" id="uwb_cache_xml_sitemaps_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) ); ?>" min="0.1" />
-                                        <p class="description">The lifespan of static cache files for XML sitemaps. Enter <code>0</code> for unlimited lifespan.</p>
+                                        <label for="uwb_cache_xml_sitemaps_lifespan">XML Sitemap Cache Lifespan (Minutes)</label>
+                                        <input type="number" name="uwb_cache_xml_sitemaps_lifespan" id="uwb_cache_xml_sitemaps_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 600 ) ); ?>" min="1" />
+                                        <p class="description">
+                                            The lifespan of static cache files for XML sitemaps. Enter <code>0</code> for unlimited lifespan.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
                                     </div>
                                 </div>
 
@@ -766,9 +800,12 @@ class Uwb_Admin {
                                     </div>
 
                                     <div class="uwb-form-group" id="uwb-php-lifespan-group" style="<?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
-                                        <label for="uwb_cache_php_lifespan">PHP Cache Lifespan (Hours)</label>
-                                        <input type="number" step="0.1" name="uwb_cache_php_lifespan" id="uwb_cache_php_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 10 ) ); ?>" min="0.1" />
-                                        <p class="description">The lifespan of static cache files for PHP pages. Enter <code>0</code> for unlimited lifespan.</p>
+                                        <label for="uwb_cache_php_lifespan">PHP Cache Lifespan (Minutes)</label>
+                                        <input type="number" name="uwb_cache_php_lifespan" id="uwb_cache_php_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 600 ) ); ?>" min="1" />
+                                        <p class="description">
+                                            The lifespan of static cache files for PHP pages. Enter <code>0</code> for unlimited lifespan.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -923,9 +960,12 @@ class Uwb_Admin {
                                     </div>
 
                                     <div class="uwb-form-group" id="uwb-browser-cache-lifespan-group" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?> margin-bottom:0;">
-                                        <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Hours)</label>
-                                        <input type="number" step="0.01" min="0.01" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 1.0 ) ); ?>" />
-                                        <p class="description">The amount of time guest browsers are instructed to cache pages. Default is <code>1.0</code> hour.</p>
+                                        <label for="uwb_browser_cache_lifespan">Browser Cache Lifespan (Minutes)</label>
+                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb_browser_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 60 ) ); ?>" min="1" />
+                                        <p class="description">
+                                            The amount of time guest browsers are instructed to cache pages. Default is 60 minutes.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -1636,6 +1676,33 @@ class Uwb_Admin {
             }
             $('#uwb_cache_php').on('change', togglePHPFields);
             togglePHPFields();
+
+            // Click to copy and auto-fill lifespan conversion helper values
+            $('.uwb-copy-val').on('click', function(e) {
+                e.preventDefault();
+                var $code = $(this);
+                var val = $code.text().trim();
+                
+                // Copy to clipboard
+                var $temp = $("<input>");
+                $("body").append($temp);
+                $temp.val(val).select();
+                document.execCommand("copy");
+                $temp.remove();
+
+                // Auto-fill the corresponding input
+                var $group = $code.closest('.uwb-form-group');
+                var $input = $group.find('input[type="number"]');
+                if ($input.length) {
+                    $input.val(val).trigger('change');
+                }
+
+                // Show toast/notification
+                var $toast = $('#uwb-url-toast');
+                if ($toast.length) {
+                    $toast.text('Copied and applied: ' + val + ' minutes').fadeIn(200).delay(1500).fadeOut(200);
+                }
+            });
 
             // Copy Cron Job to clipboard
             $('.uwb-copy-cron').on('click', function(e) {
