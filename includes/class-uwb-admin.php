@@ -458,6 +458,11 @@ class Uwb_Admin {
                 display: grid;
                 grid-template-columns: 240px 1fr;
                 gap: 24px;
+                transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .uwb-layout.collapsed {
+                grid-template-columns: 78px 1fr;
             }
 
             .uwb-sidebar-nav {
@@ -469,6 +474,30 @@ class Uwb_Admin {
                 flex-direction: column;
                 gap: 8px;
                 height: fit-content;
+                transition: all 0.3s ease;
+                overflow: hidden;
+            }
+
+            .uwb-layout.collapsed .uwb-sidebar-nav {
+                padding: 16px 8px;
+            }
+
+            .uwb-sidebar-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding: 8px;
+                cursor: pointer;
+                color: var(--uwb-text-muted);
+                border-bottom: 1px solid var(--uwb-border);
+                margin-bottom: 8px;
+                transition: all 0.2s ease;
+            }
+
+            .uwb-layout.collapsed .uwb-sidebar-toggle {
+                justify-content: center;
+                border-bottom: none;
+                margin-bottom: 0;
             }
 
             .uwb-nav-item {
@@ -485,6 +514,21 @@ class Uwb_Admin {
                 cursor: pointer;
             }
 
+            .uwb-nav-item span {
+                transition: opacity 0.2s ease;
+                white-space: nowrap;
+            }
+
+            .uwb-layout.collapsed .uwb-nav-item span {
+                display: none;
+                opacity: 0;
+            }
+
+            .uwb-layout.collapsed .uwb-nav-item {
+                justify-content: center;
+                padding: 12px;
+            }
+
             .uwb-nav-item:hover, .uwb-nav-item.active {
                 background: #f1f5f9;
                 color: var(--uwb-primary);
@@ -493,6 +537,42 @@ class Uwb_Admin {
             .uwb-nav-item.active {
                 background: #e0e7ff;
                 color: var(--uwb-primary-dark);
+            }
+
+            /* Sub-tabs Styling */
+            .uwb-sub-tabs-nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                border-bottom: 2px solid var(--uwb-border);
+                margin-bottom: 24px;
+                padding-bottom: 12px;
+            }
+
+            .uwb-sub-tab-item {
+                padding: 10px 18px;
+                font-weight: 700;
+                font-size: 13.5px;
+                color: var(--uwb-text-muted);
+                cursor: pointer;
+                border-radius: 8px;
+                transition: all 0.2s ease;
+                background: #f8fafc;
+                border: 1px solid var(--uwb-border);
+            }
+
+            .uwb-sub-tab-item:hover, .uwb-sub-tab-item.active {
+                background: #e0e7ff;
+                color: var(--uwb-primary-dark);
+                border-color: #c7d2fe;
+            }
+
+            .uwb-subtab-content {
+                display: none;
+            }
+
+            .uwb-subtab-content.active {
+                display: block;
             }
 
             .uwb-content-panel {
@@ -861,20 +941,25 @@ class Uwb_Admin {
 
             <div class="uwb-layout">
                 <div class="uwb-sidebar-nav">
-                    <div class="uwb-nav-item active" data-tab="url_status">
-                        Dashboard
+                    <div class="uwb-sidebar-toggle" id="uwb-toggle-sidebar" title="Thu gọn / Mở rộng">
+                        <svg class="toggle-icon-collapse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                        <svg class="toggle-icon-expand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:none;"><polyline points="9 18 15 12 9 6"/></svg>
                     </div>
-                    <div class="uwb-nav-item" data-tab="cache_settings">
-                        Cache Settings
+                    <div class="uwb-nav-item active" data-tab="url_status" title="Dashboard">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                        <span>Dashboard</span>
                     </div>
-                    <div class="uwb-nav-item" data-tab="object_cache">
-                        Object Cache
+                    <div class="uwb-nav-item" data-tab="cache_settings" title="Cache Settings">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <span>Cache Settings</span>
                     </div>
-                    <div class="uwb-nav-item" data-tab="preload_settings">
-                        Preload Settings
+                    <div class="uwb-nav-item" data-tab="preload_settings" title="Preload Settings">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <span>Preload Settings</span>
                     </div>
-                    <div class="uwb-nav-item" data-tab="import_export">
-                        Import / Export
+                    <div class="uwb-nav-item" data-tab="import_export" title="Import / Export">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Import / Export</span>
                     </div>
                 </div>
 
@@ -888,361 +973,421 @@ class Uwb_Admin {
                             <h2 style="margin-top:0;">Cache Configuration</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Configure cache lifespan, bypass conditions, and exclusions for static files.</p>
 
-                            <!-- Group 1: Page Cache Settings -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                                    Page Cache Settings
-                                </h3>
-                                
-                                <div class="uwb-form-group">
-                                    <label for="uwb_cache_lifespan">Cache Lifespan (Minutes)</label>
-                                    <input type="number" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 0 ) ); ?>" />
-                                    <p class="description">
-                                        The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.<br>
-                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">720</code> (12h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">4320</code> (3d) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
-                                    <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache for Logged-in Users</label>
-                                    <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
-                                        <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
-                                            <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
-                                            <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
-                                        </select>
-                                        <div id="uwb-logged-in-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>"></div>
-                                        <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb-logged-in-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>" />
-                                    </div>
-                                    <p class="description">
-                                        Serve static cached pages to logged-in users. When enabled, enter lifespan in minutes (default is 10).<br>
-                                        <strong>Warning:</strong> Personalized content may be cached if not configured carefully.<br>
-                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">5</code> (5m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10</code> (10m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">15</code> (15m)
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group">
-                                    <label for="uwb_cache_404">Cache 404 Pages</label>
-                                    <select name="uwb_cache_404" id="uwb_cache_404" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                        <option value="0" <?php selected( get_option( 'uwb_cache_404', 0 ), 0 ); ?>>Disabled</option>
-                                        <option value="1" <?php selected( get_option( 'uwb_cache_404', 0 ), 1 ); ?>>Enabled</option>
-                                    </select>
-                                    <p class="description">Enable this to generate static cache files for 404 Not Found error pages.</p>
-                                </div>
-
-                                <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
-                                    <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache XML Sitemaps</label>
-                                    <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
-                                        <select name="uwb_cache_xml_sitemaps" id="uwb_cache_xml_sitemaps" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
-                                            <option value="0" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 0 ); ?>>Disabled</option>
-                                            <option value="1" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 1 ); ?>>Enabled</option>
-                                        </select>
-                                        <div id="uwb-xml-sitemaps-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?>"></div>
-                                        <input type="number" name="uwb_cache_xml_sitemaps_lifespan" id="uwb-xml-sitemaps-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?>" />
-                                    </div>
-                                    <p class="description">
-                                        Generate static cache files for XML sitemaps (e.g. <code>/sitemap.xml</code>). Served as <code>text/xml</code>.<br>
-                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
-                                    <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache PHP Pages</label>
-                                    <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
-                                        <select name="uwb_cache_php" id="uwb_cache_php" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
-                                            <option value="0" <?php selected( get_option( 'uwb_cache_php', 0 ), 0 ); ?>>Disabled</option>
-                                            <option value="1" <?php selected( get_option( 'uwb_cache_php', 0 ), 1 ); ?>>Enabled</option>
-                                        </select>
-                                        <div id="uwb-php-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?>"></div>
-                                        <input type="number" name="uwb_cache_php_lifespan" id="uwb-php-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?>" />
-                                    </div>
-                                    <p class="description">
-                                        Generate static cache files for requests ending with <code>.php</code> extension (except <code>index.php</code>).<br>
-                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 0;">
-                                    <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Browser Caching (Guest)</label>
-                                    <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
-                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
-                                            <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
-                                            <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
-                                        </select>
-                                        <div id="uwb-browser-cache-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>"></div>
-                                        <input type="number" name="uwb_browser_cache_lifespan" id="uwb-browser-cache-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>" />
-                                    </div>
-                                    <p class="description">
-                                        Allow guests' browsers to cache static HTML pages locally.<br>
-                                        <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                    </p>
-                                </div>
+                            <!-- Horizontal Sub-tabs Nav -->
+                            <div class="uwb-sub-tabs-nav">
+                                <div class="uwb-sub-tab-item active" data-subtab="page_cache">Cache Page / Browser Cache</div>
+                                <div class="uwb-sub-tab-item" data-subtab="cdn_cache">CDN Cache</div>
+                                <div class="uwb-sub-tab-item" data-subtab="webserver_cache">Webserver Cache</div>
+                                <div class="uwb-sub-tab-item" data-subtab="object_cache">Object Cache</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opcache">OPCache</div>
                             </div>
 
-                            <!-- Group 3: Exclusion & Bypass Rules -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                    Force & Exclusion Rules
-                                </h3>
-
-                                <div class="uwb-form-group">
-                                    <label for="uwb_excluded_urls">Excluded URLs</label>
-                                    <textarea name="uwb_excluded_urls" id="uwb_excluded_urls" rows="6"><?php echo esc_textarea( get_option( 'uwb_excluded_urls', '' ) ); ?></textarea>
-                                    <p class="description">
-                                        URLs or RegEx patterns that should NEVER be cached (one per line).<br>
-                                        Examples:<br>
-                                        <code>/cart(.*)</code> to exclude the shopping cart pages<br>
-                                        <code>/checkout(.*)</code> to exclude checkout pages
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group">
-                                    <label for="uwb_ignored_query">Ignored Query Parameters</label>
-                                    <textarea name="uwb_ignored_query" id="uwb_ignored_query" rows="5"><?php 
-                                        $ignored_query_val = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
-                                        echo esc_textarea( $ignored_query_val ); 
-                                    ?></textarea>
-                                    <p class="description">
-                                        Query parameters to ignore when deciding whether to serve the static cache (one per line).<br>
-                                        Marketing parameters like <code>utm_source</code>, <code>fbclid</code>, and <code>gclid</code> are ignored by default to ensure ad campaign clicks still get fast static pages.
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group">
-                                    <label for="uwb_exclude_cookies">Never Cache Cookies</label>
-                                    <textarea name="uwb_exclude_cookies" id="uwb_exclude_cookies" rows="4" placeholder="wordpress_no_cache_&#10;custom_cookie_*"><?php echo esc_textarea( get_option( 'uwb_exclude_cookies', '' ) ); ?></textarea>
-                                    <p class="description">
-                                        Specify cookie names or patterns that should bypass cache when present in the request (one per line).<br>
-                                        Supports wildcards, e.g. <code>woocommerce_items_in_cart_*</code>
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group">
-                                    <label for="uwb_exclude_user_agents">Never Cache User Agent(s)</label>
-                                    <textarea name="uwb_exclude_user_agents" id="uwb_exclude_user_agents" rows="4" placeholder="GTmetrix&#10;PingdomLinkCheck"><?php echo esc_textarea( get_option( 'uwb_exclude_user_agents', '' ) ); ?></textarea>
-                                    <p class="description">
-                                        Specify user agent substrings that should bypass cache (one per line). Case-insensitive.<br>
-                                        Examples: <code>GTmetrix</code>, <code>Pingdom</code>, etc.
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group">
-                                    <label for="uwb_always_purge_urls">Always Purge URL</label>
-                                    <textarea name="uwb_always_purge_urls" id="uwb_always_purge_urls" rows="4" placeholder="/some-page/&#10;https://example.com/another-page/"><?php echo esc_textarea( get_option( 'uwb_always_purge_urls', '' ) ); ?></textarea>
-                                    <p class="description">
-                                        Specify URLs you always want purged from cache whenever you update any post or page (one per line).<br>
-                                        Supports absolute URLs or relative paths starting with <code>/</code>.
-                                    </p>
-                                </div>
-
-                                <div class="uwb-form-group" style="margin-bottom:0;">
-                                    <label for="uwb_cache_query_strings">Cache Query String</label>
-                                    <textarea name="uwb_cache_query_strings" id="uwb_cache_query_strings" rows="4" placeholder="paged&#10;sort"><?php echo esc_textarea( get_option( 'uwb_cache_query_strings', '' ) ); ?></textarea>
-                                    <p class="description" style="margin-bottom:0;">
-                                        Cache for query strings enables you to force caching for specific GET parameters (one per line).<br>
-                                        Example: <code>paged</code> or <code>sort</code>.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TAB: Object Cache -->
-                        <div id="tab-object_cache" class="uwb-tab-content">
-                            <h2 style="margin-top:0;">Object Cache Settings</h2>
-                            <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Configure database query object caching using Redis, Valkey, or Memcached.</p>
-
-                            <?php
-                            $oc_active = wp_using_ext_object_cache();
-                            $oc_dropin = file_exists( WP_CONTENT_DIR . '/object-cache.php' );
-                            $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
-                            ?>
-                            <!-- Cache Status & Connection Test Block -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px; display:flex; flex-direction:column; justify-content:space-between;">
-                                <div>
-                                    <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
-                                        Object Cache Status
+                            <!-- SUB-TAB 1: Cache Page / Browser Cache -->
+                            <div id="subtab-page_cache" class="uwb-subtab-content active">
+                                <!-- Group 1: Page Cache Settings -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                        Page Cache Settings
                                     </h3>
                                     
-                                    <div style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
-                                        <!-- Status Info -->
-                                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                                            <span style="font-weight:600; font-size:13.5px; color:var(--uwb-text);">Status:</span>
-                                            <?php
-                                            if ( $oc_active ) {
-                                                if ( $oc_type === 2 ) {
-                                                    echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active (Memcached)</div>';
-                                                } else {
-                                                    echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active (Redis)</div>';
-                                                }
-                                            } else {
-                                                echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span> Inactive</div>';
-                                            }
-                                            ?>
-                                        </div>
-
-                                        <!-- Drop-in Info -->
-                                        <div style="border-top:1px solid var(--uwb-border); padding-top:12px; display:flex; align-items:center; justify-content:space-between; font-size:13px;">
-                                            <span style="font-weight:600; color:var(--uwb-text);">Drop-in File:</span>
-                                            <?php if ( $oc_dropin ) : ?>
-                                                <span style="color:#059669; font-weight:600;">✓ Installed</span>
-                                            <?php else : ?>
-                                                <span style="color:#d97706; font-weight:600;">✗ Not Found</span>
-                                            <?php endif; ?>
-                                        </div>
-
-                                        <!-- Connection Info -->
-                                        <div style="border-top:1px solid var(--uwb-border); padding-top:12px; display:flex; flex-direction:column; gap:6px; font-size:13px;">
-                                            <?php
-                                            $curr_conn_type = get_option('uwb_redis_conn_type', 'tcp');
-                                            $curr_host = get_option('uwb_redis_host', '127.0.0.1');
-                                            $curr_port = get_option('uwb_redis_port', 6379);
-                                            $curr_socket = get_option('uwb_redis_socket', '');
-                                            $curr_db = get_option('uwb_redis_db', 0);
-                                            
-                                            if ( $oc_type === 0 ) {
-                                                $redis_available = extension_loaded('redis') || class_exists('Redis');
-                                                $mc_available = extension_loaded('memcached');
-                                                ?>
-                                                <div style="display:flex; justify-content:space-between;">
-                                                    <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
-                                                    <span style="color:var(--uwb-text-muted);">Disabled</span>
-                                                </div>
-                                                <div style="display:flex; justify-content:space-between;">
-                                                    <span style="font-weight:600; color:var(--uwb-text);">Redis Extension:</span>
-                                                    <span><?php echo $redis_available ? 'Available ✓' : 'Not Installed ✗'; ?></span>
-                                                </div>
-                                                <div style="display:flex; justify-content:space-between;">
-                                                    <span style="font-weight:600; color:var(--uwb-text);">Memcached Extension:</span>
-                                                    <span><?php echo $mc_available ? 'Available ✓' : 'Not Installed ✗'; ?></span>
-                                                </div>
-                                                <?php
-                                            } else {
-                                                if ( $oc_type === 2 ) {
-                                                    if ( intval( $curr_port ) === 6379 ) {
-                                                        $curr_port = 11211;
-                                                    }
-                                                    $conn_str = esc_html( $curr_host . ':' . $curr_port );
-                                                    $ext_available = extension_loaded('memcached');
-                                                    $ext_label = 'Memcached';
-                                                } else {
-                                                    if ( intval( $curr_port ) === 11211 ) {
-                                                        $curr_port = 6379;
-                                                    }
-                                                    if ( $curr_conn_type === 'socket' ) {
-                                                        $conn_str = esc_html( $curr_socket );
-                                                    } else {
-                                                        $conn_str = esc_html( $curr_host . ':' . $curr_port );
-                                                    }
-                                                    $ext_available = extension_loaded('redis') || class_exists('Redis');
-                                                    $ext_label = 'Redis';
-                                                }
-                                                ?>
-                                                <div style="display:flex; justify-content:space-between;">
-                                                    <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
-                                                    <code><?php echo $conn_str; ?><?php if ($oc_type !== 2) { echo ' (DB ' . intval( $curr_db ) . ')'; } ?></code>
-                                                </div>
-                                                <div style="display:flex; justify-content:space-between;">
-                                                    <span style="font-weight:600; color:var(--uwb-text);">PHP Extension:</span>
-                                                    <span><?php echo $ext_available ? $ext_label . ' Available ✓' : $ext_label . ' Not Installed ✗'; ?></span>
-                                                </div>
-                                                <?php
-                                            }
-                                            ?>
-                                        </div>
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_cache_lifespan">Cache Lifespan (Minutes)</label>
+                                        <input type="number" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 0 ) ); ?>" />
+                                        <p class="description">
+                                            The amount of time static cache files are kept before being cleared and regenerated. Enter <code>0</code> for unlimited lifespan.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">720</code> (12h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">4320</code> (3d) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
                                     </div>
-                                    <div id="redis-test-result" style="display:none; padding:10px 14px; border-radius:8px; font-size:12.5px; font-weight:600; margin-top:12px;"></div>
+
+                                    <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
+                                        <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache for Logged-in Users</label>
+                                        <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
+                                            <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
+                                                <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
+                                                <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
+                                            </select>
+                                            <div id="uwb-logged-in-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>"></div>
+                                            <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb-logged-in-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>" />
+                                        </div>
+                                        <p class="description">
+                                            Serve static cached pages to logged-in users. When enabled, enter lifespan in minutes (default is 10).<br>
+                                            <strong>Warning:</strong> Personalized content may be cached if not configured carefully.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">5</code> (5m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10</code> (10m) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">15</code> (15m)
+                                        </p>
+                                    </div>
+
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_cache_404">Cache 404 Pages</label>
+                                        <select name="uwb_cache_404" id="uwb_cache_404" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                            <option value="0" <?php selected( get_option( 'uwb_cache_404', 0 ), 0 ); ?>>Disabled</option>
+                                            <option value="1" <?php selected( get_option( 'uwb_cache_404', 0 ), 1 ); ?>>Enabled</option>
+                                        </select>
+                                        <p class="description">Enable this to generate static cache files for 404 Not Found error pages.</p>
+                                    </div>
+
+                                    <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
+                                        <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache XML Sitemaps</label>
+                                        <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
+                                            <select name="uwb_cache_xml_sitemaps" id="uwb_cache_xml_sitemaps" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
+                                                <option value="0" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 0 ); ?>>Disabled</option>
+                                                <option value="1" <?php selected( get_option( 'uwb_cache_xml_sitemaps', 0 ), 1 ); ?>>Enabled</option>
+                                            </select>
+                                            <div id="uwb-xml-sitemaps-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?>"></div>
+                                            <input type="number" name="uwb_cache_xml_sitemaps_lifespan" id="uwb-xml-sitemaps-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_xml_sitemaps', 0 ) ? '' : 'display:none;'; ?>" />
+                                        </div>
+                                        <p class="description">
+                                            Generate static cache files for XML sitemaps (e.g. <code>/sitemap.xml</code>). Served as <code>text/xml</code>.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
+                                    </div>
+
+                                    <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
+                                        <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache PHP Pages</label>
+                                        <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
+                                            <select name="uwb_cache_php" id="uwb_cache_php" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
+                                                <option value="0" <?php selected( get_option( 'uwb_cache_php', 0 ), 0 ); ?>>Disabled</option>
+                                                <option value="1" <?php selected( get_option( 'uwb_cache_php', 0 ), 1 ); ?>>Enabled</option>
+                                            </select>
+                                            <div id="uwb-php-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?>"></div>
+                                            <input type="number" name="uwb_cache_php_lifespan" id="uwb-php-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_php_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_php', 0 ) ? '' : 'display:none;'; ?>" />
+                                        </div>
+                                        <p class="description">
+                                            Generate static cache files for requests ending with <code>.php</code> extension (except <code>index.php</code>).<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
+                                    </div>
+
+                                    <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 0;">
+                                        <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Browser Caching (Guest)</label>
+                                        <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
+                                            <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
+                                                <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
+                                                <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
+                                            </select>
+                                            <div id="uwb-browser-cache-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>"></div>
+                                            <input type="number" name="uwb_browser_cache_lifespan" id="uwb-browser-cache-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>" />
+                                        </div>
+                                        <p class="description">
+                                            Allow guests' browsers to cache static HTML pages locally.<br>
+                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
+                                        </p>
+                                    </div>
                                 </div>
 
-                                <div style="display:flex; gap:12px; margin-top:16px; border-top:1px solid var(--uwb-border); padding-top:12px;">
-                                    <button type="button" id="btn-test-redis" class="button" style="border:1px solid var(--uwb-border); padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; background:#fff; cursor:pointer; color:var(--uwb-text); transition:all 0.2s; flex:1;">Test Connection</button>
-                                    <button type="button" id="btn-flush-redis" class="button" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; cursor:pointer; transition:all 0.2s; flex:1;">Flush Cache</button>
+                                <!-- Group 3: Exclusion & Bypass Rules -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                        Force & Exclusion Rules
+                                    </h3>
+
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_excluded_urls">Excluded URLs</label>
+                                        <textarea name="uwb_excluded_urls" id="uwb_excluded_urls" rows="6"><?php echo esc_textarea( get_option( 'uwb_excluded_urls', '' ) ); ?></textarea>
+                                        <p class="description">
+                                            URLs or RegEx patterns that should NEVER be cached (one per line).<br>
+                                            Examples:<br>
+                                            <code>/cart(.*)</code> to exclude the shopping cart pages<br>
+                                            <code>/checkout(.*)</code> to exclude checkout pages
+                                        </p>
+                                    </div>
+
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_ignored_query">Ignored Query Parameters</label>
+                                        <textarea name="uwb_ignored_query" id="uwb_ignored_query" rows="5"><?php 
+                                            $ignored_query_val = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
+                                            echo esc_textarea( $ignored_query_val ); 
+                                        ?></textarea>
+                                        <p class="description">
+                                            Query parameters to ignore when deciding whether to serve the static cache (one per line).<br>
+                                            Marketing parameters like <code>utm_source</code>, <code>fbclid</code>, and <code>gclid</code> are ignored by default to ensure ad campaign clicks still get fast static pages.
+                                        </p>
+                                    </div>
+
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_exclude_cookies">Never Cache Cookies</label>
+                                        <textarea name="uwb_exclude_cookies" id="uwb_exclude_cookies" rows="4" placeholder="wordpress_no_cache_&#10;custom_cookie_*"><?php echo esc_textarea( get_option( 'uwb_exclude_cookies', '' ) ); ?></textarea>
+                                        <p class="description">
+                                            Specify cookie names or patterns that should bypass cache when present in the request (one per line).<br>
+                                            Supports wildcards, e.g. <code>woocommerce_items_in_cart_*</code>
+                                        </p>
+                                    </div>
+
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_exclude_user_agents">Never Cache User Agent(s)</label>
+                                        <textarea name="uwb_exclude_user_agents" id="uwb_exclude_user_agents" rows="4" placeholder="GTmetrix&#10;PingdomLinkCheck"><?php echo esc_textarea( get_option( 'uwb_exclude_user_agents', '' ) ); ?></textarea>
+                                        <p class="description">
+                                            Specify user agent substrings that should bypass cache (one per line). Case-insensitive.<br>
+                                            Examples: <code>GTmetrix</code>, <code>Pingdom</code>, etc.
+                                        </p>
+                                    </div>
+
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_always_purge_urls">Always Purge URL</label>
+                                        <textarea name="uwb_always_purge_urls" id="uwb_always_purge_urls" rows="4" placeholder="/some-page/&#10;https://example.com/another-page/"><?php echo esc_textarea( get_option( 'uwb_always_purge_urls', '' ) ); ?></textarea>
+                                        <p class="description">
+                                            Specify URLs you always want purged from cache whenever you update any post or page (one per line).<br>
+                                            Supports absolute URLs or relative paths starting with <code>/</code>.
+                                        </p>
+                                    </div>
+
+                                    <div class="uwb-form-group" style="margin-bottom:0;">
+                                        <label for="uwb_cache_query_strings">Cache Query String</label>
+                                        <textarea name="uwb_cache_query_strings" id="uwb_cache_query_strings" rows="4" placeholder="paged&#10;sort"><?php echo esc_textarea( get_option( 'uwb_cache_query_strings', '' ) ); ?></textarea>
+                                        <p class="description" style="margin-bottom:0;">
+                                            Cache for query strings enables you to force caching for specific GET parameters (one per line).<br>
+                                            Example: <code>paged</code> or <code>sort</code>.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Group 4: Object Cache Settings -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    Object Cache
-                                </h3>
+                            <!-- SUB-TAB 2: CDN Cache -->
+                            <div id="subtab-cdn_cache" class="uwb-subtab-content">
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                                        CDN Cache Status & Information
+                                    </h3>
+                                    <p style="font-size:13.5px; line-height:1.6; color:var(--uwb-text); margin-bottom:16px;">
+                                        CDN (Content Delivery Network) caching is managed at the DNS or proxy routing level. Ultimate WP Booster optimizes HTML response headers (such as <code>Cache-Control</code>, <code>Pragma</code>, and <code>ETag</code>) to ensure clean cache invalidation with edge providers.
+                                    </p>
+                                    <div style="padding:12px 16px; background:#e0e7ff; color:var(--uwb-primary-dark); border-radius:8px; font-size:13px; font-weight:600; display:inline-block;">
+                                        Status: <?php echo esc_html($cdn_details); ?>
+                                    </div>
+                                </div>
+                            </div>
 
-                                <div class="uwb-form-group">
-                                    <label for="uwb_redis_enabled">Enable Object Cache?</label>
-                                    <select name="uwb_redis_enabled" id="uwb_redis_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                        <option value="0" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 0 ); ?>>None</option>
-                                        <option value="1" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 1 ); ?>>Redis / Valkey</option>
-                                        <option value="2" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 2 ); ?>>Memcached</option>
-                                    </select>
-                                    <p class="description" style="margin-bottom:0;">When enabled, database query results will be stored persistently in the selected cache backend. Our custom drop-in file will be automatically copied to <code>wp-content/object-cache.php</code>.</p>
+                            <!-- SUB-TAB 3: Webserver Cache -->
+                            <div id="subtab-webserver_cache" class="uwb-subtab-content">
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                                        Webserver Cache Status & Information
+                                    </h3>
+                                    <p style="font-size:13.5px; line-height:1.6; color:var(--uwb-text); margin-bottom:16px;">
+                                        Webserver-level caching (like Nginx FastCGI Cache or LiteSpeed Cache) compiles HTML files dynamically and serves them with zero execution overhead. Static files preloaded by Ultimate WP Booster are fully compatible.
+                                    </p>
+                                    <div style="padding:12px 16px; background:#e0e7ff; color:var(--uwb-primary-dark); border-radius:8px; font-size:13px; font-weight:600; display:inline-block;">
+                                        Status: <?php echo esc_html($webserver_details); ?>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-TAB 4: Object Cache -->
+                            <div id="subtab-object_cache" class="uwb-subtab-content">
+                                <?php
+                                $oc_active = wp_using_ext_object_cache();
+                                $oc_dropin = file_exists( WP_CONTENT_DIR . '/object-cache.php' );
+                                $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
+                                ?>
+                                <!-- Cache Status & Connection Test Block -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px; display:flex; flex-direction:column; justify-content:space-between;">
+                                    <div>
+                                        <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                                            Object Cache Status
+                                        </h3>
+                                        
+                                        <div style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
+                                            <!-- Status Info -->
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <span style="font-weight:600; font-size:13.5px; color:var(--uwb-text);">Status:</span>
+                                                <?php
+                                                if ( $oc_active ) {
+                                                    if ( $oc_type === 2 ) {
+                                                        echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active (Memcached)</div>';
+                                                    } else {
+                                                        echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;"></span> Active (Redis)</div>';
+                                                    }
+                                                } else {
+                                                    echo '<div style="display:inline-flex; align-items:center; gap:6px; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;"><span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span> Inactive</div>';
+                                                }
+                                                ?>
+                                            </div>
+
+                                            <!-- Drop-in Info -->
+                                            <div style="border-top:1px solid var(--uwb-border); padding-top:12px; display:flex; align-items:center; justify-content:space-between; font-size:13px;">
+                                                <span style="font-weight:600; color:var(--uwb-text);">Drop-in File:</span>
+                                                <?php if ( $oc_dropin ) : ?>
+                                                    <span style="color:#059669; font-weight:600;">✓ Installed</span>
+                                                <?php else : ?>
+                                                    <span style="color:#d97706; font-weight:600;">✗ Not Found</span>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Connection Info -->
+                                            <div style="border-top:1px solid var(--uwb-border); padding-top:12px; display:flex; flex-direction:column; gap:6px; font-size:13px;">
+                                                <?php
+                                                $curr_conn_type = get_option('uwb_redis_conn_type', 'tcp');
+                                                $curr_host = get_option('uwb_redis_host', '127.0.0.1');
+                                                $curr_port = get_option('uwb_redis_port', 6379);
+                                                $curr_socket = get_option('uwb_redis_socket', '');
+                                                $curr_db = get_option('uwb_redis_db', 0);
+                                                
+                                                if ( $oc_type === 0 ) {
+                                                    $redis_available = extension_loaded('redis') || class_exists('Redis');
+                                                    $mc_available = extension_loaded('memcached');
+                                                    ?>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
+                                                        <span style="color:var(--uwb-text-muted);">Disabled</span>
+                                                    </div>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">Redis Extension:</span>
+                                                        <span><?php echo $redis_available ? 'Available ✓' : 'Not Installed ✗'; ?></span>
+                                                    </div>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">Memcached Extension:</span>
+                                                        <span><?php echo $mc_available ? 'Available ✓' : 'Not Installed ✗'; ?></span>
+                                                    </div>
+                                                    <?php
+                                                } else {
+                                                    if ( $oc_type === 2 ) {
+                                                        if ( intval( $curr_port ) === 6379 ) {
+                                                            $curr_port = 11211;
+                                                        }
+                                                        $conn_str = esc_html( $curr_host . ':' . $curr_port );
+                                                        $ext_available = extension_loaded('memcached');
+                                                        $ext_label = 'Memcached';
+                                                    } else {
+                                                        if ( intval( $curr_port ) === 11211 ) {
+                                                            $curr_port = 6379;
+                                                        }
+                                                        if ( $curr_conn_type === 'socket' ) {
+                                                            $conn_str = esc_html( $curr_socket );
+                                                        } else {
+                                                            $conn_str = esc_html( $curr_host . ':' . $curr_port );
+                                                        }
+                                                        $ext_available = extension_loaded('redis') || class_exists('Redis');
+                                                        $ext_label = 'Redis';
+                                                    }
+                                                    ?>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">Connection:</span>
+                                                        <code><?php echo $conn_str; ?><?php if ($oc_type !== 2) { echo ' (DB ' . intval( $curr_db ) . ')'; } ?></code>
+                                                    </div>
+                                                    <div style="display:flex; justify-content:space-between;">
+                                                        <span style="font-weight:600; color:var(--uwb-text);">PHP Extension:</span>
+                                                        <span><?php echo $ext_available ? $ext_label . ' Available ✓' : $ext_label . ' Not Installed ✗'; ?></span>
+                                                    </div>
+                                                    <?php
+                                                }
+                                                ?>
+                                            </div>
+                                        </div>
+                                        <div id="redis-test-result" style="display:none; padding:10px 14px; border-radius:8px; font-size:12.5px; font-weight:600; margin-top:12px;"></div>
+                                    </div>
+
+                                    <div style="display:flex; gap:12px; margin-top:16px; border-top:1px solid var(--uwb-border); padding-top:12px;">
+                                        <button type="button" id="btn-test-redis" class="button" style="border:1px solid var(--uwb-border); padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; background:#fff; cursor:pointer; color:var(--uwb-text); transition:all 0.2s; flex:1;">Test Connection</button>
+                                        <button type="button" id="btn-flush-redis" class="button" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; cursor:pointer; transition:all 0.2s; flex:1;">Flush Cache</button>
+                                    </div>
                                 </div>
 
-                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                                    <div id="uwb-oc-conn-type-group" class="uwb-form-group">
-                                        <label for="uwb_redis_conn_type">Connection Type</label>
-                                        <select name="uwb_redis_conn_type" id="uwb_redis_conn_type" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                            <option value="tcp" <?php selected( get_option( 'uwb_redis_conn_type', 'tcp' ), 'tcp' ); ?>>TCP/IP (Host/Port)</option>
-                                            <option value="socket" <?php selected( get_option( 'uwb_redis_conn_type', 'tcp' ), 'socket' ); ?>>Unix Socket</option>
+                                <!-- Group 4: Object Cache Settings -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        Object Cache Settings
+                                    </h3>
+
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_enabled">Enable Object Cache?</label>
+                                        <select name="uwb_redis_enabled" id="uwb_redis_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                            <option value="0" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 0 ); ?>>None</option>
+                                            <option value="1" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 1 ); ?>>Redis / Valkey</option>
+                                            <option value="2" <?php selected( get_option( 'uwb_redis_enabled', 0 ), 2 ); ?>>Memcached</option>
                                         </select>
+                                        <p class="description" style="margin-bottom:0;">When enabled, database query results will be stored persistently in the selected cache backend. Our custom drop-in file will be automatically copied to <code>wp-content/object-cache.php</code>.</p>
                                     </div>
 
-                                    <div id="uwb-oc-db-group" class="uwb-form-group">
-                                        <label for="uwb_redis_db">Database Index</label>
-                                        <input type="number" min="0" max="15" name="uwb_redis_db" id="uwb_redis_db" value="<?php echo esc_attr( get_option( 'uwb_redis_db', 0 ) ); ?>" />
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                                        <div id="uwb-oc-conn-type-group" class="uwb-form-group">
+                                            <label for="uwb_redis_conn_type">Connection Type</label>
+                                            <select name="uwb_redis_conn_type" id="uwb_redis_conn_type" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                                <option value="tcp" <?php selected( get_option( 'uwb_redis_conn_type', 'tcp' ), 'tcp' ); ?>>TCP/IP (Host/Port)</option>
+                                                <option value="socket" <?php selected( get_option( 'uwb_redis_conn_type', 'tcp' ), 'socket' ); ?>>Unix Socket</option>
+                                            </select>
+                                        </div>
+
+                                        <div id="uwb-oc-db-group" class="uwb-form-group">
+                                            <label for="uwb_redis_db">Database Index</label>
+                                            <input type="number" min="0" max="15" name="uwb_redis_db" id="uwb_redis_db" value="<?php echo esc_attr( get_option( 'uwb_redis_db', 0 ) ); ?>" />
+                                        </div>
+                                    </div>
+
+                                    <!-- TCP Settings -->
+                                    <div id="redis-tcp-settings" style="display:grid; grid-template-columns: 2fr 1fr; gap:16px;">
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_redis_host">Redis Host</label>
+                                            <input type="text" name="uwb_redis_host" id="uwb_redis_host" value="<?php echo esc_attr( get_option( 'uwb_redis_host', '127.0.0.1' ) ); ?>" />
+                                        </div>
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_redis_port">Redis Port</label>
+                                            <input type="number" name="uwb_redis_port" id="uwb_redis_port" value="<?php echo esc_attr( get_option( 'uwb_redis_port', 6379 ) ); ?>" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Socket Settings -->
+                                    <div id="redis-socket-settings" style="display:none;">
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_redis_socket">Unix Socket Path</label>
+                                            <input type="text" name="uwb_redis_socket" id="uwb_redis_socket" placeholder="/var/run/redis/redis.sock" value="<?php echo esc_attr( get_option( 'uwb_redis_socket', '' ) ); ?>" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Password Setting -->
+                                    <div id="uwb-oc-password-group" class="uwb-form-group" style="margin-bottom:20px;">
+                                        <label for="uwb_redis_password">Redis Password (Optional)</label>
+                                        <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" autocomplete="new-password" />
+                                    </div>
+
+                                    <!-- Key Prefix / Salt Setting -->
+                                    <div id="uwb-oc-prefix-group" class="uwb-form-group">
+                                        <label for="uwb_redis_prefix">Redis Key Prefix / Salt</label>
+                                        <input type="text" name="uwb_redis_prefix" id="uwb_redis_prefix" placeholder="uwb_oc:" value="<?php echo esc_attr( get_option( 'uwb_redis_prefix', 'uwb_oc:' ) ); ?>" />
+                                        <p class="description">Prefix to avoid conflicts with other sites sharing the same Redis database. Default is <code>uwb_oc:</code>.</p>
+                                    </div>
+
+                                    <!-- Redis Connection Timeouts and retry interval -->
+                                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px;">
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_redis_timeout">Timeout (seconds)</label>
+                                            <input type="number" step="0.1" min="0.1" name="uwb_redis_timeout" id="uwb_redis_timeout" value="<?php echo esc_attr( get_option( 'uwb_redis_timeout', 1.0 ) ); ?>" />
+                                        </div>
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_redis_read_timeout">Read Timeout (seconds)</label>
+                                            <input type="number" step="0.1" min="0.1" name="uwb_redis_read_timeout" id="uwb_redis_read_timeout" value="<?php echo esc_attr( get_option( 'uwb_redis_read_timeout', 1.0 ) ); ?>" />
+                                        </div>
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_redis_retry_interval">Retry Interval (ms)</label>
+                                            <input type="number" name="uwb_redis_retry_interval" id="uwb_redis_retry_interval" placeholder="e.g. 100" value="<?php echo esc_attr( get_option( 'uwb_redis_retry_interval', '' ) ); ?>" />
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- TCP Settings -->
-                                <div id="redis-tcp-settings" style="display:grid; grid-template-columns: 2fr 1fr; gap:16px;">
-                                    <div class="uwb-form-group">
-                                        <label for="uwb_redis_host">Redis Host</label>
-                                        <input type="text" name="uwb_redis_host" id="uwb_redis_host" value="<?php echo esc_attr( get_option( 'uwb_redis_host', '127.0.0.1' ) ); ?>" />
-                                    </div>
-                                    <div class="uwb-form-group">
-                                        <label for="uwb_redis_port">Redis Port</label>
-                                        <input type="number" name="uwb_redis_port" id="uwb_redis_port" value="<?php echo esc_attr( get_option( 'uwb_redis_port', 6379 ) ); ?>" />
-                                    </div>
-                                </div>
-
-                                <!-- Socket Settings -->
-                                <div id="redis-socket-settings" style="display:none;">
-                                    <div class="uwb-form-group">
-                                        <label for="uwb_redis_socket">Unix Socket Path</label>
-                                        <input type="text" name="uwb_redis_socket" id="uwb_redis_socket" placeholder="/var/run/redis/redis.sock" value="<?php echo esc_attr( get_option( 'uwb_redis_socket', '' ) ); ?>" />
-                                    </div>
-                                </div>
-
-                                <!-- Password Setting -->
-                                <div id="uwb-oc-password-group" class="uwb-form-group" style="margin-bottom:20px;">
-                                    <label for="uwb_redis_password">Redis Password (Optional)</label>
-                                    <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" autocomplete="new-password" />
-                                </div>
-
-                                <!-- Key Prefix / Salt Setting -->
-                                <div id="uwb-oc-prefix-group" class="uwb-form-group">
-                                    <label for="uwb_redis_prefix">Redis Key Prefix / Salt</label>
-                                    <input type="text" name="uwb_redis_prefix" id="uwb_redis_prefix" placeholder="uwb_oc:" value="<?php echo esc_attr( get_option( 'uwb_redis_prefix', 'uwb_oc:' ) ); ?>" />
-                                    <p class="description">Prefix to avoid conflicts with other sites sharing the same Redis database. Default is <code>uwb_oc:</code>.</p>
-                                </div>
-
-                                <!-- Redis Connection Timeouts and retry interval -->
-                                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px;">
-                                    <div class="uwb-form-group">
-                                        <label for="uwb_redis_timeout">Timeout (seconds)</label>
-                                        <input type="number" step="0.1" min="0.1" name="uwb_redis_timeout" id="uwb_redis_timeout" value="<?php echo esc_attr( get_option( 'uwb_redis_timeout', 1.0 ) ); ?>" />
-                                    </div>
-                                    <div class="uwb-form-group">
-                                        <label for="uwb_redis_read_timeout">Read Timeout (seconds)</label>
-                                        <input type="number" step="0.1" min="0.1" name="uwb_redis_read_timeout" id="uwb_redis_read_timeout" value="<?php echo esc_attr( get_option( 'uwb_redis_read_timeout', 1.0 ) ); ?>" />
-                                    </div>
-                                    <div class="uwb-form-group">
-                                        <label for="uwb_redis_retry_interval">Retry Interval (ms)</label>
-                                        <input type="number" name="uwb_redis_retry_interval" id="uwb_redis_retry_interval" placeholder="e.g. 100" value="<?php echo esc_attr( get_option( 'uwb_redis_retry_interval', '' ) ); ?>" />
+                            <!-- SUB-TAB 5: OPCache -->
+                            <div id="subtab-opcache" class="uwb-subtab-content">
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                        OPcache Status & Settings
+                                    </h3>
+                                    <p style="font-size:13.5px; line-height:1.6; color:var(--uwb-text); margin-bottom:16px;">
+                                        OPcache improves PHP performance by storing precompiled script bytecode in shared memory, removing the need for PHP to load and parse scripts on each request.
+                                    </p>
+                                    <div style="margin-top:16px; display:flex; flex-direction:column; gap:12px;">
+                                        <div style="padding:12px; background:#e0e7ff; color:var(--uwb-primary-dark); border-radius:8px; font-size:13px; font-weight:600; display:inline-block; max-width:fit-content;">
+                                            Status: <?php echo esc_html($opcode_details); ?>
+                                        </div>
+                                        <div>
+                                            <button type="button" onclick="window.location.reload();" class="button" style="border:1px solid var(--uwb-border); padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; background:#fff; cursor:pointer; color:var(--uwb-text);">Retest OPcache Status</button>
+                                        </div>
                                     </div>
                                 </div>
-
-
                             </div>
                         </div>
 
@@ -1454,7 +1599,7 @@ class Uwb_Admin {
                                             </div>
                                         </div>
                                         <div class="node-action-right">
-                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click');" class="uwb-btn-mini">Settings</button>
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'page_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
                                         </div>
                                     </div>
                                     
@@ -1470,7 +1615,8 @@ class Uwb_Admin {
                                                 <span class="node-desc"><?php echo esc_html($cdn_details); ?></span>
                                             </div>
                                         </div>
-                                        <div class="node-action-right">
+                                        <div class="node-action-right" style="display:flex; gap:6px;">
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'cdn_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
                                             <button type="button" onclick="window.location.reload();" class="uwb-btn-mini">Retest</button>
                                         </div>
                                     </div>
@@ -1487,11 +1633,12 @@ class Uwb_Admin {
                                                 <span class="node-desc"><?php echo esc_html($webserver_details); ?></span>
                                             </div>
                                         </div>
-                                        <div class="node-action-right">
+                                        <div class="node-action-right" style="display:flex; gap:6px;">
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'webserver_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
                                             <button type="button" onclick="window.location.reload();" class="uwb-btn-mini">Retest</button>
                                         </div>
                                     </div>
-
+ 
                                     <!-- Node 5: Page Cache Full -->
                                     <div class="uwb-tree-node <?php echo $page_cache_active ? 'active' : 'inactive'; ?>">
                                         <div class="node-status-left"></div>
@@ -1505,11 +1652,11 @@ class Uwb_Admin {
                                             </div>
                                         </div>
                                         <div class="node-action-right" style="display:flex; gap:6px;">
-                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click');" class="uwb-btn-mini">Settings</button>
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'page_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
                                             <a href="<?php echo $purge_url; ?>" class="uwb-btn-mini uwb-btn-mini-danger" style="text-decoration:none;">Purge Cache</a>
                                         </div>
                                     </div>
-
+ 
                                     <!-- Node 6: Object Cache -->
                                     <div class="uwb-tree-node <?php echo $obj_active ? 'active' : 'inactive'; ?>">
                                         <div class="node-status-left"></div>
@@ -1523,11 +1670,11 @@ class Uwb_Admin {
                                             </div>
                                         </div>
                                         <div class="node-action-right" style="display:flex; gap:6px;">
-                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'object_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'object_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
                                             <button type="button" id="btn-flush-redis-tree" class="uwb-btn-mini uwb-btn-mini-danger">Flush Cache</button>
                                         </div>
                                     </div>
-
+ 
                                     <!-- Node 7: Opcode Cache -->
                                     <div class="uwb-tree-node <?php echo $opcode_active ? 'active' : 'inactive'; ?>">
                                         <div class="node-status-left"></div>
@@ -1540,7 +1687,8 @@ class Uwb_Admin {
                                                 <span class="node-desc"><?php echo esc_html($opcode_details); ?></span>
                                             </div>
                                         </div>
-                                        <div class="node-action-right">
+                                        <div class="node-action-right" style="display:flex; gap:6px;">
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opcache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
                                             <button type="button" onclick="window.location.reload();" class="uwb-btn-mini">Retest</button>
                                         </div>
                                     </div>
@@ -1806,6 +1954,39 @@ class Uwb_Admin {
                     loadUrlTable();
                 }
             });
+
+            // Sub-tabs Switcher Logic
+            $('.uwb-sub-tab-item').on('click', function() {
+                var subtabId = $(this).data('subtab');
+                var parentTab = $(this).closest('.uwb-tab-content');
+                
+                parentTab.find('.uwb-sub-tab-item').removeClass('active');
+                $(this).addClass('active');
+                
+                parentTab.find('.uwb-subtab-content').removeClass('active');
+                $('#subtab-' + subtabId).addClass('active');
+            });
+
+            // Sidebar Collapse/Expand Toggle
+            $('#uwb-toggle-sidebar').on('click', function() {
+                $('.uwb-layout').toggleClass('collapsed');
+                if ($('.uwb-layout').hasClass('collapsed')) {
+                    $('.toggle-icon-collapse').hide();
+                    $('.toggle-icon-expand').show();
+                    localStorage.setItem('uwb_sidebar_collapsed', '1');
+                } else {
+                    $('.toggle-icon-collapse').show();
+                    $('.toggle-icon-expand').hide();
+                    localStorage.setItem('uwb_sidebar_collapsed', '0');
+                }
+            });
+            
+            // Restore sidebar state
+            if (localStorage.getItem('uwb_sidebar_collapsed') === '1') {
+                $('.uwb-layout').addClass('collapsed');
+                $('.toggle-icon-collapse').hide();
+                $('.toggle-icon-expand').show();
+            }
 
             // Preloader Live Tracker
             var checkInterval;
