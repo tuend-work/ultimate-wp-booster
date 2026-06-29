@@ -1948,23 +1948,23 @@ class Uwb_Admin {
                             </div>
 
                             <!-- Table -->
-                            <div style="overflow-x:auto; border:1px solid var(--uwb-border); border-radius:10px;">
-                                <table id="uwb-url-table" style="width:100%; border-collapse:collapse; font-size:13px;">
-                                    <thead>
-                                        <tr style="background:#f8fafc; border-bottom:1px solid var(--uwb-border);">
-                                            <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Important <span class="uwb-sort-icon">↑</span></th>
-                                            <th class="uwb-sortable" data-col="url" style="padding:12px 14px; text-align:left; font-weight:700; cursor:pointer; user-select:none;">URL <span class="uwb-sort-icon">↕</span></th>
-                                            <th class="uwb-sortable" data-col="status" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Status <span class="uwb-sort-icon">↕</span></th>
-                                            <th class="uwb-sortable" data-col="attempts" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none;">Tries <span class="uwb-sort-icon">↕</span></th>
-                                            <th class="uwb-sortable" data-col="last_attempt" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap;">Last Attempt <span class="uwb-sort-icon">↕</span></th>
-                                            <th style="padding:12px 14px; text-align:center; font-weight:700;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="uwb-url-tbody">
-                                        <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">Loading...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                             <div style="overflow-x:auto; border:1px solid var(--uwb-border); border-radius:10px; width:100%;">
+                                 <table id="uwb-url-table" style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; min-width:850px;">
+                                     <thead>
+                                         <tr style="background:#f8fafc; border-bottom:1px solid var(--uwb-border);">
+                                             <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:120px;">Important <span class="uwb-sort-icon">↑</span></th>
+                                             <th class="uwb-sortable" data-col="url" style="padding:12px 14px; text-align:left; font-weight:700; cursor:pointer; user-select:none;">URL <span class="uwb-sort-icon">↕</span></th>
+                                             <th class="uwb-sortable" data-col="status" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:110px;">Status <span class="uwb-sort-icon">↕</span></th>
+                                             <th class="uwb-sortable" data-col="attempts" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; width:70px;">Tries <span class="uwb-sort-icon">↕</span></th>
+                                             <th class="uwb-sortable" data-col="last_attempt" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:160px;">Last Attempt <span class="uwb-sort-icon">↕</span></th>
+                                             <th style="padding:12px 14px; text-align:center; font-weight:700; width:260px;">Actions</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody id="uwb-url-tbody">
+                                         <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">Loading...</td></tr>
+                                     </tbody>
+                                 </table>
+                             </div>
 
                             <!-- Pagination -->
                             <div id="uwb-url-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:13px; color:var(--uwb-text-muted);"></div>
