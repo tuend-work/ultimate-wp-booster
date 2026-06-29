@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.4.81
+ * Version:     1.4.82
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.4.81' );
+define( 'UWB_VERSION', '1.4.82' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -101,6 +101,15 @@ function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
         'parent' => 'uwb-admin-bar',
         'title'  => 'Clear & Preload Cache',
         'href'   => $clear_preload_url,
+    ) );
+
+    // Add sub-node: Flush OPCache
+    $flush_op_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_opcache' ), 'uwb_flush_opcache_action' );
+    $wp_admin_bar->add_node( array(
+        'id'     => 'uwb-flush-opcache',
+        'parent' => 'uwb-admin-bar',
+        'title'  => 'Flush OPCache',
+        'href'   => $flush_op_url,
     ) );
 
     if ( wp_using_ext_object_cache() ) {
@@ -331,4 +340,22 @@ function uwb_handle_external_cron_trigger() {
             wp_die( 'Invalid secret key.' );
         }
     }
+}
+
+// Handler for Flushing OPcache from Admin Bar
+add_action( 'admin_post_uwb_flush_opcache', 'uwb_handle_admin_bar_flush_opcache' );
+function uwb_handle_admin_bar_flush_opcache() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die( 'Permission denied.' );
+    }
+
+    check_admin_referer( 'uwb_flush_opcache_action' );
+
+    if ( function_exists( 'opcache_reset' ) ) {
+        @opcache_reset();
+    }
+
+    $referer = wp_get_referer() ? wp_get_referer() : admin_url( 'options-general.php?page=ultimate-wp-booster' );
+    wp_safe_redirect( add_query_arg( 'uwb_opcache_flushed', '1', $referer ) );
+    exit;
 }
