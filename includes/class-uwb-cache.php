@@ -153,7 +153,7 @@ class Uwb_Cache {
             $timezone = get_option( 'gmt_offset', 0 );
         }
 
-        $browser_cache_minutes = intval( get_option( 'uwb_browser_cache_lifespan', 10 ) );
+        $browser_cache_minutes = intval( get_option( 'uwb_browser_cache_html_lifespan', 525600 ) );
         $browser_cache_seconds = $browser_cache_minutes * 60;
 
         $ignored_query_raw = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
@@ -181,7 +181,7 @@ class Uwb_Cache {
             'cache_lifespan'           => $lifespan_seconds,
             'cache_logged_in'          => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
             'cache_logged_in_lifespan' => intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ) * 60,
-            'browser_cache_enabled'    => intval( get_option( 'uwb_browser_cache_enabled', 1 ) ),
+            'browser_cache_enabled'    => intval( get_option( 'uwb_browser_cache_html', 1 ) ) && intval( get_option( 'uwb_browser_cache_enabled', 1 ) ),
             'browser_cache_lifespan'   => $browser_cache_seconds,
             'excluded_urls'            => array_values( $exclusions ),
             'ignored_query'            => array_values( $ignored_queries ),
@@ -224,6 +224,9 @@ class Uwb_Cache {
         } else {
             Uwb_Activator::remove_object_cache_dropin();
         }
+
+        // Auto-sync browser caching rules to root .htaccess
+        self::write_htaccess_browser_cache();
     }
 
     /**
@@ -436,5 +439,82 @@ class Uwb_Cache {
                 }
             }
         }
+    }
+
+    /**
+     * Generate and write .htaccess browser caching rules for Apache/LiteSpeed
+     */
+    public static function write_htaccess_browser_cache() {
+        $htaccess_path = ABSPATH . '.htaccess';
+        $rules = array();
+        
+        $browser_cache_enabled = intval( get_option( 'uwb_browser_cache_enabled', 1 ) );
+        
+        if ( $browser_cache_enabled ) {
+            $rules[] = '<IfModule mod_expires.c>';
+            $rules[] = '    ExpiresActive On';
+            $rules[] = '    ExpiresDefault "access plus 1 month"';
+            
+            // HTML
+            $html_enabled = intval( get_option( 'uwb_browser_cache_html', 1 ) );
+            $html_lifespan = intval( get_option( 'uwb_browser_cache_html_lifespan', 525600 ) ); // 365 days default
+            if ( $html_enabled ) {
+                $rules[] = '    ExpiresByType text/html "access plus ' . $html_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType text/xml "access plus ' . $html_lifespan . ' minutes"';
+            }
+            
+            // CSS
+            $css_enabled = intval( get_option( 'uwb_browser_cache_css', 1 ) );
+            $css_lifespan = intval( get_option( 'uwb_browser_cache_css_lifespan', 525600 ) );
+            if ( $css_enabled ) {
+                $rules[] = '    ExpiresByType text/css "access plus ' . $css_lifespan . ' minutes"';
+            }
+            
+            // JS
+            $js_enabled = intval( get_option( 'uwb_browser_cache_js', 1 ) );
+            $js_lifespan = intval( get_option( 'uwb_browser_cache_js_lifespan', 525600 ) );
+            if ( $js_enabled ) {
+                $rules[] = '    ExpiresByType application/javascript "access plus ' . $js_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType text/javascript "access plus ' . $js_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType application/x-javascript "access plus ' . $js_lifespan . ' minutes"';
+            }
+            
+            // Image
+            $image_enabled = intval( get_option( 'uwb_browser_cache_image', 1 ) );
+            $image_lifespan = intval( get_option( 'uwb_browser_cache_image_lifespan', 525600 ) );
+            if ( $image_enabled ) {
+                $rules[] = '    ExpiresByType image/jpeg "access plus ' . $image_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType image/png "access plus ' . $image_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType image/gif "access plus ' . $image_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType image/webp "access plus ' . $image_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType image/svg+xml "access plus ' . $image_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType image/x-icon "access plus ' . $image_lifespan . ' minutes"';
+            }
+            
+            // Font
+            $font_enabled = intval( get_option( 'uwb_browser_cache_font', 1 ) );
+            $font_lifespan = intval( get_option( 'uwb_browser_cache_font_lifespan', 525600 ) );
+            if ( $font_enabled ) {
+                $rules[] = '    ExpiresByType font/ttf "access plus ' . $font_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType font/otf "access plus ' . $font_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType font/woff "access plus ' . $font_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType font/woff2 "access plus ' . $font_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType application/vnd.ms-fontobject "access plus ' . $font_lifespan . ' minutes"';
+            }
+            
+            // Other / Static resources
+            $other_enabled = intval( get_option( 'uwb_browser_cache_other', 1 ) );
+            $other_lifespan = intval( get_option( 'uwb_browser_cache_other_lifespan', 525600 ) );
+            if ( $other_enabled ) {
+                $rules[] = '    ExpiresByType application/pdf "access plus ' . $other_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType audio/mpeg "access plus ' . $other_lifespan . ' minutes"';
+                $rules[] = '    ExpiresByType video/mp4 "access plus ' . $other_lifespan . ' minutes"';
+            }
+            
+            $rules[] = '</IfModule>';
+        }
+        
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        insert_with_markers( $htaccess_path, 'Ultimate WP Booster Browser Cache', $rules );
     }
 }

@@ -74,6 +74,18 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_cache_logged_in_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_lifespan', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_html', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_html_lifespan', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_css', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_css_lifespan', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_js', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_js_lifespan', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_image', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_image_lifespan', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_font', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_font_lifespan', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_other', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_browser_cache_other_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_excluded_urls', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_ignored_query', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_enabled', 'intval' );
@@ -242,6 +254,18 @@ class Uwb_Admin {
                 'uwb_cache_logged_in_lifespan',
                 'uwb_browser_cache_enabled',
                 'uwb_browser_cache_lifespan',
+                'uwb_browser_cache_html',
+                'uwb_browser_cache_html_lifespan',
+                'uwb_browser_cache_css',
+                'uwb_browser_cache_css_lifespan',
+                'uwb_browser_cache_js',
+                'uwb_browser_cache_js_lifespan',
+                'uwb_browser_cache_image',
+                'uwb_browser_cache_image_lifespan',
+                'uwb_browser_cache_font',
+                'uwb_browser_cache_font_lifespan',
+                'uwb_browser_cache_other',
+                'uwb_browser_cache_other_lifespan',
                 'uwb_ignored_query',
                 'uwb_redis_enabled',
                 'uwb_redis_conn_type',
@@ -297,6 +321,18 @@ class Uwb_Admin {
                         'uwb_cache_logged_in_lifespan',
                         'uwb_browser_cache_enabled',
                         'uwb_browser_cache_lifespan',
+                        'uwb_browser_cache_html',
+                        'uwb_browser_cache_html_lifespan',
+                        'uwb_browser_cache_css',
+                        'uwb_browser_cache_css_lifespan',
+                        'uwb_browser_cache_js',
+                        'uwb_browser_cache_js_lifespan',
+                        'uwb_browser_cache_image',
+                        'uwb_browser_cache_image_lifespan',
+                        'uwb_browser_cache_font',
+                        'uwb_browser_cache_font_lifespan',
+                        'uwb_browser_cache_other',
+                        'uwb_browser_cache_other_lifespan',
                         'uwb_ignored_query',
                         'uwb_redis_enabled',
                         'uwb_redis_conn_type',
@@ -975,15 +1011,78 @@ class Uwb_Admin {
 
                             <!-- Horizontal Sub-tabs Nav -->
                             <div class="uwb-sub-tabs-nav">
-                                <div class="uwb-sub-tab-item active" data-subtab="page_cache">Cache Page / Browser Cache</div>
+                                <div class="uwb-sub-tab-item active" data-subtab="browser_cache">Browser Cache</div>
+                                <div class="uwb-sub-tab-item" data-subtab="page_cache">Cache Page</div>
                                 <div class="uwb-sub-tab-item" data-subtab="cdn_cache">CDN Cache</div>
                                 <div class="uwb-sub-tab-item" data-subtab="webserver_cache">Webserver Cache</div>
                                 <div class="uwb-sub-tab-item" data-subtab="object_cache">Object Cache</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opcache">OPCache</div>
                             </div>
 
-                            <!-- SUB-TAB 1: Cache Page / Browser Cache -->
-                            <div id="subtab-page_cache" class="uwb-subtab-content active">
+                            <!-- SUB-TAB 0: Browser Cache -->
+                            <div id="subtab-browser_cache" class="uwb-subtab-content active">
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                                        Browser Cache Settings
+                                    </h3>
+                                    
+                                    <div class="uwb-form-group" style="margin-bottom: 24px;">
+                                        <label for="uwb_browser_cache_enabled">Enable Browser Caching</label>
+                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                            <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
+                                            <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
+                                        </select>
+                                        <p class="description">Allow visitors' browsers to store static files locally to speed up subsequent loads.</p>
+                                    </div>
+
+                                    <div id="uwb-browser-cache-detailed-settings" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>">
+                                        <h4 style="margin-top: 24px; margin-bottom: 16px; font-size: 14px; font-weight: 700; color: var(--uwb-text);">Configure Lifespan by File Type</h4>
+                                        <p class="description" style="margin-bottom: 20px;">Lifespan values are configured in minutes. Defaults are 365 days (525600 minutes).</p>
+                                        
+                                        <!-- Grid of Caching categories -->
+                                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                                            <?php
+                                            $categories = array(
+                                                'html'  => 'HTML / XML Pages',
+                                                'css'   => 'CSS Stylesheets',
+                                                'js'    => 'JavaScript Files',
+                                                'image' => 'Images (JPG, PNG, GIF, WebP, SVG, ICO)',
+                                                'font'  => 'Fonts (TTF, OTF, WOFF, WOFF2, EOT)',
+                                                'other' => 'Other Static Assets (PDF, Audio, Video, Zip)',
+                                            );
+
+                                            foreach ( $categories as $key => $label ) :
+                                                $opt_enabled  = intval( get_option( "uwb_browser_cache_{$key}", 1 ) );
+                                                $opt_lifespan = intval( get_option( "uwb_browser_cache_{$key}_lifespan", 525600 ) ); // 365 days
+                                                ?>
+                                                <div style="display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 16px; gap: 20px; flex-wrap: wrap;">
+                                                    <div style="flex: 1; min-width: 200px;">
+                                                        <strong style="font-size: 13.5px; color: var(--uwb-text); display: block;"><?php echo esc_html( $label ); ?></strong>
+                                                    </div>
+                                                    
+                                                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                                                        <!-- Enable/Disable Category Switch -->
+                                                        <select name="uwb_browser_cache_<?php echo $key; ?>" class="uwb-bc-cat-toggle" style="border: 1px solid var(--uwb-border); border-radius: 6px; padding: 8px; font-size: 13px;">
+                                                            <option value="0" <?php selected( $opt_enabled, 0 ); ?>>Bypass</option>
+                                                            <option value="1" <?php selected( $opt_enabled, 1 ); ?>>Cache</option>
+                                                        </select>
+                                                        
+                                                        <!-- Lifespan Input -->
+                                                        <div class="uwb-bc-lifespan-wrap" style="display: flex; align-items: center; gap: 8px; <?php echo $opt_enabled ? '' : 'display:none;'; ?>">
+                                                            <input type="number" min="1" name="uwb_browser_cache_<?php echo $key; ?>_lifespan" value="<?php echo esc_attr( $opt_lifespan ); ?>" style="width: 130px; padding: 8px; border: 1px solid var(--uwb-border); border-radius: 6px; font-size: 13px;" />
+                                                            <span style="font-size: 12.5px; color: var(--uwb-text-muted);">Minutes</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-TAB 1: Cache Page -->
+                            <div id="subtab-page_cache" class="uwb-subtab-content">
                                 <!-- Group 1: Page Cache Settings -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                     <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
@@ -1042,7 +1141,7 @@ class Uwb_Admin {
                                         </p>
                                     </div>
 
-                                    <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
+                                    <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 0;">
                                         <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache PHP Pages</label>
                                         <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
                                             <select name="uwb_cache_php" id="uwb_cache_php" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
@@ -1055,22 +1154,6 @@ class Uwb_Admin {
                                         <p class="description">
                                             Generate static cache files for requests ending with <code>.php</code> extension (except <code>index.php</code>).<br>
                                             <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
-                                        </p>
-                                    </div>
-
-                                    <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 0;">
-                                        <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Browser Caching (Guest)</label>
-                                        <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
-                                            <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
-                                                <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
-                                                <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
-                                            </select>
-                                            <div id="uwb-browser-cache-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>"></div>
-                                            <input type="number" name="uwb_browser_cache_lifespan" id="uwb-browser-cache-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_browser_cache_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>" />
-                                        </div>
-                                        <p class="description">
-                                            Allow guests' browsers to cache static HTML pages locally.<br>
-                                            <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">360</code> (6h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
                                         </p>
                                     </div>
                                 </div>
@@ -1599,7 +1682,7 @@ class Uwb_Admin {
                                             </div>
                                         </div>
                                         <div class="node-action-right">
-                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'page_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'browser_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
                                         </div>
                                     </div>
                                     
@@ -2198,15 +2281,23 @@ class Uwb_Admin {
             function toggleBrowserCacheFields() {
                 var browserCacheEnabled = $('#uwb_browser_cache_enabled').val();
                 if (browserCacheEnabled === '1') {
-                    $('#uwb-browser-cache-lifespan-group').show();
-                    $('#uwb-browser-cache-divider').show();
+                    $('#uwb-browser-cache-detailed-settings').show();
                 } else {
-                    $('#uwb-browser-cache-lifespan-group').hide();
-                    $('#uwb-browser-cache-divider').hide();
+                    $('#uwb-browser-cache-detailed-settings').hide();
                 }
             }
             $('#uwb_browser_cache_enabled').on('change', toggleBrowserCacheFields);
             toggleBrowserCacheFields();
+
+            // Toggle individual category lifespan fields
+            $('.uwb-bc-cat-toggle').on('change', function() {
+                var wrap = $(this).closest('div').find('.uwb-bc-lifespan-wrap');
+                if ($(this).val() === '1') {
+                    wrap.css('display', 'flex');
+                } else {
+                    wrap.hide();
+                }
+            });
 
             // Toggle Logged-in Cache Lifespan fields
             function toggleLoggedInFields() {
