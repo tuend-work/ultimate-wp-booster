@@ -704,15 +704,31 @@ class Uwb_Admin {
                 align-items: center;
                 justify-content: space-between;
                 overflow-x: auto;
-                padding: 12px 0;
-                gap: 8px;
+                padding: 16px 8px;
+                gap: 12px;
+            }
+            /* Custom styled thin scrollbar for pipeline flow */
+            .uwb-pipeline-flow::-webkit-scrollbar {
+                height: 6px;
+            }
+            .uwb-pipeline-flow::-webkit-scrollbar-track {
+                background: #f1f5f9;
+                border-radius: 4px;
+            }
+            .uwb-pipeline-flow::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 4px;
+            }
+            .uwb-pipeline-flow::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
             }
             .uwb-pipeline-node {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 text-align: center;
-                min-width: 100px;
+                min-width: 90px;
+                flex-shrink: 0;
                 position: relative;
                 transition: all 0.25s ease;
                 cursor: pointer;
@@ -769,6 +785,7 @@ class Uwb_Admin {
                 justify-content: center;
                 color: var(--uwb-text-muted);
                 padding-bottom: 24px;
+                flex-shrink: 0;
                 animation: uwb-pulse 2s infinite ease-in-out;
             }
             @keyframes uwb-pulse {
