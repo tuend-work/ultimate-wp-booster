@@ -50,9 +50,19 @@ if ( defined( 'WP_CONTENT_DIR' ) ) {
                     define( 'WP_REDIS_DATABASE', intval( $uwb_config_data['redis_db'] ) );
                 }
                 
+                if ( ! defined( 'WP_REDIS_TIMEOUT' ) && isset( $uwb_config_data['redis_timeout'] ) ) {
+                    define( 'WP_REDIS_TIMEOUT', floatval( $uwb_config_data['redis_timeout'] ) );
+                }
+                if ( ! defined( 'WP_REDIS_READ_TIMEOUT' ) && isset( $uwb_config_data['redis_read_timeout'] ) ) {
+                    define( 'WP_REDIS_READ_TIMEOUT', floatval( $uwb_config_data['redis_read_timeout'] ) );
+                }
+                if ( ! defined( 'WP_REDIS_RETRY_INTERVAL' ) && isset( $uwb_config_data['redis_retry_interval'] ) && $uwb_config_data['redis_retry_interval'] !== '' ) {
+                    define( 'WP_REDIS_RETRY_INTERVAL', intval( $uwb_config_data['redis_retry_interval'] ) );
+                }
+
                 // Prefix keys to avoid clashes with other WordPress sites
                 if ( ! defined( 'WP_REDIS_PREFIX' ) ) {
-                    define( 'WP_REDIS_PREFIX', 'uwb_oc:' );
+                    define( 'WP_REDIS_PREFIX', ! empty( $uwb_config_data['redis_prefix'] ) ? $uwb_config_data['redis_prefix'] : 'uwb_oc:' );
                 }
 
                 // Add default non-persistent groups to prevent stale option, plugin/theme lists

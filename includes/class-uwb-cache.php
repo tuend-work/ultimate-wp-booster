@@ -201,7 +201,11 @@ class Uwb_Cache {
             'redis_port'               => intval( get_option( 'uwb_redis_port', 6379 ) ),
             'redis_socket'             => get_option( 'uwb_redis_socket', '/var/run/redis/redis.sock' ),
             'redis_password'           => get_option( 'uwb_redis_password', '' ),
-            'redis_db'                 => intval( get_option( 'uwb_redis_db', 0 ) )
+            'redis_db'                 => intval( get_option( 'uwb_redis_db', 0 ) ),
+            'redis_prefix'             => get_option( 'uwb_redis_prefix', 'uwb_oc:' ),
+            'redis_timeout'            => floatval( get_option( 'uwb_redis_timeout', 1.0 ) ),
+            'redis_read_timeout'       => floatval( get_option( 'uwb_redis_read_timeout', 1.0 ) ),
+            'redis_retry_interval'     => get_option( 'uwb_redis_retry_interval', '' )
         );
 
         $config_content = "<?php\n" .

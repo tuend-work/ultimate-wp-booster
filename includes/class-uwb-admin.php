@@ -27,6 +27,10 @@ class Uwb_Admin {
             'uwb_redis_socket',
             'uwb_redis_password',
             'uwb_redis_db',
+            'uwb_redis_prefix',
+            'uwb_redis_timeout',
+            'uwb_redis_read_timeout',
+            'uwb_redis_retry_interval',
             'uwb_cache_404',
             'uwb_exclude_cookies',
             'uwb_exclude_user_agents',
@@ -95,6 +99,10 @@ class Uwb_Admin {
         register_setting( 'uwb_redis_socket', 'uwb_redis_socket', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_password', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_db', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_prefix', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_timeout', 'floatval' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_read_timeout', 'floatval' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_retry_interval', 'sanitize_text_field' );
     }
 
     public function sanitize_object_cache_enabled( $val ) {
@@ -242,6 +250,10 @@ class Uwb_Admin {
                 'uwb_redis_socket',
                 'uwb_redis_password',
                 'uwb_redis_db',
+                'uwb_redis_prefix',
+                'uwb_redis_timeout',
+                'uwb_redis_read_timeout',
+                'uwb_redis_retry_interval',
                 'uwb_cache_404',
                 'uwb_exclude_cookies',
                 'uwb_exclude_user_agents',
@@ -293,6 +305,10 @@ class Uwb_Admin {
                         'uwb_redis_socket',
                         'uwb_redis_password',
                         'uwb_redis_db',
+                        'uwb_redis_prefix',
+                        'uwb_redis_timeout',
+                        'uwb_redis_read_timeout',
+                        'uwb_redis_retry_interval',
                         'uwb_cache_404',
                         'uwb_exclude_cookies',
                         'uwb_exclude_user_agents',
@@ -944,6 +960,29 @@ class Uwb_Admin {
                                 <div id="uwb-oc-password-group" class="uwb-form-group" style="margin-bottom:20px;">
                                     <label for="uwb_redis_password">Redis Password (Optional)</label>
                                     <input type="password" name="uwb_redis_password" id="uwb_redis_password" placeholder="Leave blank if no password" value="<?php echo esc_attr( get_option( 'uwb_redis_password', '' ) ); ?>" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px;" autocomplete="new-password" />
+                                </div>
+
+                                <!-- Key Prefix / Salt Setting -->
+                                <div id="uwb-oc-prefix-group" class="uwb-form-group">
+                                    <label for="uwb_redis_prefix">Redis Key Prefix / Salt</label>
+                                    <input type="text" name="uwb_redis_prefix" id="uwb_redis_prefix" placeholder="uwb_oc:" value="<?php echo esc_attr( get_option( 'uwb_redis_prefix', 'uwb_oc:' ) ); ?>" />
+                                    <p class="description">Prefix to avoid conflicts with other sites sharing the same Redis database. Default is <code>uwb_oc:</code>.</p>
+                                </div>
+
+                                <!-- Redis Connection Timeouts and retry interval -->
+                                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px;">
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_timeout">Timeout (seconds)</label>
+                                        <input type="number" step="0.1" min="0.1" name="uwb_redis_timeout" id="uwb_redis_timeout" value="<?php echo esc_attr( get_option( 'uwb_redis_timeout', 1.0 ) ); ?>" />
+                                    </div>
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_read_timeout">Read Timeout (seconds)</label>
+                                        <input type="number" step="0.1" min="0.1" name="uwb_redis_read_timeout" id="uwb_redis_read_timeout" value="<?php echo esc_attr( get_option( 'uwb_redis_read_timeout', 1.0 ) ); ?>" />
+                                    </div>
+                                    <div class="uwb-form-group">
+                                        <label for="uwb_redis_retry_interval">Retry Interval (ms)</label>
+                                        <input type="number" name="uwb_redis_retry_interval" id="uwb_redis_retry_interval" placeholder="e.g. 100" value="<?php echo esc_attr( get_option( 'uwb_redis_retry_interval', '' ) ); ?>" />
+                                    </div>
                                 </div>
 
                                 <!-- Test Connection Button for Settings -->
