@@ -2195,6 +2195,8 @@ class Uwb_Admin {
                 $('.uwb-tab-content').removeClass('active');
                 $('#tab-' + tabId).addClass('active');
 
+                localStorage.setItem('uwb_active_tab', tabId);
+
                 // Hide submit row on non-settings tabs
                 if (['url_status', 'import_export'].indexOf(tabId) !== -1) {
                     $('#uwb-submit-row').hide();
@@ -2219,6 +2221,8 @@ class Uwb_Admin {
                 
                 parentTab.find('.uwb-subtab-content').removeClass('active');
                 $('#subtab-' + subtabId).addClass('active');
+
+                localStorage.setItem('uwb_active_subtab', subtabId);
             });
 
             // Sidebar Collapse/Expand Toggle
@@ -3040,10 +3044,41 @@ class Uwb_Admin {
                 });
             });
 
-            // Load URL table on load since it is the default tab (Dashboard)
-            uwbUrlTableLoaded = true;
-            loadUrlTable();
-
+            // Restore active tab and subtab state
+            var savedTab = localStorage.getItem('uwb_active_tab');
+            if (savedTab) {
+                $('.uwb-nav-item').removeClass('active');
+                var $targetTabBtn = $('.uwb-nav-item[data-tab="' + savedTab + '"]');
+                $targetTabBtn.addClass('active');
+                
+                $('.uwb-tab-content').removeClass('active');
+                $('#tab-' + savedTab).addClass('active');
+                
+                if (['url_status', 'import_export'].indexOf(savedTab) !== -1) {
+                    $('#uwb-submit-row').hide();
+                } else {
+                    $('#uwb-submit-row').show();
+                }
+                
+                if (savedTab === 'url_status') {
+                    uwbUrlTableLoaded = true;
+                    loadUrlTable();
+                }
+            } else {
+                // Default: Load URL table on load since it is the default tab (Dashboard)
+                uwbUrlTableLoaded = true;
+                loadUrlTable();
+            }
+            
+            var savedSubtab = localStorage.getItem('uwb_active_subtab');
+            if (savedSubtab) {
+                $('.uwb-sub-tab-item').removeClass('active');
+                var $targetSubtabBtn = $('.uwb-sub-tab-item[data-subtab="' + savedSubtab + '"]');
+                $targetSubtabBtn.addClass('active');
+                
+                $('.uwb-subtab-content').removeClass('active');
+                $('#subtab-' + savedSubtab).addClass('active');
+            }
         });
         </script>
         <?php
