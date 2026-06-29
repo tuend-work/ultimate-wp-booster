@@ -1949,19 +1949,18 @@ class Uwb_Admin {
 
                             <!-- Table -->
                              <div style="overflow-x:auto; border:1px solid var(--uwb-border); border-radius:10px; width:100%;">
-                                 <table id="uwb-url-table" style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; min-width:850px;">
+                                 <table id="uwb-url-table" style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; min-width:700px;">
                                      <thead>
                                          <tr style="background:#f8fafc; border-bottom:1px solid var(--uwb-border);">
-                                             <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:120px;">Important <span class="uwb-sort-icon">↑</span></th>
+                                             <th class="uwb-sortable" data-col="priority" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:60px;">No. <span class="uwb-sort-icon">↑</span></th>
                                              <th class="uwb-sortable" data-col="url" style="padding:12px 14px; text-align:left; font-weight:700; cursor:pointer; user-select:none;">URL <span class="uwb-sort-icon">↕</span></th>
-                                             <th class="uwb-sortable" data-col="status" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:110px;">Status <span class="uwb-sort-icon">↕</span></th>
-                                             <th class="uwb-sortable" data-col="attempts" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; width:70px;">Tries <span class="uwb-sort-icon">↕</span></th>
-                                             <th class="uwb-sortable" data-col="last_attempt" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:160px;">Last Attempt <span class="uwb-sort-icon">↕</span></th>
-                                             <th style="padding:12px 14px; text-align:center; font-weight:700; width:260px;">Actions</th>
+                                             <th class="uwb-sortable" data-col="status" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:90px;">Status <span class="uwb-sort-icon">↕</span></th>
+                                             <th class="uwb-sortable" data-col="last_attempt" style="padding:12px 14px; text-align:center; font-weight:700; cursor:pointer; user-select:none; white-space:nowrap; width:140px;">Last Attempt <span class="uwb-sort-icon">↕</span></th>
+                                             <th style="padding:12px 14px; text-align:center; font-weight:700; width:250px;">Actions</th>
                                          </tr>
                                      </thead>
                                      <tbody id="uwb-url-tbody">
-                                         <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">Loading...</td></tr>
+                                         <tr><td colspan="5" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">Loading...</td></tr>
                                      </tbody>
                                  </table>
                              </div>
@@ -2641,18 +2640,20 @@ class Uwb_Admin {
                 var rows = data.rows;
                 var $tbody = $('#uwb-url-tbody');
                 if (!rows || rows.length === 0) {
-                    $tbody.html('<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">No URLs found.</td></tr>');
+                    $tbody.html('<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--uwb-text-muted);">No URLs found.</td></tr>');
                 } else {
                     var html = '';
                     $.each(rows, function(i, r) {
                         var rowBg = (i % 2 === 0) ? '#ffffff' : '#f8fafc';
-                        var priorityLabel = (r.priority == 0) ? '<span style="color:#f59e0b; font-weight:700;">★ Important</span>' : '<span style="color:#94a3b8; font-size:11.5px;">Normal (#' + r.priority + ')</span>';
+                        var priorityLabel = '<span style="font-weight:600; color:var(--uwb-text);">' + r.priority + '</span>';
                         var lastAttempt = r.last_attempt ? r.last_attempt : '—';
+                        var uri = r.url.replace(/^https?:\/\/[^\/]+/i, '');
+                        if (uri === '') { uri = '/'; }
+                        
                         html += '<tr style="background:' + rowBg + '; border-bottom:1px solid #f1f5f9; transition:background 0.15s;" onmouseover="this.style.background=\'#eef2ff\'" onmouseout="this.style.background=\'' + rowBg + '\'">';
                         html += '<td style="padding:10px 14px; text-align:center;">' + priorityLabel + '</td>';
-                        html += '<td style="padding:10px 14px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + $('<div>').text(r.url).html() + '"><a href="' + $('<div>').text(r.url).html() + '" target="_blank" style="color:var(--uwb-primary); text-decoration:none; font-size:12.5px;">' + $('<div>').text(r.url).html() + '</a></td>';
+                        html += '<td style="padding:10px 14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + $('<div>').text(r.url).html() + '"><a href="' + $('<div>').text(r.url).html() + '" target="_blank" style="color:var(--uwb-primary); text-decoration:none; font-size:12.5px;">' + $('<div>').text(uri).html() + '</a></td>';
                         html += '<td style="padding:10px 14px; text-align:center;">' + statusBadge(r.status) + '</td>';
-                        html += '<td style="padding:10px 14px; text-align:center; color:var(--uwb-text-muted);">' + r.attempts + '</td>';
                         html += '<td style="padding:10px 14px; text-align:center; color:var(--uwb-text-muted); font-size:12px;">' + lastAttempt + '</td>';
                         html += '<td style="padding:10px 14px; text-align:center; white-space:nowrap;">';
                         html += '<button class="uwb-act-process" data-id="' + r.id + '" style="background:#6366f1; color:#fff; border:none; border-radius:5px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; margin:2px;" title="Process this URL now">▶ Now</button>';
