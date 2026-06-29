@@ -1063,7 +1063,7 @@ class Uwb_Admin {
                                                     
                                                     <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
                                                         <!-- Enable/Disable Category Switch -->
-                                                        <select name="uwb_browser_cache_<?php echo $key; ?>" class="uwb-bc-cat-toggle" style="border: 1px solid var(--uwb-border); border-radius: 6px; padding: 8px; font-size: 13px;">
+                                                        <select name="uwb_browser_cache_<?php echo $key; ?>" class="uwb-bc-cat-toggle" style="width: 75px; border: 1px solid var(--uwb-border); border-radius: 6px; padding: 8px; font-size: 13px;">
                                                             <option value="0" <?php selected( $opt_enabled, 0 ); ?>>Bypass</option>
                                                             <option value="1" <?php selected( $opt_enabled, 1 ); ?>>Cache</option>
                                                         </select>
