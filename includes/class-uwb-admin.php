@@ -691,7 +691,7 @@ class Uwb_Admin {
                 100% { transform: rotate(360deg); }
             }
 
-            /* Horizontal Cache Pipeline Styling */
+            /* Vertical Cache Tree Layout */
             .uwb-pipeline-container {
                 background: #f8fafc;
                 border: 1px solid var(--uwb-border);
@@ -699,98 +699,139 @@ class Uwb_Admin {
                 padding: 24px;
                 margin-bottom: 24px;
             }
-            .uwb-pipeline-flow {
+            .uwb-pipeline-tree {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
+                position: relative;
+                margin-top: 16px;
+            }
+            .uwb-pipeline-tree::before {
+                content: '';
+                position: absolute;
+                left: 27px;
+                top: 24px;
+                bottom: 24px;
+                width: 2px;
+                background: var(--uwb-border);
+                z-index: 1;
+            }
+            .uwb-tree-node {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                overflow-x: auto;
-                padding: 16px 8px;
-                gap: 12px;
-            }
-            /* Custom styled thin scrollbar for pipeline flow */
-            .uwb-pipeline-flow::-webkit-scrollbar {
-                height: 6px;
-            }
-            .uwb-pipeline-flow::-webkit-scrollbar-track {
-                background: #f1f5f9;
-                border-radius: 4px;
-            }
-            .uwb-pipeline-flow::-webkit-scrollbar-thumb {
-                background: #cbd5e1;
-                border-radius: 4px;
-            }
-            .uwb-pipeline-flow::-webkit-scrollbar-thumb:hover {
-                background: #94a3b8;
-            }
-            .uwb-pipeline-node {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-                min-width: 90px;
-                flex-shrink: 0;
+                background: var(--uwb-card-bg);
+                border: 1px solid var(--uwb-border);
+                border-radius: 10px;
+                padding: 16px 20px;
+                margin-bottom: 12px;
                 position: relative;
-                transition: all 0.25s ease;
-                cursor: pointer;
+                z-index: 2;
+                transition: all 0.2s ease;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+                box-sizing: border-box;
             }
-            .uwb-pipeline-node:hover {
-                transform: translateY(-4px);
+            .uwb-tree-node:hover {
+                transform: translateX(4px);
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             }
-            .uwb-pipeline-icon {
-                width: 48px;
-                height: 48px;
+            .node-status-left {
+                width: 16px;
+                height: 16px;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-bottom: 8px;
-                color: #ffffff;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                transition: all 0.25s ease;
-                box-sizing: border-box;
+                margin-right: 16px;
+                flex-shrink: 0;
             }
-            .uwb-pipeline-node.active .uwb-pipeline-icon {
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                border: 2px solid #34d399;
+            .uwb-tree-node.active .node-status-left {
+                background: #d1fae5;
+                border: 2px solid #10b981;
             }
-            .uwb-pipeline-node.active:hover .uwb-pipeline-icon {
-                box-shadow: 0 8px 12px -3px rgba(16, 185, 129, 0.4);
-            }
-            .uwb-pipeline-node.inactive .uwb-pipeline-icon {
-                background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            .uwb-tree-node.inactive .node-status-left {
+                background: #f1f5f9;
                 border: 2px solid #94a3b8;
-                opacity: 0.8;
             }
-            .uwb-pipeline-node.inactive:hover .uwb-pipeline-icon {
-                box-shadow: 0 8px 12px -3px rgba(71, 85, 105, 0.4);
+            .uwb-tree-node.active .node-status-left::after {
+                content: '';
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #10b981;
             }
-            .uwb-pipeline-node .node-label {
-                font-weight: 700;
-                font-size: 11px;
-                color: var(--uwb-text);
-                margin-bottom: 2px;
+            .uwb-tree-node.inactive .node-status-left::after {
+                content: '';
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #94a3b8;
             }
-            .uwb-pipeline-node .node-status {
-                font-size: 9px;
-                text-transform: uppercase;
-                font-weight: 600;
-                padding: 1px 6px;
-                border-radius: 4px;
-                color: #ffffff;
-                background: rgba(0,0,0,0.15);
+            .node-info-mid {
+                display: flex;
+                align-items: center;
+                flex: 1;
+                margin-right: 20px;
             }
-            .uwb-pipeline-arrow {
+            .node-icon-wrap {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                background: #f1f5f9;
+                color: var(--uwb-text-muted);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: var(--uwb-text-muted);
-                padding-bottom: 24px;
+                margin-right: 16px;
                 flex-shrink: 0;
-                animation: uwb-pulse 2s infinite ease-in-out;
             }
-            @keyframes uwb-pulse {
-                0%, 100% { opacity: 0.4; }
-                50% { opacity: 1; }
+            .uwb-tree-node.active .node-icon-wrap {
+                background: #e0e7ff;
+                color: var(--uwb-primary);
+            }
+            .node-text-wrap {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .node-title {
+                font-weight: 700;
+                font-size: 13.5px;
+                color: var(--uwb-text);
+            }
+            .node-desc {
+                font-size: 12px;
+                color: var(--uwb-text-muted);
+            }
+            .node-action-right {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+            .uwb-btn-mini {
+                padding: 6px 12px;
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--uwb-text);
+                background: #ffffff;
+                border: 1px solid var(--uwb-border);
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            .uwb-btn-mini:hover {
+                background: #f1f5f9;
+                border-color: #cbd5e1;
+            }
+            .uwb-btn-mini-danger {
+                background: #fee2e2;
+                border-color: #fca5a5;
+                color: #991b1b;
+            }
+            .uwb-btn-mini-danger:hover {
+                background: #fecaca;
+                border-color: #f87171;
             }
         </style>
         <?php
@@ -1274,124 +1315,130 @@ class Uwb_Admin {
                             <div class="uwb-pipeline-container">
                                 <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px; margin-bottom: 20px;">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                                    Chuỗi Cấu Hình Cache Toàn Diện (Cache Pipeline)
+                                    Cấu Hình Chuỗi Cache Xử Lý (Cache Pipeline)
                                 </h3>
-                                <div class="uwb-pipeline-flow">
-                                    <!-- Node 0: User -->
-                                    <div class="uwb-pipeline-node active" title="Người dùng gửi yêu cầu truy cập website">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                        </div>
-                                        <span class="node-label">Người dùng</span>
-                                        <span class="node-status">Visitor</span>
-                                    </div>
-
-                                    <div class="uwb-pipeline-arrow">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                                    </div>
-
+                                
+                                <div class="uwb-pipeline-tree">
                                     <!-- Node 1: DNS Cache -->
-                                    <div class="uwb-pipeline-node <?php echo $dns_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($dns_details); ?>">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    <div class="uwb-tree-node active">
+                                        <div class="node-status-left"></div>
+                                        <div class="node-info-mid">
+                                            <div class="node-icon-wrap">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                            </div>
+                                            <div class="node-text-wrap">
+                                                <span class="node-title">1. DNS Cache</span>
+                                                <span class="node-desc"><?php echo esc_html($dns_details); ?></span>
+                                            </div>
                                         </div>
-                                        <span class="node-label">DNS Cache</span>
-                                        <span class="node-status"><?php echo $dns_active ? 'Active' : 'Off'; ?></span>
-                                    </div>
-
-                                    <div class="uwb-pipeline-arrow">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                                    </div>
-
-                                    <!-- Node 2: Browser Cache -->
-                                    <div class="uwb-pipeline-node <?php echo $browser_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($browser_details); ?>">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                                        <div class="node-action-right">
+                                            <button type="button" onclick="window.location.reload();" class="uwb-btn-mini">Retest</button>
                                         </div>
-                                        <span class="node-label">Trình duyệt cache</span>
-                                        <span class="node-status"><?php echo $browser_active ? 'Active' : 'Off'; ?></span>
                                     </div>
-
-                                    <div class="uwb-pipeline-arrow">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    
+                                    <!-- Node 2: Trình duyệt cache -->
+                                    <div class="uwb-tree-node <?php echo $browser_active ? 'active' : 'inactive'; ?>">
+                                        <div class="node-status-left"></div>
+                                        <div class="node-info-mid">
+                                            <div class="node-icon-wrap">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                                            </div>
+                                            <div class="node-text-wrap">
+                                                <span class="node-title">2. Trình duyệt cache (Browser Cache)</span>
+                                                <span class="node-desc"><?php echo esc_html($browser_details); ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="node-action-right">
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click');" class="uwb-btn-mini">Settings</button>
+                                        </div>
                                     </div>
-
+                                    
                                     <!-- Node 3: CDN Cache -->
-                                    <div class="uwb-pipeline-node <?php echo $cdn_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($cdn_details); ?>">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                                    <div class="uwb-tree-node <?php echo $cdn_active ? 'active' : 'inactive'; ?>">
+                                        <div class="node-status-left"></div>
+                                        <div class="node-info-mid">
+                                            <div class="node-icon-wrap">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                                            </div>
+                                            <div class="node-text-wrap">
+                                                <span class="node-title">3. CDN Cache</span>
+                                                <span class="node-desc"><?php echo esc_html($cdn_details); ?></span>
+                                            </div>
                                         </div>
-                                        <span class="node-label">CDN Cache</span>
-                                        <span class="node-status"><?php echo $cdn_active ? 'Active' : 'Off'; ?></span>
+                                        <div class="node-action-right">
+                                            <button type="button" onclick="window.location.reload();" class="uwb-btn-mini">Retest</button>
+                                        </div>
                                     </div>
-
-                                    <div class="uwb-pipeline-arrow">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                                    </div>
-
+                                    
                                     <!-- Node 4: Webserver Cache -->
-                                    <div class="uwb-pipeline-node <?php echo $webserver_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($webserver_details); ?>">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                                    <div class="uwb-tree-node <?php echo $webserver_active ? 'active' : 'inactive'; ?>">
+                                        <div class="node-status-left"></div>
+                                        <div class="node-info-mid">
+                                            <div class="node-icon-wrap">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                                            </div>
+                                            <div class="node-text-wrap">
+                                                <span class="node-title">4. Webserver Cache</span>
+                                                <span class="node-desc"><?php echo esc_html($webserver_details); ?></span>
+                                            </div>
                                         </div>
-                                        <span class="node-label">Webserver Cache</span>
-                                        <span class="node-status"><?php echo $webserver_active ? 'Active' : 'Off'; ?></span>
-                                    </div>
-
-                                    <div class="uwb-pipeline-arrow">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                        <div class="node-action-right">
+                                            <button type="button" onclick="window.location.reload();" class="uwb-btn-mini">Retest</button>
+                                        </div>
                                     </div>
 
                                     <!-- Node 5: Page Cache Full -->
-                                    <div class="uwb-pipeline-node <?php echo $page_cache_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($page_cache_details); ?>">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <div class="uwb-tree-node <?php echo $page_cache_active ? 'active' : 'inactive'; ?>">
+                                        <div class="node-status-left"></div>
+                                        <div class="node-info-mid">
+                                            <div class="node-icon-wrap">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            </div>
+                                            <div class="node-text-wrap">
+                                                <span class="node-title">5. Page Cache Full (Static HTML)</span>
+                                                <span class="node-desc"><?php echo esc_html($page_cache_details); ?></span>
+                                            </div>
                                         </div>
-                                        <span class="node-label">Page Cache Full</span>
-                                        <span class="node-status"><?php echo $page_cache_active ? 'Active' : 'Off'; ?></span>
-                                    </div>
-
-                                    <div class="uwb-pipeline-arrow">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                        <div class="node-action-right" style="display:flex; gap:6px;">
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click');" class="uwb-btn-mini">Settings</button>
+                                            <a href="<?php echo $purge_url; ?>" class="uwb-btn-mini uwb-btn-mini-danger" style="text-decoration:none;">Purge Cache</a>
+                                        </div>
                                     </div>
 
                                     <!-- Node 6: Object Cache -->
-                                    <div class="uwb-pipeline-node <?php echo $obj_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($obj_details); ?>">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6"/></svg>
+                                    <div class="uwb-tree-node <?php echo $obj_active ? 'active' : 'inactive'; ?>">
+                                        <div class="node-status-left"></div>
+                                        <div class="node-info-mid">
+                                            <div class="node-icon-wrap">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6"/></svg>
+                                            </div>
+                                            <div class="node-text-wrap">
+                                                <span class="node-title">6. Object Cache (Redis/Memcached)</span>
+                                                <span class="node-desc"><?php echo esc_html($obj_details); ?></span>
+                                            </div>
                                         </div>
-                                        <span class="node-label">Object Cache</span>
-                                        <span class="node-status"><?php echo $obj_active ? 'Active' : 'Off'; ?></span>
-                                    </div>
-
-                                    <div class="uwb-pipeline-arrow">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                        <div class="node-action-right" style="display:flex; gap:6px;">
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'object_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
+                                            <button type="button" id="btn-flush-redis-tree" class="uwb-btn-mini uwb-btn-mini-danger">Flush Cache</button>
+                                        </div>
                                     </div>
 
                                     <!-- Node 7: Opcode Cache -->
-                                    <div class="uwb-pipeline-node <?php echo $opcode_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($opcode_details); ?>">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                    <div class="uwb-tree-node <?php echo $opcode_active ? 'active' : 'inactive'; ?>">
+                                        <div class="node-status-left"></div>
+                                        <div class="node-info-mid">
+                                            <div class="node-icon-wrap">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                            </div>
+                                            <div class="node-text-wrap">
+                                                <span class="node-title">7. Opcode Cache (PHP OPcache)</span>
+                                                <span class="node-desc"><?php echo esc_html($opcode_details); ?></span>
+                                            </div>
                                         </div>
-                                        <span class="node-label">Opcode Cache</span>
-                                        <span class="node-status"><?php echo $opcode_active ? 'Active' : 'Off'; ?></span>
-                                    </div>
-
-                                    <div class="uwb-pipeline-arrow">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                                    </div>
-
-                                    <!-- Node 8: Server -->
-                                    <div class="uwb-pipeline-node active" title="Máy chủ web & Database xử lý mã nguồn gốc">
-                                        <div class="uwb-pipeline-icon">
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"/><rect x="6" y="6" width="12" height="4"/><rect x="6" y="14" width="12" height="4"/></svg>
+                                        <div class="node-action-right">
+                                            <button type="button" onclick="window.location.reload();" class="uwb-btn-mini">Retest</button>
                                         </div>
-                                        <span class="node-label">Máy chủ</span>
-                                        <span class="node-status">Origin Server</span>
                                     </div>
-                                </div>
-                                <div style="text-align: center; border-top: 1px solid var(--uwb-border); padding-top: 12px; margin-top: 16px; font-size: 11px; color: var(--uwb-text-muted);">
-                                    Di chuột (hover) vào từng tầng trong chu trình xử lý để xem thông tin chi tiết
                                 </div>
                             </div>
 
@@ -2239,7 +2286,7 @@ class Uwb_Admin {
             });
 
             // Flush Redis Cache
-            $('#btn-flush-redis').on('click', function(e) {
+            $('#btn-flush-redis, #btn-flush-redis-tree').on('click', function(e) {
                 e.preventDefault();
                 if (!confirm('Are you sure you want to flush the persistent object cache?')) {
                     return;
