@@ -686,56 +686,94 @@ class Uwb_Admin {
                 100% { transform: rotate(360deg); }
             }
 
-            /* 5 Cache Layers Styling */
-            .uwb-cache-stack {
+            @keyframes uwb-rotation {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            /* Horizontal Cache Pipeline Styling */
+            .uwb-pipeline-container {
+                background: #f8fafc;
+                border: 1px solid var(--uwb-border);
+                border-radius: 12px;
+                padding: 24px;
+                margin-bottom: 24px;
+            }
+            .uwb-pipeline-flow {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                overflow-x: auto;
+                padding: 12px 0;
+                gap: 8px;
+            }
+            .uwb-pipeline-node {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 8px;
-                width: 100%;
-                margin-top: 12px;
-            }
-            .uwb-cache-layer {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 16px;
-                border-radius: 8px;
-                font-weight: 700;
-                font-size: 12px;
-                color: #ffffff;
-                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+                text-align: center;
+                min-width: 100px;
+                position: relative;
+                transition: all 0.25s ease;
                 cursor: pointer;
+            }
+            .uwb-pipeline-node:hover {
+                transform: translateY(-4px);
+            }
+            .uwb-pipeline-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 8px;
+                color: #ffffff;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                transition: all 0.25s ease;
                 box-sizing: border-box;
             }
-            .uwb-cache-layer.active {
+            .uwb-pipeline-node.active .uwb-pipeline-icon {
                 background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                border: 1px solid #34d399;
+                border: 2px solid #34d399;
             }
-            .uwb-cache-layer.active:hover {
-                transform: scale(1.03);
-                box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.25);
+            .uwb-pipeline-node.active:hover .uwb-pipeline-icon {
+                box-shadow: 0 8px 12px -3px rgba(16, 185, 129, 0.4);
             }
-            .uwb-cache-layer.inactive {
+            .uwb-pipeline-node.inactive .uwb-pipeline-icon {
                 background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-                border: 1px solid #94a3b8;
-                opacity: 0.85;
+                border: 2px solid #94a3b8;
+                opacity: 0.8;
             }
-            .uwb-cache-layer.inactive:hover {
-                transform: scale(1.03);
-                box-shadow: 0 10px 15px -3px rgba(71, 85, 105, 0.25);
+            .uwb-pipeline-node.inactive:hover .uwb-pipeline-icon {
+                box-shadow: 0 8px 12px -3px rgba(71, 85, 105, 0.4);
             }
-            .uwb-cache-layer .layer-title {
-                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            .uwb-pipeline-node .node-label {
+                font-weight: 700;
+                font-size: 11px;
+                color: var(--uwb-text);
+                margin-bottom: 2px;
             }
-            .uwb-cache-layer .layer-status {
-                background: rgba(255, 255, 255, 0.25);
-                padding: 2px 8px;
-                border-radius: 6px;
-                font-size: 10px;
+            .uwb-pipeline-node .node-status {
+                font-size: 9px;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                font-weight: 600;
+                padding: 1px 6px;
+                border-radius: 4px;
+                color: #ffffff;
+                background: rgba(0,0,0,0.15);
+            }
+            .uwb-pipeline-arrow {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--uwb-text-muted);
+                padding-bottom: 24px;
+                animation: uwb-pulse 2s infinite ease-in-out;
+            }
+            @keyframes uwb-pulse {
+                0%, 100% { opacity: 0.4; }
+                50% { opacity: 1; }
             }
         </style>
         <?php
@@ -1130,116 +1168,217 @@ class Uwb_Admin {
                         <!-- TAB 5: Dashboard -->
                         <div id="tab-url_status" class="uwb-tab-content active">
                             <h2 style="margin-top:0;">Dashboard</h2>
-                            <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter by status, search, sort columns, and take actions on individual URLs.</p>
+                            <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter b                            <!-- Horizontal Cache Pipeline Widget -->
+                            <?php
+                            // 1. Opcode Cache
+                            $opcode_active = false;
+                            $opcode_details = 'OPcache is not active or enabled.';
+                            if ( function_exists( 'opcache_get_status' ) ) {
+                                $opcache_status = @opcache_get_status( false );
+                                if ( ! empty( $opcache_status['opcache_enabled'] ) ) {
+                                    $opcode_active = true;
+                                    if ( isset( $opcache_status['memory_usage']['used_memory'] ) && isset( $opcache_status['memory_usage']['free_memory'] ) ) {
+                                        $used = round( $opcache_status['memory_usage']['used_memory'] / 1024 / 1024, 1 );
+                                        $free = round( $opcache_status['memory_usage']['free_memory'] / 1024 / 1024, 1 );
+                                        $opcode_details = "OPcache Active ({$used}MB used, {$free}MB free)";
+                                    } else {
+                                        $opcode_details = 'OPcache Active';
+                                    }
+                                }
+                            }
 
-                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:20px;">
-                                <!-- 5 Cache Layers Widget -->
-                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; display:flex; flex-direction:column; justify-content:space-between;">
-                                    <div>
-                                        <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px; margin-bottom: 20px;">
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                                            Trạng thái 5 Tầng Cache
-                                        </h3>
-                                        
-                                        <?php
-                                        // 1. Opcode Cache
-                                        $opcode_active = false;
-                                        $opcode_details = 'OPcache is not active or enabled.';
-                                        if ( function_exists( 'opcache_get_status' ) ) {
-                                            $opcache_status = @opcache_get_status( false );
-                                            if ( ! empty( $opcache_status['opcache_enabled'] ) ) {
-                                                $opcode_active = true;
-                                                if ( isset( $opcache_status['memory_usage']['used_memory'] ) && isset( $opcache_status['memory_usage']['free_memory'] ) ) {
-                                                    $used = round( $opcache_status['memory_usage']['used_memory'] / 1024 / 1024, 1 );
-                                                    $free = round( $opcache_status['memory_usage']['free_memory'] / 1024 / 1024, 1 );
-                                                    $opcode_details = "OPcache Active ({$used}MB used, {$free}MB free)";
-                                                } else {
-                                                    $opcode_details = 'OPcache Active';
-                                                }
-                                            }
+                            // 2. Object Cache
+                            $obj_active = wp_using_ext_object_cache();
+                            $obj_details = 'No external persistent cache detected.';
+                            if ( $obj_active ) {
+                                $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
+                                if ( $oc_type === 2 ) {
+                                    $obj_details = 'Memcached Object Cache Active';
+                                } else {
+                                    $obj_details = 'Redis Object Cache Active';
+                                }
+                            }
+
+                            // 3. Page Cache Full
+                            $page_cache_active = defined( 'WP_CACHE' ) && WP_CACHE;
+                            $page_cache_details = 'WP_CACHE constant is not enabled.';
+                            if ( $page_cache_active ) {
+                                $cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket';
+                                $file_count = 0;
+                                if ( is_dir( $cache_dir ) ) {
+                                    $di = new RecursiveDirectoryIterator( $cache_dir, RecursiveDirectoryIterator::SKIP_DOTS );
+                                    $it = new RecursiveIteratorIterator( $di );
+                                    foreach ( $it as $file ) {
+                                        if ( $file->isFile() && ( $file->getExtension() === 'html' || $file->getExtension() === 'html_gzip' ) ) {
+                                            $file_count++;
                                         }
+                                    }
+                                }
+                                $page_cache_details = "Page Cache Active ({$file_count} static files)";
+                            }
 
-                                        // 2. Object Cache
-                                        $obj_active = wp_using_ext_object_cache();
-                                        $obj_details = 'No external persistent cache detected.';
-                                        if ( $obj_active ) {
-                                            $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
-                                            if ( $oc_type === 2 ) {
-                                                $obj_details = 'Memcached Object Cache Active';
-                                            } else {
-                                                $obj_details = 'Redis Object Cache Active';
-                                            }
-                                        }
+                            // 4. CDN Cache
+                            $cdn_active = ! empty( $_SERVER['HTTP_CF_RAY'] ) || ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) || ! empty( $_SERVER['HTTP_X_CDN_FORWARD'] );
+                            if ( $cdn_active ) {
+                                $cdn_details = 'Cloudflare / CDN Proxy Detected';
+                            } else {
+                                $cdn_details = 'No active CDN proxy header detected.';
+                            }
 
-                                        // 3. Page Cache Full
-                                        $page_cache_active = defined( 'WP_CACHE' ) && WP_CACHE;
-                                        $page_cache_details = 'WP_CACHE constant is not enabled.';
-                                        if ( $page_cache_active ) {
-                                            $cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket';
-                                            $file_count = 0;
-                                            if ( is_dir( $cache_dir ) ) {
-                                                $di = new RecursiveDirectoryIterator( $cache_dir, RecursiveDirectoryIterator::SKIP_DOTS );
-                                                $it = new RecursiveIteratorIterator( $di );
-                                                foreach ( $it as $file ) {
-                                                    if ( $file->isFile() && ( $file->getExtension() === 'html' || $file->getExtension() === 'html_gzip' ) ) {
-                                                        $file_count++;
-                                                    }
-                                                }
-                                            }
-                                            $page_cache_details = "Page Cache Active ({$file_count} static files)";
-                                        }
+                            // 5. Browser Cache
+                            $browser_active = intval( get_option( 'uwb_browser_cache_enabled', 1 ) ) === 1;
+                            if ( $browser_active ) {
+                                $browser_lifespan = intval( get_option( 'uwb_browser_cache_lifespan', 10 ) );
+                                $browser_details = "Browser cache enabled ({$browser_lifespan} minutes)";
+                            } else {
+                                $browser_details = 'Local browser caching is disabled.';
+                            }
 
-                                        // 4. CDN Cache
-                                        $cdn_active = ! empty( $_SERVER['HTTP_CF_RAY'] ) || ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) || ! empty( $_SERVER['HTTP_X_CDN_FORWARD'] );
-                                        if ( $cdn_active ) {
-                                            $cdn_details = 'Cloudflare / CDN Proxy Detected';
-                                        } else {
-                                            $cdn_details = 'No active CDN proxy header detected.';
-                                        }
+                            // 6. DNS Cache
+                            $dns_active = true;
+                            $dns_details = 'DNS resolution is cached at OS/Browser/ISP level.';
 
-                                        // 5. Browser Cache
-                                        $browser_active = intval( get_option( 'uwb_browser_cache_enabled', 1 ) ) === 1;
-                                        if ( $browser_active ) {
-                                            $browser_lifespan = intval( get_option( 'uwb_browser_cache_lifespan', 10 ) );
-                                            $browser_details = "Browser cache enabled ({$browser_lifespan} minutes)";
-                                        } else {
-                                            $browser_details = 'Local browser caching is disabled.';
-                                        }
-                                        ?>
+                            // 7. Webserver Cache
+                            $webserver_active = false;
+                            $webserver_details = 'Webserver cache not detected.';
+                            if ( ! empty( $_SERVER['SERVER_SOFTWARE'] ) ) {
+                                if ( stripos( $_SERVER['SERVER_SOFTWARE'], 'litespeed' ) !== false ) {
+                                    $webserver_active = true;
+                                    $webserver_details = 'LiteSpeed Web Server Cache Supported';
+                                } elseif ( stripos( $_SERVER['SERVER_SOFTWARE'], 'nginx' ) !== false ) {
+                                    $webserver_active = true;
+                                    $webserver_details = 'Nginx Cache / FastCGI Cache Supported';
+                                } else {
+                                    $webserver_details = esc_html($_SERVER['SERVER_SOFTWARE']);
+                                }
+                            }
+                            ?>
 
-                                        <div class="uwb-cache-stack">
-                                            <!-- Tầng 1: Opcode Cache -->
-                                            <div class="uwb-cache-layer <?php echo $opcode_active ? 'active' : 'inactive'; ?>" style="width: 60%;" title="<?php echo esc_attr($opcode_details); ?>">
-                                                <span class="layer-title">Opcode Cache</span>
-                                                <span class="layer-status"><?php echo $opcode_active ? 'Active' : 'Off'; ?></span>
-                                            </div>
-                                            <!-- Tầng 2: Object Cache -->
-                                            <div class="uwb-cache-layer <?php echo $obj_active ? 'active' : 'inactive'; ?>" style="width: 70%;" title="<?php echo esc_attr($obj_details); ?>">
-                                                <span class="layer-title">Object Cache</span>
-                                                <span class="layer-status"><?php echo $obj_active ? 'Active' : 'Off'; ?></span>
-                                            </div>
-                                            <!-- Tầng 3: Page Cache Full -->
-                                            <div class="uwb-cache-layer <?php echo $page_cache_active ? 'active' : 'inactive'; ?>" style="width: 80%;" title="<?php echo esc_attr($page_cache_details); ?>">
-                                                <span class="layer-title">Page Cache Full</span>
-                                                <span class="layer-status"><?php echo $page_cache_active ? 'Active' : 'Off'; ?></span>
-                                            </div>
-                                            <!-- Tầng 4: CDN Cache -->
-                                            <div class="uwb-cache-layer <?php echo $cdn_active ? 'active' : 'inactive'; ?>" style="width: 90%;" title="<?php echo esc_attr($cdn_details); ?>">
-                                                <span class="layer-title">CDN Cache</span>
-                                                <span class="layer-status"><?php echo $cdn_active ? 'Active' : 'Off'; ?></span>
-                                            </div>
-                                            <!-- Tầng 5: Trình duyệt cache -->
-                                            <div class="uwb-cache-layer <?php echo $browser_active ? 'active' : 'inactive'; ?>" style="width: 100%;" title="<?php echo esc_attr($browser_details); ?>">
-                                                <span class="layer-title">Trình duyệt cache</span>
-                                                <span class="layer-status"><?php echo $browser_active ? 'Active' : 'Off'; ?></span>
-                                            </div>
+                            <div class="uwb-pipeline-container">
+                                <h3 style="margin-top:0; font-size:15px; display:flex; align-items:center; gap:8px; margin-bottom: 20px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                                    Chuỗi Cấu Hình Cache Toàn Diện (Cache Pipeline)
+                                </h3>
+                                <div class="uwb-pipeline-flow">
+                                    <!-- Node 0: User -->
+                                    <div class="uwb-pipeline-node active" title="Người dùng gửi yêu cầu truy cập website">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                         </div>
+                                        <span class="node-label">Người dùng</span>
+                                        <span class="node-status">Visitor</span>
                                     </div>
-                                    <div style="text-align: center; border-top: 1px solid var(--uwb-border); padding-top: 12px; margin-top: 20px; font-size: 11px; color: var(--uwb-text-muted);">
-                                        Hover vào từng tầng để xem thông tin chi tiết
+
+                                    <div class="uwb-pipeline-arrow">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+
+                                    <!-- Node 1: DNS Cache -->
+                                    <div class="uwb-pipeline-node <?php echo $dns_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($dns_details); ?>">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                        </div>
+                                        <span class="node-label">DNS Cache</span>
+                                        <span class="node-status"><?php echo $dns_active ? 'Active' : 'Off'; ?></span>
+                                    </div>
+
+                                    <div class="uwb-pipeline-arrow">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+
+                                    <!-- Node 2: Browser Cache -->
+                                    <div class="uwb-pipeline-node <?php echo $browser_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($browser_details); ?>">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                                        </div>
+                                        <span class="node-label">Trình duyệt cache</span>
+                                        <span class="node-status"><?php echo $browser_active ? 'Active' : 'Off'; ?></span>
+                                    </div>
+
+                                    <div class="uwb-pipeline-arrow">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+
+                                    <!-- Node 3: CDN Cache -->
+                                    <div class="uwb-pipeline-node <?php echo $cdn_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($cdn_details); ?>">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                                        </div>
+                                        <span class="node-label">CDN Cache</span>
+                                        <span class="node-status"><?php echo $cdn_active ? 'Active' : 'Off'; ?></span>
+                                    </div>
+
+                                    <div class="uwb-pipeline-arrow">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+
+                                    <!-- Node 4: Webserver Cache -->
+                                    <div class="uwb-pipeline-node <?php echo $webserver_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($webserver_details); ?>">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                                        </div>
+                                        <span class="node-label">Webserver Cache</span>
+                                        <span class="node-status"><?php echo $webserver_active ? 'Active' : 'Off'; ?></span>
+                                    </div>
+
+                                    <div class="uwb-pipeline-arrow">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+
+                                    <!-- Node 5: Page Cache Full -->
+                                    <div class="uwb-pipeline-node <?php echo $page_cache_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($page_cache_details); ?>">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        </div>
+                                        <span class="node-label">Page Cache Full</span>
+                                        <span class="node-status"><?php echo $page_cache_active ? 'Active' : 'Off'; ?></span>
+                                    </div>
+
+                                    <div class="uwb-pipeline-arrow">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+
+                                    <!-- Node 6: Object Cache -->
+                                    <div class="uwb-pipeline-node <?php echo $obj_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($obj_details); ?>">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6"/></svg>
+                                        </div>
+                                        <span class="node-label">Object Cache</span>
+                                        <span class="node-status"><?php echo $obj_active ? 'Active' : 'Off'; ?></span>
+                                    </div>
+
+                                    <div class="uwb-pipeline-arrow">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+
+                                    <!-- Node 7: Opcode Cache -->
+                                    <div class="uwb-pipeline-node <?php echo $opcode_active ? 'active' : 'inactive'; ?>" title="<?php echo esc_attr($opcode_details); ?>">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                        </div>
+                                        <span class="node-label">Opcode Cache</span>
+                                        <span class="node-status"><?php echo $opcode_active ? 'Active' : 'Off'; ?></span>
+                                    </div>
+
+                                    <div class="uwb-pipeline-arrow">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+
+                                    <!-- Node 8: Server -->
+                                    <div class="uwb-pipeline-node active" title="Máy chủ web & Database xử lý mã nguồn gốc">
+                                        <div class="uwb-pipeline-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"/><rect x="6" y="6" width="12" height="4"/><rect x="6" y="14" width="12" height="4"/></svg>
+                                        </div>
+                                        <span class="node-label">Máy chủ</span>
+                                        <span class="node-status">Origin Server</span>
                                     </div>
                                 </div>
+                                <div style="text-align: center; border-top: 1px solid var(--uwb-border); padding-top: 12px; margin-top: 16px; font-size: 11px; color: var(--uwb-text-muted);">
+                                    Di chuột (hover) vào từng tầng trong chu trình xử lý để xem thông tin chi tiết
+                                </div>
+                            </div>
 
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:20px;">
                                 <!-- Cache Status & Connection Test Block -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; display:flex; flex-direction:column; justify-content:space-between;">
                                     <div>
