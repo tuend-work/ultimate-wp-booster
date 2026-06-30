@@ -1694,6 +1694,7 @@ class Uwb_Admin {
                                     <?php endif; ?>
                                 </div>
 
+                                <?php if ( $oc_active && ! empty( $stats_data ) ) : ?>
                                     <!-- Stats details row: 2 Cards -->
                                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:20px; margin-bottom:24px;">
                                         <!-- Card 1: Server Stats -->
