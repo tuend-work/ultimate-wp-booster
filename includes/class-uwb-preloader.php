@@ -445,6 +445,9 @@ class Uwb_Preloader {
 
         foreach ( $queue_items as $item ) {
             $url = $item->url;
+            if ( strpos( $url, 'http' ) !== 0 ) {
+                $url = home_url( '/' . ltrim( $url, '/' ) );
+            }
             $id = $item->id;
 
             // Increment attempts
@@ -617,7 +620,11 @@ class Uwb_Preloader {
         foreach ( $raw_urls as $url ) {
             $normalized_url = $this->normalize_url( $url );
             if ( ! $this->is_xml_url( $normalized_url ) ) {
-                $normalized_urls[] = $normalized_url;
+                $parsed_url = wp_parse_url( $normalized_url );
+                $path = isset( $parsed_url['path'] ) ? $parsed_url['path'] : '/';
+                $query = isset( $parsed_url['query'] ) ? '?' . $parsed_url['query'] : '';
+                $uri = '/' . ltrim( $path, '/' ) . $query;
+                $normalized_urls[] = $uri;
             }
         }
         $urls = array_values( array_unique( $normalized_urls ) );
@@ -883,6 +890,12 @@ class Uwb_Preloader {
         $query_params = array_merge( $params, array( $per_page, $offset ) );
         $rows = $wpdb->get_results( $wpdb->prepare( $query_sql, $query_params ) );
 
+        foreach ( $rows as $row ) {
+            if ( strpos( $row->url, 'http' ) !== 0 ) {
+                $row->url = home_url( '/' . ltrim( $row->url, '/' ) );
+            }
+        }
+
         wp_send_json_success( array(
             'rows'       => $rows,
             'total'      => intval( $total ),
@@ -915,7 +928,12 @@ class Uwb_Preloader {
         // Mark as processing
         $wpdb->update( $this->table_name, array( 'status' => 'processing', 'attempts' => $item->attempts + 1, 'last_attempt' => current_time( 'mysql' ) ), array( 'id' => $id ), array( '%s', '%d', '%s' ), array( '%d' ) );
 
-        $response = wp_remote_get( $item->url, array(
+        $url = $item->url;
+        if ( strpos( $url, 'http' ) !== 0 ) {
+            $url = home_url( '/' . ltrim( $url, '/' ) );
+        }
+
+        $response = wp_remote_get( $url, array(
             'timeout'   => 20,
             'sslverify' => false,
             'user-agent'=> 'Ultimate-WP-Booster-Preloader',

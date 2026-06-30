@@ -58,7 +58,7 @@ class Uwb_Activator {
         }
 
         if ( get_option( 'uwb_preload_sitemap' ) === false ) {
-            update_option( 'uwb_preload_sitemap', home_url( '/important-sitemap.xml' ) . "\n" . home_url( '/wp-sitemap.xml' ) );
+            update_option( 'uwb_preload_sitemap', "/important-sitemap.xml\n/wp-sitemap.xml" );
         }
 
         if ( get_option( 'uwb_cache_logged_in' ) === false ) {

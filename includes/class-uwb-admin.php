@@ -88,7 +88,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_font_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_other', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_browser_cache_other_lifespan', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_excluded_urls', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_excluded_urls', array( $this, 'sanitize_excluded_urls' ) );
         register_setting( 'uwb_settings_group', 'uwb_ignored_query', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_preload_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_preload_sitemap', array( $this, 'sanitize_sitemap_list' ) );
@@ -98,7 +98,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_cache_404', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_exclude_cookies', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_exclude_user_agents', 'sanitize_textarea_field' );
-        register_setting( 'uwb_settings_group', 'uwb_always_purge_urls', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_always_purge_urls', array( $this, 'sanitize_always_purge_urls' ) );
         register_setting( 'uwb_settings_group', 'uwb_cache_query_strings', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_cache_xml_sitemaps', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_xml_sitemaps_lifespan', 'intval' );
@@ -132,22 +132,52 @@ class Uwb_Admin {
         return $val;
     }
 
+    private function uwb_clean_url_to_uri( $url ) {
+        $url = trim( (string) $url );
+        if ( empty( $url ) ) {
+            return '';
+        }
+
+        $home_url = home_url();
+        $parsed_home = wp_parse_url( $home_url );
+        $home_host = isset( $parsed_home['host'] ) ? $parsed_home['host'] : '';
+        $home_path = isset( $parsed_home['path'] ) ? trim( $parsed_home['path'], '/' ) : '';
+
+        // Strip protocol and host
+        if ( ! empty( $home_host ) ) {
+            $url = preg_replace( '#^(https?:)?//' . preg_quote( $home_host, '#' ) . '#i', '', $url );
+        }
+
+        // Strip subdirectory if present
+        if ( ! empty( $home_path ) ) {
+            $url = preg_replace( '#^/?' . preg_quote( $home_path, '#' ) . '#i', '', $url );
+        }
+
+        // Strip any remaining protocol/host (e.g. if they put another domain or custom scheme)
+        $url = preg_replace( '#^(https?:)?//[^/]+#i', '', $url );
+
+        // Ensure it starts with /
+        $url = '/' . ltrim( $url, '/' );
+
+        return $url;
+    }
+
     public function sanitize_sitemap_list( $value ) {
         $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', (string) $value ) ) ) );
-        $urls  = array();
+        $uris  = array();
 
         foreach ( $lines as $line ) {
-            $url = esc_url_raw( $line );
-            if ( ! empty( $url ) ) {
-                $urls[] = $url;
+            $uri = $this->uwb_clean_url_to_uri( $line );
+            if ( ! empty( $uri ) ) {
+                $uris[] = $uri;
             }
         }
 
-        if ( empty( $urls ) ) {
-            $urls = $this->get_default_preload_sitemaps();
+        if ( empty( $uris ) ) {
+            $uris = $this->get_default_preload_sitemaps();
         }
 
-        return implode( "\n", array_values( array_unique( $urls ) ) );
+        return implode( "\n", array_values( array_unique( $uris ) ) );
     }
 
     public function sanitize_priority_urls( $val ) {
@@ -155,31 +185,124 @@ class Uwb_Admin {
         $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $val ) ) ) );
         
         $preloader = new Uwb_Preloader();
-        $normalized_lines = array();
+        $normalized_uris = array();
         foreach ( $lines as $line ) {
-            $normalized_line = $preloader->normalize_url_by_permalink_settings( $line );
-            if ( ! empty( $normalized_line ) ) {
-                $normalized_lines[] = $normalized_line;
+            $uri = $this->uwb_clean_url_to_uri( $line );
+            $normalized_uri = $preloader->normalize_url_by_permalink_settings( $uri );
+            if ( ! empty( $normalized_uri ) ) {
+                $normalized_uris[] = $normalized_uri;
             }
         }
         
-        return implode( "\n", array_unique( $normalized_lines ) );
+        return implode( "\n", array_unique( $normalized_uris ) );
+    }
+
+    public function sanitize_excluded_urls( $val ) {
+        $val = sanitize_textarea_field( $val );
+        $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $val ) ) ) );
+        
+        $cleaned_uris = array();
+        foreach ( $lines as $line ) {
+            $cleaned = $this->uwb_clean_url_to_uri( $line );
+            if ( ! empty( $cleaned ) ) {
+                $cleaned_uris[] = $cleaned;
+            }
+        }
+        
+        return implode( "\n", array_unique( $cleaned_uris ) );
+    }
+
+    public function sanitize_always_purge_urls( $val ) {
+        $val = sanitize_textarea_field( $val );
+        $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $val ) ) ) );
+        
+        $cleaned_uris = array();
+        foreach ( $lines as $line ) {
+            $cleaned = $this->uwb_clean_url_to_uri( $line );
+            if ( ! empty( $cleaned ) ) {
+                $cleaned_uris[] = $cleaned;
+            }
+        }
+        
+        return implode( "\n", array_unique( $cleaned_uris ) );
     }
 
     private function get_default_preload_sitemaps() {
         return array(
-            home_url( '/important-sitemap.xml' ),
-            home_url( '/wp-sitemap.xml' ),
+            '/important-sitemap.xml',
+            '/wp-sitemap.xml',
         );
     }
 
     private function get_preload_sitemap_setting_value() {
         $value = get_option( 'uwb_preload_sitemap', '' );
         if ( empty( $value ) ) {
-            return implode( "\n", $this->get_default_preload_sitemaps() );
+            $uris = $this->get_default_preload_sitemaps();
+        } else {
+            $uris = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $value ) ) ) );
         }
 
-        return $value;
+        $urls = array();
+        foreach ( $uris as $uri ) {
+            if ( strpos( $uri, 'http' ) !== 0 ) {
+                $urls[] = home_url( '/' . ltrim( $uri, '/' ) );
+            } else {
+                $urls[] = $uri;
+            }
+        }
+
+        return implode( "\n", $urls );
+    }
+
+    private function get_priority_urls_setting_value() {
+        $value = get_option( 'uwb_priority_urls', '' );
+        if ( empty( $value ) ) {
+            return '';
+        }
+        $uris = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $value ) ) ) );
+        $urls = array();
+        foreach ( $uris as $uri ) {
+            if ( strpos( $uri, 'http' ) !== 0 ) {
+                $urls[] = home_url( '/' . ltrim( $uri, '/' ) );
+            } else {
+                $urls[] = $uri;
+            }
+        }
+        return implode( "\n", $urls );
+    }
+
+    private function get_excluded_urls_setting_value() {
+        $value = get_option( 'uwb_excluded_urls', '' );
+        if ( empty( $value ) ) {
+            return '';
+        }
+        $uris = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $value ) ) ) );
+        $urls = array();
+        foreach ( $uris as $uri ) {
+            if ( strpos( $uri, 'http' ) !== 0 && strpos( $uri, '/' ) === 0 ) {
+                $urls[] = home_url( $uri );
+            } else {
+                $urls[] = $uri;
+            }
+        }
+        return implode( "\n", $urls );
+    }
+
+    private function get_always_purge_urls_setting_value() {
+        $value = get_option( 'uwb_always_purge_urls', '' );
+        if ( empty( $value ) ) {
+            return '';
+        }
+        $uris = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $value ) ) ) );
+        $urls = array();
+        foreach ( $uris as $uri ) {
+            if ( strpos( $uri, 'http' ) !== 0 && strpos( $uri, '/' ) === 0 ) {
+                $urls[] = home_url( $uri );
+            } else {
+                $urls[] = $uri;
+            }
+        }
+        return implode( "\n", $urls );
     }
 
     private function migrate_default_important_sitemap() {
@@ -1207,7 +1330,7 @@ class Uwb_Admin {
 
                                         <div class="uwb-form-group">
                                             <label for="uwb_excluded_urls">Excluded URLs</label>
-                                            <textarea name="uwb_excluded_urls" id="uwb_excluded_urls" rows="6"><?php echo esc_textarea( get_option( 'uwb_excluded_urls', '' ) ); ?></textarea>
+                                            <textarea name="uwb_excluded_urls" id="uwb_excluded_urls" rows="6"><?php echo esc_textarea( $this->get_excluded_urls_setting_value() ); ?></textarea>
                                             <p class="description">
                                                 URLs or RegEx patterns that should NEVER be cached (one per line).<br>
                                                 Examples:<br>
@@ -1248,7 +1371,7 @@ class Uwb_Admin {
 
                                         <div class="uwb-form-group">
                                             <label for="uwb_always_purge_urls">Always Purge URL</label>
-                                            <textarea name="uwb_always_purge_urls" id="uwb_always_purge_urls" rows="4" placeholder="/some-page/&#10;https://example.com/another-page/"><?php echo esc_textarea( get_option( 'uwb_always_purge_urls', '' ) ); ?></textarea>
+                                            <textarea name="uwb_always_purge_urls" id="uwb_always_purge_urls" rows="4" placeholder="/some-page/&#10;https://example.com/another-page/"><?php echo esc_textarea( $this->get_always_purge_urls_setting_value() ); ?></textarea>
                                             <p class="description">
                                                 Specify URLs you always want purged from cache whenever you update any post or page (one per line).<br>
                                                 Supports absolute URLs or relative paths starting with <code>/</code>.
@@ -2078,7 +2201,7 @@ class Uwb_Admin {
 
                             <div class="uwb-form-group">
                                 <label for="uwb_priority_urls">Important URLs (Preloaded first)</label>
-                                <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( get_option( 'uwb_priority_urls', '' ) ); ?></textarea>
+                                <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( $this->get_priority_urls_setting_value() ); ?></textarea>
                                 <p class="description">Important URLs or matching keywords, one per line. Valid URLs and paths are also published at <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
                             </div>
                            <div class="uwb-form-group">
