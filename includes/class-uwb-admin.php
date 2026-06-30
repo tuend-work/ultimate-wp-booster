@@ -1647,6 +1647,13 @@ class Uwb_Admin {
                                             <input type="number" name="uwb_redis_retry_interval" id="uwb_redis_retry_interval" placeholder="e.g. 100" value="<?php echo esc_attr( get_option( 'uwb_redis_retry_interval', '' ) ); ?>" />
                                         </div>
                                     </div>
+
+                                    <div class="uwb-form-group" style="margin-top:20px; padding-top:20px; border-top:1px solid var(--uwb-border);">
+                                        <button type="button" id="btn-test-redis-settings" class="button button-secondary" style="font-weight:600; padding:10px 20px; height:auto; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
+                                            Test Connection Settings
+                                        </button>
+                                        <div id="redis-test-result-settings" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:13px; font-weight:600;"></div>
+                                    </div>
                                 </div>
                             </div>
 
