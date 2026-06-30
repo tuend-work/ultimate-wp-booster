@@ -2824,27 +2824,13 @@ class Uwb_Admin {
                 $btn.prop('disabled', true).text('Testing...');
                 $result.hide().removeClass('notice-success notice-error').css({'background': '', 'color': '', 'border': ''});
                 
-                var ocType = $('#uwb_redis_enabled').val();
-                var connType = $('#uwb_redis_conn_type').val();
-                var host = $('#uwb_redis_host').val();
-                var port = $('#uwb_redis_port').val();
-                var socket = $('#uwb_redis_socket').val();
-                var password = $('#uwb_redis_password').val();
-                var db = $('#uwb_redis_db').val();
-
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
                     data: {
                         action: 'uwb_test_redis_connection',
                         nonce: nonce,
-                        type: ocType,
-                        conn_type: connType,
-                        host: host,
-                        port: port,
-                        socket: socket,
-                        password: password,
-                        db: db
+                        is_stored: 1
                     },
                     success: function(res) {
                         $btn.prop('disabled', false).text('Test Connection');
@@ -3293,12 +3279,23 @@ class Uwb_Admin {
             wp_send_json_error( array( 'message' => 'Permission denied.' ) );
         }
 
-        $type = isset( $_POST['type'] ) ? intval( $_POST['type'] ) : 1;
-        $host = isset( $_POST['host'] ) ? sanitize_text_field( $_POST['host'] ) : '127.0.0.1';
-        $port = isset( $_POST['port'] ) ? intval( $_POST['port'] ) : ( $type === 2 ? 11211 : 6379 );
-        $socket = isset( $_POST['socket'] ) ? sanitize_text_field( $_POST['socket'] ) : '';
-        $conn_type = isset( $_POST['conn_type'] ) ? sanitize_text_field( $_POST['conn_type'] ) : 'tcp';
-        $password = isset( $_POST['password'] ) ? sanitize_text_field( $_POST['password'] ) : '';
+        $is_stored = isset( $_POST['is_stored'] ) ? intval( $_POST['is_stored'] ) : 0;
+
+        if ( $is_stored ) {
+            $type = intval( get_option( 'uwb_redis_enabled', 0 ) );
+            $conn_type = get_option( 'uwb_redis_conn_type', 'tcp' );
+            $host = get_option( 'uwb_redis_host', '127.0.0.1' );
+            $port = intval( get_option( 'uwb_redis_port', $type === 2 ? 11211 : 6379 ) );
+            $socket = get_option( 'uwb_redis_socket', '' );
+            $password = get_option( 'uwb_redis_password', '' );
+        } else {
+            $type = isset( $_POST['type'] ) ? intval( $_POST['type'] ) : 1;
+            $host = isset( $_POST['host'] ) ? sanitize_text_field( $_POST['host'] ) : '127.0.0.1';
+            $port = isset( $_POST['port'] ) ? intval( $_POST['port'] ) : ( $type === 2 ? 11211 : 6379 );
+            $socket = isset( $_POST['socket'] ) ? sanitize_text_field( $_POST['socket'] ) : '';
+            $conn_type = isset( $_POST['conn_type'] ) ? sanitize_text_field( $_POST['conn_type'] ) : 'tcp';
+            $password = isset( $_POST['password'] ) ? sanitize_text_field( $_POST['password'] ) : '';
+        }
 
         if ( $type === 2 ) {
             // Memcached Test
