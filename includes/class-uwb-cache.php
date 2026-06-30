@@ -178,6 +178,7 @@ class Uwb_Cache {
         $php_lifespan_seconds = $php_lifespan_minutes * 60;
 
         $config = array(
+            'cache_page_enabled'       => intval( get_option( 'uwb_cache_page_enabled', 1 ) ),
             'cache_lifespan'           => $lifespan_seconds,
             'cache_logged_in'          => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
             'cache_logged_in_lifespan' => intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ) * 60,

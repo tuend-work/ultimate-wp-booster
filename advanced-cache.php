@@ -54,6 +54,14 @@ function uwb_advanced_cache_run() {
         }
     }
 
+    $cache_page_enabled = isset( $config['cache_page_enabled'] ) ? (bool) $config['cache_page_enabled'] : true;
+    if ( ! $cache_page_enabled ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: Page caching is disabled in settings." );
+        }
+        return;
+    }
+
     $cache_logged_in = (bool) $config['cache_logged_in'];
 
     // 4. Check query string bypass & caching
