@@ -1524,7 +1524,7 @@ class Uwb_Admin {
                                         $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : 'Unknown';
                                         ?>
                                         
-                                        <!-- Top row: 3 Gauges & General Info -->
+                                        <!-- Gauges row: 3 Gauges -->
                                         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:24px;">
                                             <!-- Gauge 1: Memory -->
                                             <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:20px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center;">
@@ -1561,23 +1561,10 @@ class Uwb_Admin {
                                                     <span style="position:absolute; font-size:20px; font-weight:700; color:var(--uwb-text);"><?php echo $keys_pct; ?>%</span>
                                                 </div>
                                             </div>
-
-                                            <!-- Card 4: General info -->
-                                            <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:20px;">
-                                                <strong style="font-size:14px; color:var(--uwb-text); margin-bottom:12px; display:block; border-bottom:1px solid var(--uwb-border); padding-bottom:8px;">General info</strong>
-                                                <table style="width:100%; font-size:12.5px; border-collapse:collapse;">
-                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:4px 0; color:var(--uwb-text-muted);">OPcache version:</td><td style="padding:4px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($opcache_version); ?></td></tr>
-                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:4px 0; color:var(--uwb-text-muted);">PHP version:</td><td style="padding:4px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($php_version); ?></td></tr>
-                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:4px 0; color:var(--uwb-text-muted);">host:</td><td style="padding:4px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($host); ?></td></tr>
-                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:4px 0; color:var(--uwb-text-muted);">server software:</td><td style="padding:4px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($server_software); ?></td></tr>
-                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:4px 0; color:var(--uwb-text-muted);">start time:</td><td style="padding:4px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($start_time); ?></td></tr>
-                                                    <tr><td style="padding:4px 0; color:var(--uwb-text-muted);">last reset:</td><td style="padding:4px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($last_restart); ?></td></tr>
-                                                </table>
-                                            </div>
                                         </div>
 
-                                        <!-- Bottom row: Details Grid -->
-                                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:20px;">
+                                        <!-- Stats details row: 3 Cards -->
+                                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:20px; margin-bottom:24px;">
                                             <!-- Card 1: Memory usage -->
                                             <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:20px;">
                                                 <strong style="font-size:14px; color:var(--uwb-text); margin-bottom:12px; display:block; border-bottom:1px solid var(--uwb-border); padding-bottom:8px;">Memory usage</strong>
@@ -1612,8 +1599,24 @@ class Uwb_Admin {
                                                     <tr><td style="padding:6px 0; color:var(--uwb-text-muted);">number of strings:</td><td style="padding:6px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo number_format($is_strings); ?></td></tr>
                                                 </table>
                                             </div>
+                                        </div>
 
-                                            <!-- Card 4: Available functions -->
+                                        <!-- General Info & Available functions row: 2 Cards -->
+                                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+                                            <!-- Card 1: General info -->
+                                            <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:20px;">
+                                                <strong style="font-size:14px; color:var(--uwb-text); margin-bottom:12px; display:block; border-bottom:1px solid var(--uwb-border); padding-bottom:8px;">General info</strong>
+                                                <table style="width:100%; font-size:12.5px; border-collapse:collapse;">
+                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:6px 0; color:var(--uwb-text-muted);">OPcache version:</td><td style="padding:6px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($opcache_version); ?></td></tr>
+                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:6px 0; color:var(--uwb-text-muted);">PHP version:</td><td style="padding:6px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($php_version); ?></td></tr>
+                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:6px 0; color:var(--uwb-text-muted);">host:</td><td style="padding:6px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($host); ?></td></tr>
+                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:6px 0; color:var(--uwb-text-muted);">server software:</td><td style="padding:6px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($server_software); ?></td></tr>
+                                                    <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:6px 0; color:var(--uwb-text-muted);">start time:</td><td style="padding:6px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($start_time); ?></td></tr>
+                                                    <tr><td style="padding:6px 0; color:var(--uwb-text-muted);">last reset:</td><td style="padding:6px 0; text-align:right; font-weight:600; color:var(--uwb-text);"><?php echo esc_html($last_restart); ?></td></tr>
+                                                </table>
+                                            </div>
+
+                                            <!-- Card 2: Available functions -->
                                             <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:20px;">
                                                 <strong style="font-size:14px; color:var(--uwb-text); margin-bottom:12px; display:block; border-bottom:1px solid var(--uwb-border); padding-bottom:8px;">Available functions</strong>
                                                 <div style="display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
@@ -1629,8 +1632,8 @@ class Uwb_Admin {
                                                     foreach ( $funcs as $f ) :
                                                         $avail = function_exists( $f );
                                                         ?>
-                                                        <div style="display:flex; justify-content:space-between;">
-                                                            <code style="color:var(--uwb-primary);"><?php echo $f; ?></code>
+                                                        <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f1f5f9;">
+                                                            <code style="color:var(--uwb-primary); background:none; padding:0;"><?php echo $f; ?></code>
                                                             <span style="font-weight:600; color:<?php echo $avail ? '#10b981' : '#ef4444'; ?>;"><?php echo $avail ? 'available' : 'unavailable'; ?></span>
                                                         </div>
                                                     <?php endforeach; ?>
