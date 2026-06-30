@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.4.84
+ * Version:     1.4.85
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.4.84' );
+define( 'UWB_VERSION', '1.4.85' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -94,13 +94,13 @@ function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
         ) );
     }
 
-    // Add sub-node: Clear & Preload Cache
-    $clear_preload_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_preload' ), 'uwb_clear_preload_action' );
+    // Add sub-node: Clear Cache Page (only clear, no preload)
+    $clear_cache_page_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cache_page' ), 'uwb_clear_cache_page_action' );
     $wp_admin_bar->add_node( array(
-        'id'     => 'uwb-clear-preload',
+        'id'     => 'uwb-clear-cache-page',
         'parent' => 'uwb-admin-bar',
-        'title'  => 'Clear & Preload Cache',
-        'href'   => $clear_preload_url,
+        'title'  => 'Clear Cache Page',
+        'href'   => $clear_cache_page_url,
     ) );
 
     // Add sub-node: Flush OPCache
@@ -159,6 +159,15 @@ function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
         ) );
     }
 
+    // Add sub-node: Flush All & Preload Cache (above settings)
+    $flush_all_preload_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_all_preload' ), 'uwb_flush_all_preload_action' );
+    $wp_admin_bar->add_node( array(
+        'id'     => 'uwb-flush-all-preload',
+        'parent' => 'uwb-admin-bar',
+        'title'  => 'Flush All & Preload Cache',
+        'href'   => $flush_all_preload_url,
+    ) );
+
     // Add sub-node: Settings
     $wp_admin_bar->add_node( array(
         'id'     => 'uwb-settings',
@@ -189,19 +198,49 @@ function uwb_handle_admin_bar_purge_url() {
     exit;
 }
 
-add_action( 'admin_post_uwb_clear_preload', 'uwb_handle_admin_bar_clear_preload' );
-function uwb_handle_admin_bar_clear_preload() {
+add_action( 'admin_post_uwb_clear_cache_page', 'uwb_handle_admin_bar_clear_cache_page' );
+function uwb_handle_admin_bar_clear_cache_page() {
     if ( ! current_user_can( 'manage_options' ) ) {
         wp_die( 'Permission denied.' );
     }
 
-    check_admin_referer( 'uwb_clear_preload_action' );
+    check_admin_referer( 'uwb_clear_cache_page_action' );
 
     // Purge all cache
     $uwb_cache = new Uwb_Cache();
     $uwb_cache->purge_all();
 
-    // Start preloader process
+    // Redirect back to settings page or referrer
+    $referer = wp_get_referer();
+    if ( $referer && strpos( $referer, 'options-general.php?page=ultimate-wp-booster' ) !== false ) {
+        wp_safe_redirect( add_query_arg( 'uwb_msg', 'cache_cleared', $referer ) );
+    } else {
+        wp_safe_redirect( admin_url( 'options-general.php?page=ultimate-wp-booster' ) );
+    }
+    exit;
+}
+
+add_action( 'admin_post_uwb_flush_all_preload', 'uwb_handle_admin_bar_flush_all_preload' );
+function uwb_handle_admin_bar_flush_all_preload() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die( 'Permission denied.' );
+    }
+
+    check_admin_referer( 'uwb_flush_all_preload_action' );
+
+    // 1. Purge all page cache
+    $uwb_cache = new Uwb_Cache();
+    $uwb_cache->purge_all();
+
+    // 2. Flush OPCache
+    if ( function_exists( 'opcache_reset' ) ) {
+        @opcache_reset();
+    }
+
+    // 3. Flush Object Cache
+    uwb_flush_object_cache_internal();
+
+    // 4. Start preloader process
     $uwb_preloader = new Uwb_Preloader();
     $uwb_preloader->start_preload();
 
@@ -215,14 +254,7 @@ function uwb_handle_admin_bar_clear_preload() {
     exit;
 }
 
-add_action( 'admin_post_uwb_flush_object_cache', 'uwb_handle_admin_bar_flush_object_cache' );
-function uwb_handle_admin_bar_flush_object_cache() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_die( 'Permission denied.' );
-    }
-
-    check_admin_referer( 'uwb_flush_object_cache_action' );
-
+function uwb_flush_object_cache_internal() {
     // Try direct flush using client if class exists
     $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
     if ( $oc_type === 2 ) {
@@ -269,6 +301,17 @@ function uwb_handle_admin_bar_flush_object_cache() {
     }
 
     wp_cache_flush();
+}
+
+add_action( 'admin_post_uwb_flush_object_cache', 'uwb_handle_admin_bar_flush_object_cache' );
+function uwb_handle_admin_bar_flush_object_cache() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die( 'Permission denied.' );
+    }
+
+    check_admin_referer( 'uwb_flush_object_cache_action' );
+
+    uwb_flush_object_cache_internal();
 
     // Redirect back to referrer
     wp_safe_redirect( wp_get_referer() ? wp_get_referer() : home_url( '/' ) );
