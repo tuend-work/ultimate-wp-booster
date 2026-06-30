@@ -1099,7 +1099,7 @@ class Uwb_Admin {
                                     </h3>
                                     
                                     <div class="uwb-form-group" style="margin-bottom: 24px;">
-                                        <label for="uwb_cache_page_enabled">Enable Page Caching</label>
+                                        <label for="uwb_cache_page_enabled">Enable HTML Page Caching</label>
                                         <select name="uwb_cache_page_enabled" id="uwb_cache_page_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                             <option value="1" <?php selected( get_option( 'uwb_cache_page_enabled', 1 ), 1 ); ?>>Enabled</option>
                                             <option value="0" <?php selected( get_option( 'uwb_cache_page_enabled', 1 ), 0 ); ?>>Disabled</option>
