@@ -19,6 +19,16 @@ class Uwb_Optimizer {
             return $html;
         }
 
+        $debug_mode = isset( $_GET['uwb_debug'] );
+        if ( $debug_mode ) {
+            $GLOBALS['uwb_debug_log'] = array();
+            $GLOBALS['uwb_debug_log'][] = "=== UWB OPTIMIZER DEBUG LOG ===";
+            $GLOBALS['uwb_debug_log'][] = "ABSPATH: " . ABSPATH;
+            $GLOBALS['uwb_debug_log'][] = "WP_CONTENT_DIR: " . (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : 'undefined');
+            $GLOBALS['uwb_debug_log'][] = "Home URL: " . (function_exists( 'home_url' ) ? home_url() : 'undefined');
+            $GLOBALS['uwb_debug_log'][] = "Config: " . json_encode( $config );
+        }
+
         // 1. Critical CSS Injection
         if ( ! empty( $config['tuning_critical_css'] ) ) {
             $html = self::inject_critical_css( $html, $config['tuning_critical_css'] );
@@ -82,6 +92,10 @@ class Uwb_Optimizer {
         // 12. Minify HTML markup
         if ( ! empty( $config['html_minify'] ) ) {
             $html = self::minify_html( $html );
+        }
+
+        if ( $debug_mode && ! empty( $GLOBALS['uwb_debug_log'] ) ) {
+            $html .= "\n<!-- UWB DEBUG LOG:\n" . implode( "\n", $GLOBALS['uwb_debug_log'] ) . "\n-->";
         }
 
         return $html;
@@ -436,17 +450,29 @@ class Uwb_Optimizer {
             }
 
             $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
+            $debug_mode = isset( $_GET['uwb_debug'] );
+            if ( $debug_mode ) {
+                $exists = ( $local_path && file_exists( $local_path ) ) ? 'YES' : 'NO';
+                $GLOBALS['uwb_debug_log'][] = "CSS URL: $url -> Cleaned: $url_clean -> Local Path: " . ($local_path ? $local_path : 'false') . " (Exists: $exists)";
+            }
+
             if ( ! $local_path || ! file_exists( $local_path ) ) {
                 return $tag;
             }
 
             if ( stripos( $url_clean, '.min.css' ) !== false ) {
+                if ( $debug_mode ) {
+                    $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean is already .min.css, skipping minify.";
+                }
                 return $tag;
             }
 
             $min_sibling = substr( $local_path, 0, -4 ) . '.min.css';
             if ( file_exists( $min_sibling ) ) {
                 $sibling_url = substr( $url_clean, 0, -4 ) . '.min.css';
+                if ( $debug_mode ) {
+                    $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean has a .min.css sibling at $min_sibling, replacing.";
+                }
                 return str_replace( $url, $sibling_url, $tag );
             }
 
@@ -454,15 +480,29 @@ class Uwb_Optimizer {
             $cache_file = $cache_dir . '/' . $hash . '.css';
             $cache_url = content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.css' );
 
+            if ( $debug_mode ) {
+                $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Cache file = $cache_file, Cache URL = $cache_url";
+            }
+
             if ( ! file_exists( $cache_file ) ) {
                 $content = @file_get_contents( $local_path );
                 if ( ! empty( $content ) ) {
                     $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
                     $content = preg_replace('/\s*([{}|;:,])\s*/', '$1', $content);
                     $content = preg_replace('/\s+/', ' ', $content);
-                    @file_put_contents( $cache_file, trim( $content ) );
+                    $write_ok = @file_put_contents( $cache_file, trim( $content ) );
+                    if ( $debug_mode ) {
+                        $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Minifying and writing to cache. Success: " . ($write_ok !== false ? 'YES' : 'NO');
+                    }
                 } else {
+                    if ( $debug_mode ) {
+                        $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Failed to read local file content.";
+                    }
                     return $tag;
+                }
+            } else {
+                if ( $debug_mode ) {
+                    $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Minified cache file already exists.";
                 }
             }
 
@@ -493,17 +533,29 @@ class Uwb_Optimizer {
             }
 
             $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
+            $debug_mode = isset( $_GET['uwb_debug'] );
+            if ( $debug_mode ) {
+                $exists = ( $local_path && file_exists( $local_path ) ) ? 'YES' : 'NO';
+                $GLOBALS['uwb_debug_log'][] = "JS URL: $url -> Cleaned: $url_clean -> Local Path: " . ($local_path ? $local_path : 'false') . " (Exists: $exists)";
+            }
+
             if ( ! $local_path || ! file_exists( $local_path ) ) {
                 return $tag;
             }
 
             if ( stripos( $url_clean, '.min.js' ) !== false ) {
+                if ( $debug_mode ) {
+                    $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean is already .min.js, skipping minify.";
+                }
                 return $tag;
             }
 
             $min_sibling = substr( $local_path, 0, -3 ) . '.min.js';
             if ( file_exists( $min_sibling ) ) {
                 $sibling_url = substr( $url_clean, 0, -3 ) . '.min.js';
+                if ( $debug_mode ) {
+                    $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean has a .min.js sibling at $min_sibling, replacing.";
+                }
                 return str_replace( $url, $sibling_url, $tag );
             }
 
@@ -511,15 +563,29 @@ class Uwb_Optimizer {
             $cache_file = $cache_dir . '/' . $hash . '.js';
             $cache_url = content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.js' );
 
+            if ( $debug_mode ) {
+                $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Cache file = $cache_file, Cache URL = $cache_url";
+            }
+
             if ( ! file_exists( $cache_file ) ) {
                 $content = @file_get_contents( $local_path );
                 if ( ! empty( $content ) ) {
                     $content = preg_replace('/(?<!:)\/\/.*$/m', '', $content);
                     $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
                     $content = preg_replace('/\s+/', ' ', $content);
-                    @file_put_contents( $cache_file, trim( $content ) );
+                    $write_ok = @file_put_contents( $cache_file, trim( $content ) );
+                    if ( $debug_mode ) {
+                        $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Minifying and writing to cache. Success: " . ($write_ok !== false ? 'YES' : 'NO');
+                    }
                 } else {
+                    if ( $debug_mode ) {
+                        $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Failed to read local file content.";
+                    }
                     return $tag;
+                }
+            } else {
+                if ( $debug_mode ) {
+                    $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Minified cache file already exists.";
                 }
             }
 
