@@ -522,25 +522,17 @@ class Uwb_Optimizer {
      * Resolve a CSS/JS URL to its absolute local file path on the server.
      */
     private static function resolve_local_path( $url, $home_url, $home_host ) {
-        if ( strpos( $url, '//' ) === 0 ) {
-            if ( ! empty( $home_host ) && strpos( $url, '//' . $home_host ) !== 0 ) {
+        $parsed = parse_url( $url );
+        if ( ! empty( $parsed['host'] ) && ! empty( $home_host ) ) {
+            if ( strcasecmp( $parsed['host'], $home_host ) !== 0 ) {
                 return false;
             }
-            $url = ( is_ssl() ? 'https:' : 'http:' ) . $url;
         }
-
-        if ( strpos( $url, 'http' ) === 0 ) {
-            if ( ! empty( $home_url ) && strpos( $url, $home_url ) !== 0 ) {
-                return false;
-            }
-            $relative = str_ireplace( $home_url, '', $url );
-        } else {
-            $relative = $url;
-        }
-
+        $relative = isset( $parsed['path'] ) ? $parsed['path'] : '';
         $relative = ltrim( $relative, '/' );
-        $path = ABSPATH . $relative;
-
-        return $path;
+        if ( empty( $relative ) ) {
+            return false;
+        }
+        return ABSPATH . $relative;
     }
 }
