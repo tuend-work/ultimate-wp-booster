@@ -255,7 +255,14 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                 wp_send_json_error( array( 'message' => 'Failed to unzip package: ' . $result->get_error_message() ) );
             }
 
-            // Determine extracted folder name (normally "{repo}-main")
+            // Initialize WordPress Filesystem API
+            global $wp_filesystem;
+            if ( ! $wp_filesystem ) {
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                WP_Filesystem( false, false, true );
+            }
+
+            // Determine extracted folder name (normally "ultimate-wp-booster-main")
             $extracted_dir = WP_CONTENT_DIR . '/upgrade-temp';
             $entries       = scandir( $extracted_dir );
             $new_folder    = '';
@@ -263,29 +270,47 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                 if ( $entry === '.' || $entry === '..' ) {
                     continue;
                 }
-                $new_folder = $extracted_dir . '/' . $entry;
-                break;
+                if ( strpos( $entry, 'ultimate-wp-booster' ) !== false && is_dir( $extracted_dir . '/' . $entry ) ) {
+                    $new_folder = $extracted_dir . '/' . $entry;
+                    break;
+                }
             }
+
+            if ( ! $new_folder || ! is_dir( $new_folder ) ) {
+                // Fallback to first directory found
+                foreach ( $entries as $entry ) {
+                    if ( $entry === '.' || $entry === '..' ) {
+                        continue;
+                    }
+                    if ( is_dir( $extracted_dir . '/' . $entry ) ) {
+                        $new_folder = $extracted_dir . '/' . $entry;
+                        break;
+                    }
+                }
+            }
+
             if ( ! $new_folder || ! is_dir( $new_folder ) ) {
                 if ( $was_active ) {
                     activate_plugin( $this->basename );
                 }
-                wp_send_json_error( array( 'message' => 'Unexpected zip structure.' ) );
+                wp_send_json_error( array( 'message' => 'Unexpected zip structure: No extracted directory found.' ) );
             }
 
-            // Remove old plugin folder
+            // Copy new folder into plugins directory using robust WP Filesystem APIs
             $plugin_dir = WP_PLUGIN_DIR . '/' . dirname( $this->basename );
-            $this->delete_directory( $plugin_dir );
+            
+            if ( $wp_filesystem->exists( $plugin_dir ) ) {
+                $wp_filesystem->delete( $plugin_dir, true );
+            }
 
-            // Move new folder into plugins directory
-            $move_result = rename( $new_folder, $plugin_dir );
-            $this->delete_directory( $extracted_dir );
+            $copy_result = copy_dir( $new_folder, $plugin_dir );
+            $wp_filesystem->delete( $extracted_dir, true );
 
-            if ( ! $move_result ) {
+            if ( is_wp_error( $copy_result ) ) {
                 if ( $was_active ) {
                     activate_plugin( $this->basename );
                 }
-                wp_send_json_error( array( 'message' => 'Failed to move new plugin into place.' ) );
+                wp_send_json_error( array( 'message' => 'Failed to copy new plugin files: ' . $copy_result->get_error_message() ) );
             }
 
             // Reactivate if it was active before update
