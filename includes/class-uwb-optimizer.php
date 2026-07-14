@@ -67,13 +67,15 @@ class Uwb_Optimizer {
             $html = self::defer_js( $html, $js_excludes );
         }
 
-        // 10. Minify Inline CSS
+        // 10. Minify CSS
         if ( ! empty( $config['css_minify'] ) ) {
+            $html = self::minify_external_css( $html );
             $html = self::minify_inline_css( $html );
         }
 
-        // 11. Minify Inline JS
+        // 11. Minify JS
         if ( ! empty( $config['js_minify'] ) ) {
+            $html = self::minify_external_js( $html );
             $html = self::minify_inline_js( $html );
         }
 
@@ -402,5 +404,143 @@ class Uwb_Optimizer {
             return str_replace( $matches[0], $matches[0] . "\n" . $style_tag, $html );
         }
         return $html;
+    }
+
+    /**
+     * Minify external CSS files and replace their URLs with cached minified versions.
+     */
+    public static function minify_external_css( $html ) {
+        $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
+        if ( ! is_dir( $cache_dir ) ) {
+            @mkdir( $cache_dir, 0755, true );
+        }
+
+        $home_url = function_exists( 'home_url' ) ? home_url() : '';
+        $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
+
+        return preg_replace_callback('#<link\b(?>[^>]*?)href=([\'"])(.*?\.css)(?:\?(?>[^\'"]*?))?\1(?>[^>]*?)>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
+            $tag = $matches[0];
+            $url = $matches[2];
+
+            if ( stripos( $tag, 'rel=' ) === false || stripos( $tag, 'stylesheet' ) === false ) {
+                return $tag;
+            }
+
+            if ( stripos( $tag, 'uwb-critical-css' ) !== false ) {
+                return $tag;
+            }
+
+            $local_path = self::resolve_local_path( $url, $home_url, $home_host );
+            if ( ! $local_path || ! file_exists( $local_path ) ) {
+                return $tag;
+            }
+
+            if ( stripos( $url, '.min.css' ) !== false ) {
+                return $tag;
+            }
+
+            $min_sibling = substr( $local_path, 0, -4 ) . '.min.css';
+            if ( file_exists( $min_sibling ) ) {
+                $sibling_url = substr( $url, 0, -4 ) . '.min.css';
+                return str_replace( $url, $sibling_url, $tag );
+            }
+
+            $hash = md5( $local_path . '_' . filemtime( $local_path ) );
+            $cache_file = $cache_dir . '/' . $hash . '.css';
+            $cache_url = content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.css' );
+
+            if ( ! file_exists( $cache_file ) ) {
+                $content = @file_get_contents( $local_path );
+                if ( ! empty( $content ) ) {
+                    $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
+                    $content = preg_replace('/\s*([{}|;:,])\s*/', '$1', $content);
+                    $content = preg_replace('/\s+/', ' ', $content);
+                    @file_put_contents( $cache_file, trim( $content ) );
+                } else {
+                    return $tag;
+                }
+            }
+
+            $new_tag = preg_replace('/href=([\'"])(.*?)\1/i', 'href="' . esc_url( $cache_url ) . '"', $tag);
+            return $new_tag;
+        }, $html);
+    }
+
+    /**
+     * Minify external JS files and replace their URLs with cached minified versions.
+     */
+    public static function minify_external_js( $html ) {
+        $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
+        if ( ! is_dir( $cache_dir ) ) {
+            @mkdir( $cache_dir, 0755, true );
+        }
+
+        $home_url = function_exists( 'home_url' ) ? home_url() : '';
+        $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
+
+        return preg_replace_callback('#<script\b(?>[^>]*?)src=([\'"])(.*?\.js)(?:\?(?>[^\'"]*?))?\1(?>[^>]*?)>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
+            $tag = $matches[0];
+            $url = $matches[2];
+
+            $local_path = self::resolve_local_path( $url, $home_url, $home_host );
+            if ( ! $local_path || ! file_exists( $local_path ) ) {
+                return $tag;
+            }
+
+            if ( stripos( $url, '.min.js' ) !== false ) {
+                return $tag;
+            }
+
+            $min_sibling = substr( $local_path, 0, -3 ) . '.min.js';
+            if ( file_exists( $min_sibling ) ) {
+                $sibling_url = substr( $url, 0, -3 ) . '.min.js';
+                return str_replace( $url, $sibling_url, $tag );
+            }
+
+            $hash = md5( $local_path . '_' . filemtime( $local_path ) );
+            $cache_file = $cache_dir . '/' . $hash . '.js';
+            $cache_url = content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.js' );
+
+            if ( ! file_exists( $cache_file ) ) {
+                $content = @file_get_contents( $local_path );
+                if ( ! empty( $content ) ) {
+                    $content = preg_replace('/(?<!:)\/\/.*$/m', '', $content);
+                    $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
+                    $content = preg_replace('/\s+/', ' ', $content);
+                    @file_put_contents( $cache_file, trim( $content ) );
+                } else {
+                    return $tag;
+                }
+            }
+
+            $new_tag = preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . esc_url( $cache_url ) . '"', $tag);
+            return $new_tag;
+        }, $html);
+    }
+
+    /**
+     * Resolve a CSS/JS URL to its absolute local file path on the server.
+     */
+    private static function resolve_local_path( $url, $home_url, $home_host ) {
+        if ( strpos( $url, '//' ) === 0 ) {
+            if ( ! empty( $home_host ) && strpos( $url, '//' . $home_host ) !== 0 ) {
+                return false;
+            }
+            $url = ( is_ssl() ? 'https:' : 'http:' ) . $url;
+        }
+
+        if ( strpos( $url, 'http' ) === 0 ) {
+            if ( ! empty( $home_url ) && strpos( $url, $home_url ) !== 0 ) {
+                return false;
+            }
+            $relative = str_ireplace( $home_url, '', $url );
+        } else {
+            $relative = $url;
+        }
+
+        $relative = ltrim( $relative, '/' );
+        $path = ABSPATH . $relative;
+
+        return $path;
     }
 }
