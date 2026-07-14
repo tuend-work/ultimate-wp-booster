@@ -199,7 +199,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
          */
         public function ajax_manual_update() {
             // Check permission
-            if ( ! current_user_can( 'update_plugins' ) ) {
+            if ( ! current_user_can( 'manage_options' ) ) {
                 wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
             }
 
