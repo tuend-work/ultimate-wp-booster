@@ -418,9 +418,14 @@ class Uwb_Optimizer {
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
 
-        return preg_replace_callback('#<link\b(?>[^>]*?)href=([\'"])(.*?\.css)(?:\?(?>[^\'"]*?))?\1(?>[^>]*?)>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
+        return preg_replace_callback('#<link\b(?>[^>]*?)href=([\'"])(.*?)\1(?>[^>]*?)>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
             $tag = $matches[0];
             $url = $matches[2];
+            $url_clean = strtok( $url, '?' );
+
+            if ( strtolower( substr( $url_clean, -4 ) ) !== '.css' ) {
+                return $tag;
+            }
 
             if ( stripos( $tag, 'rel=' ) === false || stripos( $tag, 'stylesheet' ) === false ) {
                 return $tag;
@@ -430,18 +435,18 @@ class Uwb_Optimizer {
                 return $tag;
             }
 
-            $local_path = self::resolve_local_path( $url, $home_url, $home_host );
+            $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
             if ( ! $local_path || ! file_exists( $local_path ) ) {
                 return $tag;
             }
 
-            if ( stripos( $url, '.min.css' ) !== false ) {
+            if ( stripos( $url_clean, '.min.css' ) !== false ) {
                 return $tag;
             }
 
             $min_sibling = substr( $local_path, 0, -4 ) . '.min.css';
             if ( file_exists( $min_sibling ) ) {
-                $sibling_url = substr( $url, 0, -4 ) . '.min.css';
+                $sibling_url = substr( $url_clean, 0, -4 ) . '.min.css';
                 return str_replace( $url, $sibling_url, $tag );
             }
 
@@ -478,22 +483,27 @@ class Uwb_Optimizer {
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
 
-        return preg_replace_callback('#<script\b(?>[^>]*?)src=([\'"])(.*?\.js)(?:\?(?>[^\'"]*?))?\1(?>[^>]*?)>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
+        return preg_replace_callback('#<script\b(?>[^>]*?)src=([\'"])(.*?)\1(?>[^>]*?)>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
             $tag = $matches[0];
             $url = $matches[2];
+            $url_clean = strtok( $url, '?' );
 
-            $local_path = self::resolve_local_path( $url, $home_url, $home_host );
+            if ( strtolower( substr( $url_clean, -3 ) ) !== '.js' ) {
+                return $tag;
+            }
+
+            $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
             if ( ! $local_path || ! file_exists( $local_path ) ) {
                 return $tag;
             }
 
-            if ( stripos( $url, '.min.js' ) !== false ) {
+            if ( stripos( $url_clean, '.min.js' ) !== false ) {
                 return $tag;
             }
 
             $min_sibling = substr( $local_path, 0, -3 ) . '.min.js';
             if ( file_exists( $min_sibling ) ) {
-                $sibling_url = substr( $url, 0, -3 ) . '.min.js';
+                $sibling_url = substr( $url_clean, 0, -3 ) . '.min.js';
                 return str_replace( $url, $sibling_url, $tag );
             }
 
