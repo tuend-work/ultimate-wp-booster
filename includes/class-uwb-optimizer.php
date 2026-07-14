@@ -120,7 +120,7 @@ class Uwb_Optimizer {
      * Remove inline emoji JS and styles.
      */
     public static function remove_emoji( $html ) {
-        $html = preg_replace('/<script[^>]*>.*?window\._wpemojiSettings.*?<\/script>/is', '', $html);
+        $html = preg_replace('#<script\b[^>]*>[^<]*?window\._wpemojiSettings[^<]*?<\/script>#is', '', $html);
         $html = preg_replace('/<style[^>]*>[^<]*img\.wp-smiley[^<]*<\/style>/is', '', $html);
         return $html;
     }
@@ -129,16 +129,20 @@ class Uwb_Optimizer {
      * Remove noscript blocks completely.
      */
     public static function remove_noscript( $html ) {
-        return preg_replace('/<noscript>.*?<\/noscript>/is', '', $html);
+        return preg_replace('#<noscript\b[^>]*>(?>[^<]++|<(?!/noscript>))*?</noscript>#is', '', $html);
     }
 
     /**
      * Minify CSS inside style tags.
      */
     public static function minify_inline_css( $html ) {
-        return preg_replace_callback('/<style([^>]*)>(.*?)<\/style>/is', function( $matches ) {
+        return preg_replace_callback('#<style\b([^>]*)>(?>[^<]++|<(?!/style>))*?</style>#is', function( $matches ) {
             $attrs = $matches[1];
-            $css = $matches[2];
+            // Re-match content within the matched style tag to extract the style content
+            if ( ! preg_match('#^<style\b[^>]*>(.*?)<\/style>$#is', $matches[0], $inner_matches) ) {
+                return $matches[0];
+            }
+            $css = $inner_matches[1];
             // Skip if this is critical css to avoid stripping placeholder signatures
             if ( strpos( $attrs, 'uwb-critical-css' ) !== false ) {
                 return $matches[0];
@@ -157,9 +161,13 @@ class Uwb_Optimizer {
      * Minify inline script blocks using simple safe regex rules.
      */
     public static function minify_inline_js( $html ) {
-        return preg_replace_callback('/<script([^>]*)>(.*?)<\/script>/is', function( $matches ) {
+        return preg_replace_callback('#<script\b([^>]*)>(?>[^<]++|<(?!/script>))*?</script>#is', function( $matches ) {
             $attrs = $matches[1];
-            $js = $matches[2];
+            // Re-match content within the matched script tag to extract the script content
+            if ( ! preg_match('#^<script\b[^>]*>(.*?)<\/script>$#is', $matches[0], $inner_matches) ) {
+                return $matches[0];
+            }
+            $js = $inner_matches[1];
             // Only process if it has no src attribute and is javascript
             if ( stripos( $attrs, 'src=' ) !== false ) {
                 return $matches[0];
