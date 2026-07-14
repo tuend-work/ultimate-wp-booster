@@ -663,23 +663,31 @@ class Uwb_Admin {
         }
     }
 
-    private function render_toggle_switch( $option_name, $label_desc, $detailed_desc = '' ) {
+    private function render_toggle_switch( $option_name, $label_desc, $detailed_desc = '', $disabled = false ) {
         $val = intval( get_option( $option_name, 0 ) );
+        if ( $disabled ) {
+            $val = 0; // force 0 if disabled
+        }
         ?>
-        <div class="uwb-opt-row" style="display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; gap: 20px; flex-wrap: wrap;">
+        <div class="uwb-opt-row <?php echo $disabled ? 'uwb-opt-disabled' : ''; ?>" style="display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; gap: 20px; flex-wrap: wrap; <?php echo $disabled ? 'opacity: 0.65;' : ''; ?>">
             <div style="flex: 1; min-width: 250px;">
-                <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 4px;"><?php echo esc_html( $label_desc ); ?></strong>
+                <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 4px;">
+                    <?php echo esc_html( $label_desc ); ?>
+                    <?php if ( $disabled ) : ?>
+                        <span style="background: #cbd5e1; color: #475569; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 8px; vertical-align: middle;">Updating...</span>
+                    <?php endif; ?>
+                </strong>
                 <?php if ( ! empty( $detailed_desc ) ) : ?>
                     <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block;"><?php echo wp_kses_post( $detailed_desc ); ?></span>
                 <?php endif; ?>
             </div>
             <div style="flex-shrink: 0;">
-                <div class="uwb-toggle-container">
-                    <label class="uwb-toggle-btn <?php echo ! $val ? 'active' : ''; ?>">
-                        <input type="radio" name="<?php echo esc_attr( $option_name ); ?>" value="0" <?php checked( $val, 0 ); ?> class="uwb-toggle-input"> OFF
+                <div class="uwb-toggle-container <?php echo $disabled ? 'disabled' : ''; ?>">
+                    <label class="uwb-toggle-btn <?php echo $disabled ? 'disabled' : ''; ?> <?php echo ! $val ? 'active' : ''; ?>">
+                        <input type="radio" name="<?php echo esc_attr( $option_name ); ?>" value="0" <?php checked( $val, 0 ); ?> <?php disabled( $disabled, true ); ?> class="uwb-toggle-input"> OFF
                     </label>
-                    <label class="uwb-toggle-btn <?php echo $val ? 'active' : ''; ?>">
-                        <input type="radio" name="<?php echo esc_attr( $option_name ); ?>" value="1" <?php checked( $val, 1 ); ?> class="uwb-toggle-input"> ON
+                    <label class="uwb-toggle-btn <?php echo $disabled ? 'disabled' : ''; ?> <?php echo $val ? 'active' : ''; ?>">
+                        <input type="radio" name="<?php echo esc_attr( $option_name ); ?>" value="1" <?php checked( $val, 1 ); ?> <?php disabled( $disabled, true ); ?> class="uwb-toggle-input"> ON
                     </label>
                 </div>
             </div>
@@ -687,12 +695,20 @@ class Uwb_Admin {
         <?php
     }
 
-    private function render_textarea_setting( $option_name, $label_desc, $placeholder = '', $detailed_desc = '' ) {
+    private function render_textarea_setting( $option_name, $label_desc, $placeholder = '', $detailed_desc = '', $disabled = false ) {
         $val = get_option( $option_name, '' );
+        if ( $disabled ) {
+            $val = '';
+        }
         ?>
-        <div class="uwb-opt-row" style="background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px;">
-            <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 8px;"><?php echo esc_html( $label_desc ); ?></strong>
-            <textarea name="<?php echo esc_attr( $option_name ); ?>" id="<?php echo esc_attr( $option_name ); ?>" rows="5" placeholder="<?php echo esc_attr( $placeholder ); ?>" style="width: 100%; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 12px; font-size: 13.5px;"><?php echo esc_textarea( $val ); ?></textarea>
+        <div class="uwb-opt-row <?php echo $disabled ? 'uwb-opt-disabled' : ''; ?>" style="background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; <?php echo $disabled ? 'opacity: 0.65;' : ''; ?>">
+            <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 8px;">
+                <?php echo esc_html( $label_desc ); ?>
+                <?php if ( $disabled ) : ?>
+                    <span style="background: #cbd5e1; color: #475569; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 8px; vertical-align: middle;">Updating...</span>
+                <?php endif; ?>
+            </strong>
+            <textarea name="<?php echo esc_attr( $option_name ); ?>" id="<?php echo esc_attr( $option_name ); ?>" rows="5" placeholder="<?php echo esc_attr( $placeholder ); ?>" <?php disabled( $disabled, true ); ?> style="width: 100%; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 12px; font-size: 13.5px; <?php echo $disabled ? 'background: #f1f5f9; cursor: not-allowed;' : ''; ?>"><?php echo esc_textarea( $val ); ?></textarea>
             <?php if ( ! empty( $detailed_desc ) ) : ?>
                 <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block; margin-top: 6px;"><?php echo wp_kses_post( $detailed_desc ); ?></span>
             <?php endif; ?>
@@ -1293,6 +1309,19 @@ class Uwb_Admin {
                 background: var(--uwb-primary);
                 color: #ffffff;
                 box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+            }
+            .uwb-toggle-container.disabled {
+                background: #e2e8f0;
+                cursor: not-allowed;
+            }
+            .uwb-toggle-btn.disabled {
+                cursor: not-allowed;
+                opacity: 0.6;
+            }
+            .uwb-toggle-btn.disabled.active {
+                background: #94a3b8;
+                color: #ffffff;
+                box-shadow: none;
             }
             .uwb-toggle-input {
                 display: none !important;
@@ -2475,27 +2504,29 @@ class Uwb_Admin {
                             <div id="subtab-opt_css" class="uwb-subtab-content active">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_css_minify', 'CSS Minify', 'Minify CSS files and inline CSS code.' );
-                                $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS files and inline CSS code. <a href="#" target="_blank">How to Fix Problems Caused by CSS/JS Optimization.</a>' );
-                                $this->render_toggle_switch( 'uwb_css_generate_ucss', 'Generate UCSS', '<div class="uwb-warning-box" style="margin: 10px 0; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #b45309;"><strong>WARNING:</strong> You will need to finish <strong>QUIC.cloud</strong> setup to use the online services. <a href="#">Click here to set.</a></div>Use QUIC.cloud online service to generate unique CSS. This will drop the unused CSS on each page from the combined file. <a href="#">Learn More</a><br>Automatic generation of unique CSS is in the background via a cron-based queue.<br>API Filter: <code>add_filter( \'litespeed_ucss_per_pagetype\', \'__return_true\' );</code> available for UCSS per page type generation.' );
-                                $this->render_toggle_switch( 'uwb_css_ucss_inline', 'UCSS Inline', 'Inline UCSS to reduce the extra CSS file loading. This option will not be automatically turned on for <code>guest_mode</code> pages. To use it on <code>guest_mode</code> pages, please set it to ON.<br><a href="#">This option will automatically bypass Load CSS Asynchronously option.</a>' );
-                                $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS and inline CSS in combined file when <code>css_combine</code> is also enabled. This option helps maintain the priorities of CSS, which should minimize potential errors caused by CSS Combine.' );
-                                $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', '<div class="uwb-warning-box" style="margin: 10px 0; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #b45309;"><strong>WARNING:</strong> You will need to finish <strong>QUIC.cloud</strong> setup to use the online services. <a href="#">Click here to set.</a></div>Optimize CSS delivery. This can improve your speed score in services like Pingdom, GTmetrix and PageSpeed.<br>Use QUIC.cloud online service to generate critical CSS and load remaining CSS asynchronously. <a href="#">Learn More</a><br>Automatic generation of critical CSS is in the background via a cron-based queue.<br>When this option is turned on, it will also load Google Fonts asynchronously.<br>API: Elements with attribute <code>data-no-async="1"</code> in HTML code will be excluded.' );
-                                $this->render_toggle_switch( 'uwb_css_ccss_per_url', 'CCSS Per URL', 'Disable this option to generate CCSS per Post Type instead of per page. This can save significant CCSS quota, however it may result in incorrect CSS styling if your site uses a page builder.' );
-                                $this->render_toggle_switch( 'uwb_css_inline_async_lib', 'Inline CSS Async Lib', 'This will inline the asynchronous CSS library to avoid render blocking.' );
+                                $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS files and inline CSS code. <a href="#" target="_blank">How to Fix Problems Caused by CSS/JS Optimization.</a>', true );
+                                $this->render_toggle_switch( 'uwb_css_generate_ucss', 'Generate UCSS', '<div class="uwb-warning-box" style="margin: 10px 0; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #b45309;"><strong>WARNING:</strong> You will need to finish <strong>QUIC.cloud</strong> setup to use the online services. <a href="#">Click here to set.</a></div>Use QUIC.cloud online service to generate unique CSS. This will drop the unused CSS on each page from the combined file. <a href="#">Learn More</a><br>Automatic generation of unique CSS is in the background via a cron-based queue.<br>API Filter: <code>add_filter( \'litespeed_ucss_per_pagetype\', \'__return_true\' );</code> available for UCSS per page type generation.', true );
+                                $this->render_toggle_switch( 'uwb_css_ucss_inline', 'UCSS Inline', 'Inline UCSS to reduce the extra CSS file loading. This option will not be automatically turned on for <code>guest_mode</code> pages. To use it on <code>guest_mode</code> pages, please set it to ON.<br><a href="#">This option will automatically bypass Load CSS Asynchronously option.</a>', true );
+                                $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS and inline CSS in combined file when <code>css_combine</code> is also enabled. This option helps maintain the priorities of CSS, which should minimize potential errors caused by CSS Combine.', true );
+                                $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', '<div class="uwb-warning-box" style="margin: 10px 0; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #b45309;"><strong>WARNING:</strong> You will need to finish <strong>QUIC.cloud</strong> setup to use the online services. <a href="#">Click here to set.</a></div>Optimize CSS delivery. This can improve your speed score in services like Pingdom, GTmetrix and PageSpeed.<br>Use QUIC.cloud online service to generate critical CSS and load remaining CSS asynchronously. <a href="#">Learn More</a><br>Automatic generation of critical CSS is in the background via a cron-based queue.<br>When this option is turned on, it will also load Google Fonts asynchronously.<br>API: Elements with attribute <code>data-no-async="1"</code> in HTML code will be excluded.', true );
+                                $this->render_toggle_switch( 'uwb_css_ccss_per_url', 'CCSS Per URL', 'Disable this option to generate CCSS per Post Type instead of per page. This can save significant CCSS quota, however it may result in incorrect CSS styling if your site uses a page builder.', true );
+                                $this->render_toggle_switch( 'uwb_css_inline_async_lib', 'Inline CSS Async Lib', 'This will inline the asynchronous CSS library to avoid render blocking.', true );
                                 ?>
-                                <div class="uwb-opt-row" style="display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; gap: 20px; flex-wrap: wrap;">
+                                <div class="uwb-opt-row uwb-opt-disabled" style="display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; gap: 20px; flex-wrap: wrap; opacity: 0.65;">
                                     <div style="flex: 1; min-width: 250px;">
-                                        <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 4px;">Font Display Optimization</strong>
+                                        <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 4px;">
+                                            Font Display Optimization
+                                            <span style="background: #cbd5e1; color: #475569; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 8px; vertical-align: middle;">Updating...</span>
+                                        </strong>
                                         <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block;">Set this to append <code>font-display</code> to all <code>@font-face</code> rules before caching CSS to specify how fonts should be displayed while being downloaded. <code>Swap</code> is recommended.</span>
                                     </div>
                                     <div style="flex-shrink: 0;">
-                                        <?php $fd_opt = get_option( 'uwb_css_font_display_opt', 'default' ); ?>
-                                        <div class="uwb-toggle-container">
-                                            <label class="uwb-toggle-btn <?php echo ($fd_opt === 'default') ? 'active' : ''; ?>">
-                                                <input type="radio" name="uwb_css_font_display_opt" value="default" <?php checked( $fd_opt, 'default' ); ?> class="uwb-toggle-input"> Default
+                                        <div class="uwb-toggle-container disabled">
+                                            <label class="uwb-toggle-btn disabled active">
+                                                <input type="radio" name="uwb_css_font_display_opt" value="default" checked disabled class="uwb-toggle-input"> Default
                                             </label>
-                                            <label class="uwb-toggle-btn <?php echo ($fd_opt === 'swap') ? 'active' : ''; ?>">
-                                                <input type="radio" name="uwb_css_font_display_opt" value="swap" <?php checked( $fd_opt, 'swap' ); ?> class="uwb-toggle-input"> Swap
+                                            <label class="uwb-toggle-btn disabled">
+                                                <input type="radio" name="uwb_css_font_display_opt" value="swap" disabled class="uwb-toggle-input"> Swap
                                             </label>
                                         </div>
                                     </div>
@@ -2506,8 +2537,8 @@ class Uwb_Admin {
                             <div id="subtab-opt_js" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_js_minify', 'JS Minify', 'Minify JS files and inline JS code.' );
-                                $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JS files and inline JS code.' );
-                                $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS and inline JS in combined file.' );
+                                $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JS files and inline JS code.', true );
+                                $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS and inline JS in combined file.', true );
                                 $this->render_toggle_switch( 'uwb_js_load_defer', 'Load JS Deferred', 'Load JS with defer attribute to avoid render blocking.' );
                                 ?>
                             </div>
@@ -2528,7 +2559,7 @@ class Uwb_Admin {
                                 <?php
                                 $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
                                 $this->render_toggle_switch( 'uwb_media_lazy_load_iframes', 'Lazy Load Iframes', 'Delay iframe loading until visible in viewport.' );
-                                $this->render_toggle_switch( 'uwb_media_image_placeholder', 'Use Image Placeholders', 'Use responsive placeholders for lazy loaded images.' );
+                                $this->render_toggle_switch( 'uwb_media_image_placeholder', 'Use Image Placeholders', 'Use responsive placeholders for lazy loaded images.', true );
                                 $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
                                 ?>
                             </div>
@@ -2536,8 +2567,8 @@ class Uwb_Admin {
                             <!-- SUB-TAB 5: VPI -->
                             <div id="subtab-opt_vpi" class="uwb-subtab-content">
                                 <?php
-                                $this->render_toggle_switch( 'uwb_vpi_enabled', 'Viewport Images Generation', 'Automatically generate viewport critical images.' );
-                                $this->render_toggle_switch( 'uwb_vpi_cron', 'VPI Cron', 'Run VPI generation in the background.' );
+                                $this->render_toggle_switch( 'uwb_vpi_enabled', 'Viewport Images Generation', 'Automatically generate viewport critical images.', true );
+                                $this->render_toggle_switch( 'uwb_vpi_cron', 'VPI Cron', 'Run VPI generation in the background.', true );
                                 ?>
                             </div>
 
@@ -2552,9 +2583,9 @@ class Uwb_Admin {
                             <!-- SUB-TAB 7: Localization -->
                             <div id="subtab-opt_loc" class="uwb-subtab-content">
                                 <?php
-                                $this->render_toggle_switch( 'uwb_loc_gravatar_cache', 'Gravatar Cache', 'Cache Gravatar images locally.' );
-                                $this->render_toggle_switch( 'uwb_loc_gravatar_cache_cron', 'Gravatar Cache Cron', 'Refresh Gravatar cache in background.' );
-                                $this->render_textarea_setting( 'uwb_loc_resources', 'Localization Resources', '', 'Specify scripts or styles to localize and cache (one per line).' );
+                                $this->render_toggle_switch( 'uwb_loc_gravatar_cache', 'Gravatar Cache', 'Cache Gravatar images locally.', true );
+                                $this->render_toggle_switch( 'uwb_loc_gravatar_cache_cron', 'Gravatar Cache Cron', 'Refresh Gravatar cache in background.', true );
+                                $this->render_textarea_setting( 'uwb_loc_resources', 'Localization Resources', '', 'Specify scripts or styles to localize and cache (one per line).', true );
                                 ?>
                             </div>
 
@@ -2570,7 +2601,7 @@ class Uwb_Admin {
                             <!-- SUB-TAB 9: Tuning - CSS -->
                             <div id="subtab-opt_tuning_css" class="uwb-subtab-content">
                                 <?php
-                                $this->render_textarea_setting( 'uwb_tuning_ucss_excludes', 'UCSS Excludes', '', 'CSS selectors or files to exclude from UCSS generation (one per line).' );
+                                $this->render_textarea_setting( 'uwb_tuning_ucss_excludes', 'UCSS Excludes', '', 'CSS selectors or files to exclude from UCSS generation (one per line).', true );
                                 $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Critical CSS', '', 'Custom Critical CSS to inject for pages.' );
                                 ?>
                             </div>

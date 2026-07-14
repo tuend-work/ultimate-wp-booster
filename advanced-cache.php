@@ -508,6 +508,14 @@ function uwb_advanced_cache_shutdown() {
         }
 
         if ( $should_cache ) {
+            // Run Page Optimization Processor
+            $optimizer_path = dirname( __FILE__ ) . '/includes/class-uwb-optimizer.php';
+            if ( file_exists( $optimizer_path ) ) {
+                require_once $optimizer_path;
+                if ( class_exists( 'Uwb_Optimizer' ) ) {
+                    $html = Uwb_Optimizer::process( $html, $config );
+                }
+            }
             $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment} -->\n";
         } else {
             $comment_to_append = "<!-- Dynamic Page{$oc_comment} -->\n";

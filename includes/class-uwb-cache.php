@@ -206,7 +206,27 @@ class Uwb_Cache {
             'redis_prefix'             => get_option( 'uwb_redis_prefix', 'uwb_oc:' ),
             'redis_timeout'            => floatval( get_option( 'uwb_redis_timeout', 1.0 ) ),
             'redis_read_timeout'       => floatval( get_option( 'uwb_redis_read_timeout', 1.0 ) ),
-            'redis_retry_interval'     => get_option( 'uwb_redis_retry_interval', '' )
+            'redis_retry_interval'     => get_option( 'uwb_redis_retry_interval', '' ),
+            'html_minify'                 => intval( get_option( 'uwb_html_minify', 0 ) ),
+            'html_remove_qs'              => intval( get_option( 'uwb_html_remove_qs', 0 ) ),
+            'html_remove_gfonts'          => intval( get_option( 'uwb_html_remove_gfonts', 0 ) ),
+            'html_remove_emoji'           => intval( get_option( 'uwb_html_remove_emoji', 0 ) ),
+            'html_remove_noscript'        => intval( get_option( 'uwb_html_remove_noscript', 0 ) ),
+            'media_lazy_load_images'      => intval( get_option( 'uwb_media_lazy_load_images', 0 ) ),
+            'media_lazy_load_iframes'     => intval( get_option( 'uwb_media_lazy_load_iframes', 0 ) ),
+            'media_lazy_load_excludes'    => get_option( 'uwb_media_lazy_load_excludes', '' ),
+            'media_lazy_load_class_excludes' => get_option( 'uwb_media_lazy_load_class_excludes', '' ),
+            'media_image_placeholder'     => intval( get_option( 'uwb_media_image_placeholder', 0 ) ),
+            'media_add_missing_sizes'     => intval( get_option( 'uwb_media_add_missing_sizes', 0 ) ),
+            'css_minify'                  => intval( get_option( 'uwb_css_minify', 0 ) ),
+            'css_combine'                 => intval( get_option( 'uwb_css_combine', 0 ) ),
+            'js_minify'                   => intval( get_option( 'uwb_js_minify', 0 ) ),
+            'js_combine'                  => intval( get_option( 'uwb_js_combine', 0 ) ),
+            'js_load_defer'               => intval( get_option( 'uwb_js_load_defer', 0 ) ),
+            'loc_gravatar_cache'          => intval( get_option( 'uwb_loc_gravatar_cache', 0 ) ),
+            'tuning_critical_css'         => get_option( 'uwb_tuning_critical_css', '' ),
+            'tuning_css_excludes'         => get_option( 'uwb_tuning_css_excludes', '' ),
+            'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', '' )
         );
 
         $config_content = "<?php\n" .
