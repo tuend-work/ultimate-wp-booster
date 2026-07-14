@@ -509,7 +509,7 @@ function uwb_advanced_cache_shutdown() {
 
         if ( $should_cache ) {
             // Run Page Optimization Processor
-            $optimizer_path = dirname( __FILE__ ) . '/includes/class-uwb-optimizer.php';
+            $optimizer_path = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/includes/class-uwb-optimizer.php';
             if ( file_exists( $optimizer_path ) ) {
                 require_once $optimizer_path;
                 if ( class_exists( 'Uwb_Optimizer' ) ) {
