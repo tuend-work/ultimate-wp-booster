@@ -154,6 +154,50 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_redis_timeout', 'floatval' );
         register_setting( 'uwb_settings_group', 'uwb_redis_read_timeout', 'floatval' );
         register_setting( 'uwb_settings_group', 'uwb_redis_retry_interval', 'sanitize_text_field' );
+
+        // Page Optimization Settings
+        register_setting( 'uwb_settings_group', 'uwb_css_minify', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_css_combine', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_css_generate_ucss', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_css_ucss_inline', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_css_combine_ext_inline', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_css_load_async', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_css_ccss_per_url', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_css_inline_async_lib', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_css_font_display_opt', 'sanitize_text_field' );
+
+        register_setting( 'uwb_settings_group', 'uwb_js_minify', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_js_combine', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_js_combine_ext_inline', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_js_load_defer', 'intval' );
+
+        register_setting( 'uwb_settings_group', 'uwb_html_minify', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_html_remove_qs', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_html_remove_gfonts', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_html_remove_emoji', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_html_remove_noscript', 'intval' );
+
+        register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_images', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_iframes', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_image_placeholder', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_add_missing_sizes', 'intval' );
+
+        register_setting( 'uwb_settings_group', 'uwb_vpi_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_vpi_cron', 'intval' );
+
+        register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_excludes', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_class_excludes', 'sanitize_textarea_field' );
+
+        register_setting( 'uwb_settings_group', 'uwb_loc_gravatar_cache', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_loc_gravatar_cache_cron', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_loc_resources', 'sanitize_textarea_field' );
+
+        register_setting( 'uwb_settings_group', 'uwb_tuning_css_excludes', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_tuning_js_excludes', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_tuning_js_defer_excludes', 'sanitize_textarea_field' );
+
+        register_setting( 'uwb_settings_group', 'uwb_tuning_ucss_excludes', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_tuning_critical_css', 'sanitize_textarea_field' );
     }
 
     public function sanitize_object_cache_enabled( $val ) {
@@ -456,7 +500,41 @@ class Uwb_Admin {
                 'uwb_preload_sitemap',
                 'uwb_priority_urls',
                 'uwb_preload_batch_size',
-                'uwb_preload_links'
+                'uwb_preload_links',
+                'uwb_css_minify',
+                'uwb_css_combine',
+                'uwb_css_generate_ucss',
+                'uwb_css_ucss_inline',
+                'uwb_css_combine_ext_inline',
+                'uwb_css_load_async',
+                'uwb_css_ccss_per_url',
+                'uwb_css_inline_async_lib',
+                'uwb_css_font_display_opt',
+                'uwb_js_minify',
+                'uwb_js_combine',
+                'uwb_js_combine_ext_inline',
+                'uwb_js_load_defer',
+                'uwb_html_minify',
+                'uwb_html_remove_qs',
+                'uwb_html_remove_gfonts',
+                'uwb_html_remove_emoji',
+                'uwb_html_remove_noscript',
+                'uwb_media_lazy_load_images',
+                'uwb_media_lazy_load_iframes',
+                'uwb_media_image_placeholder',
+                'uwb_media_add_missing_sizes',
+                'uwb_vpi_enabled',
+                'uwb_vpi_cron',
+                'uwb_media_lazy_load_excludes',
+                'uwb_media_lazy_load_class_excludes',
+                'uwb_loc_gravatar_cache',
+                'uwb_loc_gravatar_cache_cron',
+                'uwb_loc_resources',
+                'uwb_tuning_css_excludes',
+                'uwb_tuning_js_excludes',
+                'uwb_tuning_js_defer_excludes',
+                'uwb_tuning_ucss_excludes',
+                'uwb_tuning_critical_css'
             );
 
             $export_data = array();
@@ -523,7 +601,41 @@ class Uwb_Admin {
                         'uwb_preload_sitemap',
                         'uwb_priority_urls',
                         'uwb_preload_batch_size',
-                        'uwb_preload_links'
+                        'uwb_preload_links',
+                        'uwb_css_minify',
+                        'uwb_css_combine',
+                        'uwb_css_generate_ucss',
+                        'uwb_css_ucss_inline',
+                        'uwb_css_combine_ext_inline',
+                        'uwb_css_load_async',
+                        'uwb_css_ccss_per_url',
+                        'uwb_css_inline_async_lib',
+                        'uwb_css_font_display_opt',
+                        'uwb_js_minify',
+                        'uwb_js_combine',
+                        'uwb_js_combine_ext_inline',
+                        'uwb_js_load_defer',
+                        'uwb_html_minify',
+                        'uwb_html_remove_qs',
+                        'uwb_html_remove_gfonts',
+                        'uwb_html_remove_emoji',
+                        'uwb_html_remove_noscript',
+                        'uwb_media_lazy_load_images',
+                        'uwb_media_lazy_load_iframes',
+                        'uwb_media_image_placeholder',
+                        'uwb_media_add_missing_sizes',
+                        'uwb_vpi_enabled',
+                        'uwb_vpi_cron',
+                        'uwb_media_lazy_load_excludes',
+                        'uwb_media_lazy_load_class_excludes',
+                        'uwb_loc_gravatar_cache',
+                        'uwb_loc_gravatar_cache_cron',
+                        'uwb_loc_resources',
+                        'uwb_tuning_css_excludes',
+                        'uwb_tuning_js_excludes',
+                        'uwb_tuning_js_defer_excludes',
+                        'uwb_tuning_ucss_excludes',
+                        'uwb_tuning_critical_css'
                     );
 
                     foreach ( $options_to_import as $opt ) {
@@ -549,6 +661,43 @@ class Uwb_Admin {
                 } );
             }
         }
+    }
+
+    private function render_toggle_switch( $option_name, $label_desc, $detailed_desc = '' ) {
+        $val = intval( get_option( $option_name, 0 ) );
+        ?>
+        <div class="uwb-opt-row" style="display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; gap: 20px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px;">
+                <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 4px;"><?php echo esc_html( $label_desc ); ?></strong>
+                <?php if ( ! empty( $detailed_desc ) ) : ?>
+                    <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block;"><?php echo wp_kses_post( $detailed_desc ); ?></span>
+                <?php endif; ?>
+            </div>
+            <div style="flex-shrink: 0;">
+                <div class="uwb-toggle-container">
+                    <label class="uwb-toggle-btn <?php echo ! $val ? 'active' : ''; ?>">
+                        <input type="radio" name="<?php echo esc_attr( $option_name ); ?>" value="0" <?php checked( $val, 0 ); ?> class="uwb-toggle-input"> OFF
+                    </label>
+                    <label class="uwb-toggle-btn <?php echo $val ? 'active' : ''; ?>">
+                        <input type="radio" name="<?php echo esc_attr( $option_name ); ?>" value="1" <?php checked( $val, 1 ); ?> class="uwb-toggle-input"> ON
+                    </label>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    private function render_textarea_setting( $option_name, $label_desc, $placeholder = '', $detailed_desc = '' ) {
+        $val = get_option( $option_name, '' );
+        ?>
+        <div class="uwb-opt-row" style="background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+            <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 8px;"><?php echo esc_html( $label_desc ); ?></strong>
+            <textarea name="<?php echo esc_attr( $option_name ); ?>" id="<?php echo esc_attr( $option_name ); ?>" rows="5" placeholder="<?php echo esc_attr( $placeholder ); ?>" style="width: 100%; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 12px; font-size: 13.5px;"><?php echo esc_textarea( $val ); ?></textarea>
+            <?php if ( ! empty( $detailed_desc ) ) : ?>
+                <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block; margin-top: 6px;"><?php echo wp_kses_post( $detailed_desc ); ?></span>
+            <?php endif; ?>
+        </div>
+        <?php
     }
 
     /**
@@ -1117,6 +1266,54 @@ class Uwb_Admin {
                 background: #fecaca;
                 border-color: #f87171;
             }
+
+            /* Toggle Buttons Caching & Optimization switches */
+            .uwb-toggle-container {
+                display: inline-flex;
+                background: #f1f5f9;
+                border: 1px solid var(--uwb-border);
+                border-radius: 8px;
+                padding: 3px;
+                gap: 2px;
+            }
+            .uwb-toggle-btn {
+                padding: 8px 20px;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                border-radius: 6px;
+                color: var(--uwb-text-muted);
+                transition: all 0.2s ease;
+                user-select: none;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .uwb-toggle-btn.active {
+                background: var(--uwb-primary);
+                color: #ffffff;
+                box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+            }
+            .uwb-toggle-input {
+                display: none !important;
+            }
+            .uwb-warning-box {
+                margin: 10px 0;
+                background: #fffbeb;
+                border-left: 4px solid #f59e0b;
+                padding: 12px;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #b45309;
+            }
+            .uwb-opt-row a {
+                color: var(--uwb-primary);
+                text-decoration: none;
+                font-weight: 600;
+            }
+            .uwb-opt-row a:hover {
+                text-decoration: underline;
+            }
         </style>
         <?php
     }
@@ -1180,6 +1377,10 @@ class Uwb_Admin {
                     <div class="uwb-nav-item" data-tab="preload_settings" title="Preload Settings">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                         <span>Preload Settings</span>
+                    </div>
+                    <div class="uwb-nav-item" data-tab="page_optimizes" title="Page Optimizes">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="20" y1="20" x2="4" y2="4"/></svg>
+                        <span>Page Optimizes</span>
                     </div>
                     <div class="uwb-nav-item" data-tab="import_export" title="Import / Export">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -2252,9 +2453,128 @@ class Uwb_Admin {
 
                         </div>
 
+                        <!-- TAB 3: Page Optimizes -->
+                        <div id="tab-page_optimizes" class="uwb-tab-content">
+                            <h2 style="margin-top:0;">Page Optimization</h2>
+                            <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Optimize web source code by minifying and combining resources, lazy loading media, and tuning performance.</p>
 
+                            <!-- Horizontal Sub-tabs Nav -->
+                            <div class="uwb-sub-tabs-nav">
+                                <div class="uwb-sub-tab-item active" data-subtab="opt_css">[1] CSS Settings</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_js">[2] JS Settings</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_html">[3] HTML Settings</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_media">[4] Media Settings</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_vpi">[5] VPI</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_media_excludes">[6] Media Excludes</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_loc">[7] Localization</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_tuning">[8] Tuning</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_tuning_css">[9] Tuning - CSS</div>
+                            </div>
 
+                            <!-- SUB-TAB 1: CSS Settings -->
+                            <div id="subtab-opt_css" class="uwb-subtab-content active">
+                                <?php
+                                $this->render_toggle_switch( 'uwb_css_minify', 'CSS Minify', 'Minify CSS files and inline CSS code.' );
+                                $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS files and inline CSS code. <a href="#" target="_blank">How to Fix Problems Caused by CSS/JS Optimization.</a>' );
+                                $this->render_toggle_switch( 'uwb_css_generate_ucss', 'Generate UCSS', '<div class="uwb-warning-box" style="margin: 10px 0; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #b45309;"><strong>WARNING:</strong> You will need to finish <strong>QUIC.cloud</strong> setup to use the online services. <a href="#">Click here to set.</a></div>Use QUIC.cloud online service to generate unique CSS. This will drop the unused CSS on each page from the combined file. <a href="#">Learn More</a><br>Automatic generation of unique CSS is in the background via a cron-based queue.<br>API Filter: <code>add_filter( \'litespeed_ucss_per_pagetype\', \'__return_true\' );</code> available for UCSS per page type generation.' );
+                                $this->render_toggle_switch( 'uwb_css_ucss_inline', 'UCSS Inline', 'Inline UCSS to reduce the extra CSS file loading. This option will not be automatically turned on for <code>guest_mode</code> pages. To use it on <code>guest_mode</code> pages, please set it to ON.<br><a href="#">This option will automatically bypass Load CSS Asynchronously option.</a>' );
+                                $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS and inline CSS in combined file when <code>css_combine</code> is also enabled. This option helps maintain the priorities of CSS, which should minimize potential errors caused by CSS Combine.' );
+                                $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', '<div class="uwb-warning-box" style="margin: 10px 0; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #b45309;"><strong>WARNING:</strong> You will need to finish <strong>QUIC.cloud</strong> setup to use the online services. <a href="#">Click here to set.</a></div>Optimize CSS delivery. This can improve your speed score in services like Pingdom, GTmetrix and PageSpeed.<br>Use QUIC.cloud online service to generate critical CSS and load remaining CSS asynchronously. <a href="#">Learn More</a><br>Automatic generation of critical CSS is in the background via a cron-based queue.<br>When this option is turned on, it will also load Google Fonts asynchronously.<br>API: Elements with attribute <code>data-no-async="1"</code> in HTML code will be excluded.' );
+                                $this->render_toggle_switch( 'uwb_css_ccss_per_url', 'CCSS Per URL', 'Disable this option to generate CCSS per Post Type instead of per page. This can save significant CCSS quota, however it may result in incorrect CSS styling if your site uses a page builder.' );
+                                $this->render_toggle_switch( 'uwb_css_inline_async_lib', 'Inline CSS Async Lib', 'This will inline the asynchronous CSS library to avoid render blocking.' );
+                                ?>
+                                <div class="uwb-opt-row" style="display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; gap: 20px; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 250px;">
+                                        <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 4px;">Font Display Optimization</strong>
+                                        <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block;">Set this to append <code>font-display</code> to all <code>@font-face</code> rules before caching CSS to specify how fonts should be displayed while being downloaded. <code>Swap</code> is recommended.</span>
+                                    </div>
+                                    <div style="flex-shrink: 0;">
+                                        <?php $fd_opt = get_option( 'uwb_css_font_display_opt', 'default' ); ?>
+                                        <div class="uwb-toggle-container">
+                                            <label class="uwb-toggle-btn <?php echo ($fd_opt === 'default') ? 'active' : ''; ?>">
+                                                <input type="radio" name="uwb_css_font_display_opt" value="default" <?php checked( $fd_opt, 'default' ); ?> class="uwb-toggle-input"> Default
+                                            </label>
+                                            <label class="uwb-toggle-btn <?php echo ($fd_opt === 'swap') ? 'active' : ''; ?>">
+                                                <input type="radio" name="uwb_css_font_display_opt" value="swap" <?php checked( $fd_opt, 'swap' ); ?> class="uwb-toggle-input"> Swap
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
+                            <!-- SUB-TAB 2: JS Settings -->
+                            <div id="subtab-opt_js" class="uwb-subtab-content">
+                                <?php
+                                $this->render_toggle_switch( 'uwb_js_minify', 'JS Minify', 'Minify JS files and inline JS code.' );
+                                $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JS files and inline JS code.' );
+                                $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS and inline JS in combined file.' );
+                                $this->render_toggle_switch( 'uwb_js_load_defer', 'Load JS Deferred', 'Load JS with defer attribute to avoid render blocking.' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 3: HTML Settings -->
+                            <div id="subtab-opt_html" class="uwb-subtab-content">
+                                <?php
+                                $this->render_toggle_switch( 'uwb_html_minify', 'HTML Minify', 'Minify HTML source code.' );
+                                $this->render_toggle_switch( 'uwb_html_remove_qs', 'Remove Query Strings', 'Remove query strings from static resources.' );
+                                $this->render_toggle_switch( 'uwb_html_remove_gfonts', 'Remove Google Fonts', 'Remove Google Fonts from all pages.' );
+                                $this->render_toggle_switch( 'uwb_html_remove_emoji', 'Remove WordPress Emoji', 'Remove default WordPress Emoji CSS/JS.' );
+                                $this->render_toggle_switch( 'uwb_html_remove_noscript', 'Remove Noscript Tags', 'Remove all noscript tags from HTML.' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 4: Media Settings -->
+                            <div id="subtab-opt_media" class="uwb-subtab-content">
+                                <?php
+                                $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
+                                $this->render_toggle_switch( 'uwb_media_lazy_load_iframes', 'Lazy Load Iframes', 'Delay iframe loading until visible in viewport.' );
+                                $this->render_toggle_switch( 'uwb_media_image_placeholder', 'Use Image Placeholders', 'Use responsive placeholders for lazy loaded images.' );
+                                $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 5: VPI -->
+                            <div id="subtab-opt_vpi" class="uwb-subtab-content">
+                                <?php
+                                $this->render_toggle_switch( 'uwb_vpi_enabled', 'Viewport Images Generation', 'Automatically generate viewport critical images.' );
+                                $this->render_toggle_switch( 'uwb_vpi_cron', 'VPI Cron', 'Run VPI generation in the background.' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 6: Media Excludes -->
+                            <div id="subtab-opt_media_excludes" class="uwb-subtab-content">
+                                <?php
+                                $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
+                                $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', 'skip-lazy', 'CSS class names of images or containers to exclude from lazy loading (one per line).' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 7: Localization -->
+                            <div id="subtab-opt_loc" class="uwb-subtab-content">
+                                <?php
+                                $this->render_toggle_switch( 'uwb_loc_gravatar_cache', 'Gravatar Cache', 'Cache Gravatar images locally.' );
+                                $this->render_toggle_switch( 'uwb_loc_gravatar_cache_cron', 'Gravatar Cache Cron', 'Refresh Gravatar cache in background.' );
+                                $this->render_textarea_setting( 'uwb_loc_resources', 'Localization Resources', '', 'Specify scripts or styles to localize and cache (one per line).' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 8: Tuning -->
+                            <div id="subtab-opt_tuning" class="uwb-subtab-content">
+                                <?php
+                                $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
+                                $this->render_textarea_setting( 'uwb_tuning_js_excludes', 'JS Excludes', '', 'JS files or inline keywords to exclude from minification/combination (one per line).' );
+                                $this->render_textarea_setting( 'uwb_tuning_js_defer_excludes', 'JS Deferred Excludes', '', 'JS files or inline keywords to exclude from deferred loading (one per line).' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 9: Tuning - CSS -->
+                            <div id="subtab-opt_tuning_css" class="uwb-subtab-content">
+                                <?php
+                                $this->render_textarea_setting( 'uwb_tuning_ucss_excludes', 'UCSS Excludes', '', 'CSS selectors or files to exclude from UCSS generation (one per line).' );
+                                $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Critical CSS', '', 'Custom Critical CSS to inject for pages.' );
+                                ?>
+                            </div>
+                        </div>
 
                         <!-- TAB 5: Dashboard -->
                         <div id="tab-url_status" class="uwb-tab-content active">
@@ -2736,6 +3056,13 @@ class Uwb_Admin {
                 $('#subtab-' + subtabId).addClass('active');
 
                 localStorage.setItem('uwb_active_subtab', subtabId);
+            });
+
+            // Toggle Switches interactive handler
+            $(document).on('change', '.uwb-toggle-input', function() {
+                var $container = $(this).closest('.uwb-toggle-container');
+                $container.find('.uwb-toggle-btn').removeClass('active');
+                $(this).closest('.uwb-toggle-btn').addClass('active');
             });
 
             // Sidebar Collapse/Expand Toggle
@@ -3585,12 +3912,15 @@ class Uwb_Admin {
             
             var savedSubtab = localStorage.getItem('uwb_active_subtab');
             if (savedSubtab) {
-                $('.uwb-sub-tab-item').removeClass('active');
                 var $targetSubtabBtn = $('.uwb-sub-tab-item[data-subtab="' + savedSubtab + '"]');
-                $targetSubtabBtn.addClass('active');
-                
-                $('.uwb-subtab-content').removeClass('active');
-                $('#subtab-' + savedSubtab).addClass('active');
+                if ($targetSubtabBtn.length) {
+                    var $parentTab = $targetSubtabBtn.closest('.uwb-tab-content');
+                    $parentTab.find('.uwb-sub-tab-item').removeClass('active');
+                    $targetSubtabBtn.addClass('active');
+                    
+                    $parentTab.find('.uwb-subtab-content').removeClass('active');
+                    $('#subtab-' + savedSubtab).addClass('active');
+                }
             }
         });
         </script>
@@ -3808,7 +4138,7 @@ if ( ! function_exists( 'ultimate_wp_render_dashboard' ) ) {
                 'name'         => 'Ultimate WP Booster',
                 'description'  => 'Tối ưu hóa tốc độ tải trang toàn diện, dọn dẹp và tối ưu hóa cơ sở dữ liệu, nén ảnh, gộp và nén CSS/JS, tích hợp Redis Cache.',
                 'path'         => 'ultimate-wp-booster/ultimate-wp-booster.php',
-                'settings_url' => admin_url( 'options-general.php?page=ultimate-wp-booster' ),
+                'settings_url' => admin_url( 'admin.php?page=ultimate-wp-booster' ),
             ),
             'ultimate-wp-flatsome' => array(
                 'name'         => 'Ultimate WP Flatsome',
@@ -4056,7 +4386,7 @@ if ( ! function_exists( 'ultimate_wp_render_dashboard' ) ) {
                         $settings_url = admin_url( 'admin.php?page=ultimate-wp-flatsome' );
                     } else if ( $slug === 'ultimate-wp-booster' && $is_active ) {
                         // Check if booster is updated to submenus
-                        $settings_url = admin_url( 'options-general.php?page=ultimate-wp-booster' );
+                        $settings_url = admin_url( 'admin.php?page=ultimate-wp-booster' );
                     } else {
                         $settings_url = $data['settings_url'];
                     }
