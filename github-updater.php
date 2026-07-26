@@ -245,8 +245,11 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                 wp_send_json_error( array( 'message' => 'Failed to download zip: ' . $temp_file->get_error_message() ) );
             }
 
-            // Unzip the package to a temporary directory
-            $result = unzip_file( $temp_file, WP_CONTENT_DIR . '/upgrade-temp' );
+            // Use a unique temp dir per request to avoid collision
+            $temp_unzip_dir = WP_CONTENT_DIR . '/upgrade-temp-uwb-' . uniqid();
+
+            // Unzip the package to the temp directory
+            $result = unzip_file( $temp_file, $temp_unzip_dir );
             @unlink( $temp_file );
             if ( is_wp_error( $result ) ) {
                 if ( $was_active ) {
@@ -255,23 +258,15 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                 wp_send_json_error( array( 'message' => 'Failed to unzip package: ' . $result->get_error_message() ) );
             }
 
-            // Initialize WordPress Filesystem API
-            global $wp_filesystem;
-            if ( ! $wp_filesystem ) {
-                require_once ABSPATH . 'wp-admin/includes/file.php';
-                WP_Filesystem( false, false, true );
-            }
-
             // Determine extracted folder name (normally "ultimate-wp-booster-main")
-            $extracted_dir = WP_CONTENT_DIR . '/upgrade-temp';
-            $entries       = scandir( $extracted_dir );
-            $new_folder    = '';
+            $entries    = scandir( $temp_unzip_dir );
+            $new_folder = '';
             foreach ( $entries as $entry ) {
                 if ( $entry === '.' || $entry === '..' ) {
                     continue;
                 }
-                if ( strpos( $entry, 'ultimate-wp-booster' ) !== false && is_dir( $extracted_dir . '/' . $entry ) ) {
-                    $new_folder = $extracted_dir . '/' . $entry;
+                if ( strpos( $entry, 'ultimate-wp-booster' ) !== false && is_dir( $temp_unzip_dir . '/' . $entry ) ) {
+                    $new_folder = $temp_unzip_dir . '/' . $entry;
                     break;
                 }
             }
@@ -282,35 +277,85 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                     if ( $entry === '.' || $entry === '..' ) {
                         continue;
                     }
-                    if ( is_dir( $extracted_dir . '/' . $entry ) ) {
-                        $new_folder = $extracted_dir . '/' . $entry;
+                    if ( is_dir( $temp_unzip_dir . '/' . $entry ) ) {
+                        $new_folder = $temp_unzip_dir . '/' . $entry;
                         break;
                     }
                 }
             }
 
             if ( ! $new_folder || ! is_dir( $new_folder ) ) {
+                $wp_filesystem->delete( $temp_unzip_dir, true );
                 if ( $was_active ) {
                     activate_plugin( $this->basename );
                 }
                 wp_send_json_error( array( 'message' => 'Unexpected zip structure: No extracted directory found.' ) );
             }
 
-            // Copy new folder into plugins directory using robust WP Filesystem APIs
-            $plugin_dir = WP_PLUGIN_DIR . '/' . dirname( $this->basename );
-            
-            if ( $wp_filesystem->exists( $plugin_dir ) ) {
-                $wp_filesystem->delete( $plugin_dir, true );
+            // ---------------------------------------------------------------
+            // Safe atomic replacement strategy:
+            //   1. Rename old plugin dir to a backup location (fast, no copy)
+            //   2. Rename new extracted dir to plugin destination (atomic)
+            //   3. Delete backup on success  –OR–  restore backup on failure
+            // ---------------------------------------------------------------
+            $plugin_dir   = WP_PLUGIN_DIR . '/' . dirname( $this->basename ); // e.g. …/plugins/ultimate-wp-booster
+            $backup_dir   = WP_PLUGIN_DIR . '/ultimate-wp-booster-backup-' . uniqid();
+            $rename_ok    = false;
+
+            // Step 1: Back up existing plugin directory (just a rename — instant)
+            $backup_done = false;
+            if ( is_dir( $plugin_dir ) ) {
+                $backup_done = @rename( $plugin_dir, $backup_dir );
+                if ( ! $backup_done ) {
+                    // rename failed (cross-device?), try wp_filesystem move
+                    if ( $wp_filesystem ) {
+                        $backup_done = $wp_filesystem->move( $plugin_dir, $backup_dir );
+                    }
+                }
             }
 
-            $copy_result = copy_dir( $new_folder, $plugin_dir );
-            $wp_filesystem->delete( $extracted_dir, true );
+            // Step 2: Move new folder into place
+            $rename_ok = @rename( $new_folder, $plugin_dir );
 
-            if ( is_wp_error( $copy_result ) ) {
+            if ( ! $rename_ok && $wp_filesystem ) {
+                // rename() may fail cross-device or on some hosts — fall back to copy_dir
+                if ( ! is_dir( $plugin_dir ) ) {
+                    wp_mkdir_p( $plugin_dir );
+                }
+                $copy_result = copy_dir( $new_folder, $plugin_dir );
+                $rename_ok   = ! is_wp_error( $copy_result );
+
+                if ( ! $rename_ok ) {
+                    // Last resort: pure PHP recursive copy
+                    $rename_ok = $this->php_copy_dir( $new_folder, $plugin_dir );
+                }
+            }
+
+            // Step 3: Cleanup temp unzip dir
+            if ( $wp_filesystem ) {
+                $wp_filesystem->delete( $temp_unzip_dir, true );
+            } else {
+                $this->delete_directory( $temp_unzip_dir );
+            }
+
+            if ( $rename_ok ) {
+                // Success — remove backup
+                if ( $backup_done && is_dir( $backup_dir ) ) {
+                    if ( $wp_filesystem ) {
+                        $wp_filesystem->delete( $backup_dir, true );
+                    } else {
+                        $this->delete_directory( $backup_dir );
+                    }
+                }
+            } else {
+                // Failure — restore backup so the plugin is not lost
+                if ( $backup_done && is_dir( $backup_dir ) ) {
+                    @rename( $backup_dir, $plugin_dir );
+                }
                 if ( $was_active ) {
                     activate_plugin( $this->basename );
                 }
-                wp_send_json_error( array( 'message' => 'Failed to copy new plugin files: ' . $copy_result->get_error_message() ) );
+                wp_send_json_error( array( 'message' => 'Failed to copy new plugin files. The previous version has been restored automatically. Please try again or update manually.' ) );
             }
 
             // Reactivate if it was active before update
@@ -342,6 +387,40 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
                 }
             }
             return @rmdir( $dir );
+        }
+
+        /**
+         * Recursively copy a directory using native PHP (no WP Filesystem dependency).
+         * Used as a last-resort fallback when rename() and copy_dir() both fail.
+         *
+         * @param string $src  Source directory.
+         * @param string $dest Destination directory.
+         * @return bool
+         */
+        private function php_copy_dir( $src, $dest ) {
+            if ( ! is_dir( $src ) ) {
+                return false;
+            }
+            if ( ! is_dir( $dest ) ) {
+                if ( ! @mkdir( $dest, 0755, true ) ) {
+                    return false;
+                }
+            }
+            $items = array_diff( scandir( $src ), array( '.', '..' ) );
+            foreach ( $items as $item ) {
+                $s = $src . DIRECTORY_SEPARATOR . $item;
+                $d = $dest . DIRECTORY_SEPARATOR . $item;
+                if ( is_dir( $s ) ) {
+                    if ( ! $this->php_copy_dir( $s, $d ) ) {
+                        return false;
+                    }
+                } else {
+                    if ( ! @copy( $s, $d ) ) {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
 
         /**
