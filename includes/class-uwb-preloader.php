@@ -37,6 +37,80 @@ class Uwb_Preloader {
 
         // Link Preloading
         add_action( 'wp_footer', array( $this, 'maybe_output_preload_links_script' ) );
+
+        // Auto-mark URLs cached by real visitors as "completed" in the preload queue
+        add_action( 'shutdown', array( $this, 'maybe_mark_cached_url_completed' ) );
+    }
+
+    /**
+     * When a real visitor's request results in a cached page being written,
+     * update the preload queue row for that URL to "completed".
+     *
+     * Runs on WP shutdown (after DB is available). Only fires on front-end
+     * GET requests that are NOT from the preloader bot itself.
+     */
+    public function maybe_mark_cached_url_completed() {
+        // 1. Skip AJAX, cron, CLI, and admin requests
+        if ( wp_doing_ajax() || wp_doing_cron() || is_admin() || php_sapi_name() === 'cli' ) {
+            return;
+        }
+
+        // 2. Only handle GET requests
+        if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || $_SERVER['REQUEST_METHOD'] !== 'GET' ) {
+            return;
+        }
+
+        // 3. Skip requests from our own preloader bot (avoid double-marking)
+        $ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? $_SERVER['HTTP_USER_AGENT'] : '';
+        if ( strpos( $ua, 'Ultimate-WP-Booster-Preloader' ) !== false ) {
+            return;
+        }
+
+        // 4. Only run when there is actually an active preload queue
+        global $wpdb;
+        $has_queue = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name}" );
+        if ( $has_queue === 0 ) {
+            return;
+        }
+
+        // 5. Build the normalised path for the current request
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+        $uri_path    = rawurldecode( explode( '?', $request_uri )[0] );
+        $path        = '/' . trim( $uri_path, '/' );
+        if ( $path !== '/' ) {
+            $path = rtrim( $path, '/' ) . '/';
+        }
+
+        // 6. Confirm a cache file was actually written for this URL
+        //    (so we only mark "completed" when the page is truly cached)
+        $host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( explode( ':', $_SERVER['HTTP_HOST'] )[0] ) : '';
+        if ( $host ) {
+            $is_https = (
+                ( isset( $_SERVER['HTTPS'] ) && ( $_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1 ) ) ||
+                ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' ) ||
+                ( isset( $_SERVER['SERVER_PORT'] ) && $_SERVER['SERVER_PORT'] == 443 )
+            );
+            $normalized_uri = trim( $uri_path, '/' );
+            $cache_base     = WP_CONTENT_DIR . '/cache/wp-rocket/' . $host;
+            $cache_dir      = $normalized_uri !== '' ? $cache_base . '/' . $normalized_uri : $cache_base;
+            $cache_file     = $cache_dir . '/' . ( $is_https ? 'index-https.html' : 'index.html' );
+
+            if ( ! file_exists( $cache_file ) ) {
+                return; // Page not cached yet — nothing to mark
+            }
+        }
+
+        // 7. Update matching queue rows for this path to "completed"
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$this->table_name}
+                 SET status = 'completed'
+                 WHERE (url = %s OR url = %s)
+                   AND status IN ('pending', 'processing', 'failed')",
+                $path,
+                rtrim( $path, '/' ) // also match without trailing slash
+            )
+        );
     }
 
     public function maybe_output_important_sitemap() {
