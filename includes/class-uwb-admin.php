@@ -482,6 +482,17 @@ class Uwb_Admin {
                 echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> OPcache flushed successfully!</p></div>';
             } );
         }
+
+        if ( isset( $_GET['uwb_msg'] ) ) {
+            $msg = sanitize_text_field( $_GET['uwb_msg'] );
+            add_action( 'admin_notices', function() use ( $msg ) {
+                if ( $msg === 'preload_started' ) {
+                    echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Cache cleared successfully! Preload queue populating in the background.</p></div>';
+                } elseif ( $msg === 'cache_cleared' ) {
+                    echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Page cache cleared successfully!</p></div>';
+                }
+            } );
+        }
     }
 
     public function handle_import_export() {

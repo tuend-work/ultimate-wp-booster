@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.6.5
+ * Version:     1.6.6
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.6.5' );
+define( 'UWB_VERSION', '1.6.6' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -215,7 +215,7 @@ function uwb_handle_admin_bar_clear_cache_page() {
     if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
         wp_safe_redirect( add_query_arg( 'uwb_msg', 'cache_cleared', $referer ) );
     } else {
-        wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=cache_cleared' ) );
     }
     exit;
 }
@@ -251,7 +251,7 @@ function uwb_handle_admin_bar_flush_all_preload() {
     if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
         wp_safe_redirect( add_query_arg( 'uwb_msg', 'preload_started', $referer ) );
     } else {
-        wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=preload_started' ) );
     }
     exit;
 }
