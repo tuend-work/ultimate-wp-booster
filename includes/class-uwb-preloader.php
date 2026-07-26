@@ -817,7 +817,10 @@ class Uwb_Preloader {
         if ( get_transient( 'uwb_populating_queue' ) ) {
             return new WP_Error( 'already_running', 'Queue is already being populated.' );
         }
-        set_transient( 'uwb_populating_queue', 1, 60 ); // lock for 60 seconds
+        set_transient( 'uwb_populating_queue', 1, 120 ); // lock for 120 seconds (large sites)
+
+        // Empty the queue first
+        $wpdb->query( "TRUNCATE TABLE {$this->table_name}" );
 
         // Retrieve settings
         $sitemap_urls = $this->get_preload_sitemap_urls();
@@ -830,91 +833,106 @@ class Uwb_Preloader {
         $priority_raw = get_option( 'uwb_priority_urls', '' );
         $priority_urls = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $priority_raw ) ) ) );
 
-        // 1. Collect priority URLs (manual important URLs + Homepage + Public Taxonomy Terms)
+        $total_inserted = 0;
+        $inserted_hashes = array(); // track duplicates in memory during this run
+
+        // Helper to filter, normalize and insert a batch of URLs into DB immediately
+        $insert_urls_batch = function( $raw_batch_urls ) use ( &$total_inserted, &$inserted_hashes, $exclusions_raw, $excluded_patterns, $priority_urls, $wpdb ) {
+            if ( empty( $raw_batch_urls ) ) {
+                return;
+            }
+
+            $normalized_uris = array();
+            foreach ( $raw_batch_urls as $url ) {
+                $normalized_url = $this->normalize_url( $url );
+                if ( ! $this->is_xml_url( $normalized_url ) ) {
+                    $parsed_url = wp_parse_url( $normalized_url );
+                    $path = isset( $parsed_url['path'] ) ? $parsed_url['path'] : '/';
+                    $query = isset( $parsed_url['query'] ) ? '?' . $parsed_url['query'] : '';
+                    $uri = '/' . ltrim( $path, '/' ) . $query;
+                    
+                    $hash = md5( $uri );
+                    if ( ! isset( $inserted_hashes[ $hash ] ) ) {
+                        $inserted_hashes[ $hash ] = true;
+                        $normalized_uris[] = $uri;
+                    }
+                }
+            }
+
+            if ( empty( $normalized_uris ) ) {
+                return;
+            }
+
+            $now = current_time( 'mysql' );
+            $values = array();
+            $placeholders = array();
+            $non_priority_counter = $total_inserted + 1;
+
+            foreach ( $normalized_uris as $url ) {
+                if ( $this->is_excluded( $url, $excluded_patterns ) ) {
+                    continue; // Skip excluded URLs
+                }
+
+                // Check if it matches priority list from settings
+                $is_priority = false;
+                foreach ( $priority_urls as $p_url ) {
+                    if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
+                        $is_priority = true;
+                        break;
+                    }
+                }
+
+                if ( $is_priority ) {
+                    $priority_value = 0;
+                } else {
+                    $priority_value = $non_priority_counter++;
+                }
+
+                $values[] = $url;
+                $values[] = $priority_value;
+                $values[] = 'pending';
+                $values[] = $now;
+
+                $placeholders[] = "(%s, %d, %s, %s)";
+            }
+
+            if ( ! empty( $values ) ) {
+                $chunks = array_chunk( $values, 2000 ); // 500 rows per chunk
+                foreach ( $chunks as $chunk ) {
+                    $rows_count = count( $chunk ) / 4;
+                    $chunk_placeholders = array_slice( $placeholders, 0, $rows_count );
+                    $sql = "INSERT IGNORE INTO {$this->table_name} (url, priority, status, created_at) VALUES " . implode( ',', $chunk_placeholders );
+                    $wpdb->query( $wpdb->prepare( $sql, $chunk ) );
+                    $total_inserted += $rows_count;
+                }
+            }
+        };
+
+        // 1. Collect and insert static priority URLs first (fastest)
         $manual_priority_urls = $this->get_priority_url_sitemap_entries();
         $collected_priority_urls = $this->collect_public_taxonomy_urls();
+        $insert_urls_batch( array_merge( $manual_priority_urls, $collected_priority_urls ) );
 
-        // 2. Parse Sitemaps
-        $parsed = array(
-            'priority' => array(),
-            'normal'   => array(),
-        );
+        // 2. Parse and insert sitemaps one by one (progressive loading)
         foreach ( $sitemap_urls as $sitemap_url ) {
             $sitemap_result = $this->parse_sitemap( $sitemap_url, 0, $this->is_important_sitemap_url( $sitemap_url ) );
-            $parsed['priority'] = array_merge( $parsed['priority'], $sitemap_result['priority'] );
-            $parsed['normal']   = array_merge( $parsed['normal'], $sitemap_result['normal'] );
-        }
-        
-        // Merge all raw URLs and normalize them to prevent duplicates
-        $raw_urls = array_merge( $manual_priority_urls, $collected_priority_urls, $parsed['priority'], $parsed['normal'] );
-        $normalized_urls = array();
-        foreach ( $raw_urls as $url ) {
-            $normalized_url = $this->normalize_url( $url );
-            if ( ! $this->is_xml_url( $normalized_url ) ) {
-                $parsed_url = wp_parse_url( $normalized_url );
-                $path = isset( $parsed_url['path'] ) ? $parsed_url['path'] : '/';
-                $query = isset( $parsed_url['query'] ) ? '?' . $parsed_url['query'] : '';
-                $uri = '/' . ltrim( $path, '/' ) . $query;
-                $normalized_urls[] = $uri;
+            
+            // Insert priority sitemap entries immediately
+            if ( ! empty( $sitemap_result['priority'] ) ) {
+                $insert_urls_batch( $sitemap_result['priority'] );
+            }
+            // Insert normal sitemap entries immediately
+            if ( ! empty( $sitemap_result['normal'] ) ) {
+                $insert_urls_batch( $sitemap_result['normal'] );
             }
         }
-        $urls = array_values( array_unique( $normalized_urls ) );
 
-        if ( empty( $urls ) ) {
+        if ( $total_inserted === 0 ) {
             delete_transient( 'uwb_populating_queue' );
             return new WP_Error( 'no_urls', 'No URLs found in sitemaps, important URLs, or taxonomy terms.' );
         }
 
-        // 3. Empty the queue first
-        $wpdb->query( "TRUNCATE TABLE {$this->table_name}" );
-
-        // 4. Filter and insert into the database queue in batches
-        $now = current_time( 'mysql' );
-        $values = array();
-        $placeholders = array();
-
-        $non_priority_counter = 1;
-        foreach ( $urls as $url ) {
-            if ( $this->is_excluded( $url, $excluded_patterns ) ) {
-                continue; // Skip excluded URLs
-            }
-
-            // Check if it matches priority list from settings
-            $is_priority = false;
-            foreach ( $priority_urls as $p_url ) {
-                if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
-                    $is_priority = true;
-                    break;
-                }
-            }
-
-            if ( $is_priority ) {
-                $priority_value = 0;
-            } else {
-                $priority_value = $non_priority_counter++;
-            }
-
-            $values[] = $url;
-            $values[] = $priority_value;
-            $values[] = 'pending';
-            $values[] = $now;
-
-            $placeholders[] = "(%s, %d, %s, %s)";
-        }
-
-        if ( ! empty( $values ) ) {
-            // Insert in chunks of 500 rows to prevent query payload limit
-            $chunks = array_chunk( $values, 2000 ); // 2000 items = 500 rows (4 values per row)
-            
-            foreach ( $chunks as $chunk ) {
-                $rows_count = count( $chunk ) / 4;
-                $chunk_placeholders = array_slice( $placeholders, 0, $rows_count );
-                $sql = "INSERT IGNORE INTO {$this->table_name} (url, priority, status, created_at) VALUES " . implode( ',', $chunk_placeholders );
-                $wpdb->query( $wpdb->prepare( $sql, $chunk ) );
-            }
-        }
-
-        // 4. Set status as running and schedule WP Cron if enabled via WP-Cron
+        // 3. Set status as running and schedule WP Cron if enabled via WP-Cron
         update_option( 'uwb_preload_running', 1 );
         
         $preload_enabled = intval( get_option( 'uwb_preload_enabled', 0 ) );
@@ -928,7 +946,7 @@ class Uwb_Preloader {
 
         delete_transient( 'uwb_populating_queue' );
 
-        return count( $urls );
+        return $total_inserted;
     }
 
     /**
