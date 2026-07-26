@@ -235,7 +235,8 @@ class Uwb_Cache {
             'tuning_critical_css'         => get_option( 'uwb_tuning_critical_css', '' ),
             'tuning_css_excludes'         => get_option( 'uwb_tuning_css_excludes', '' ),
             'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', '' ),
-            'ignore_all_query_strings'    => intval( get_option( 'uwb_ignore_all_query_strings', 1 ) )
+            'ignore_all_query_strings'    => intval( get_option( 'uwb_ignore_all_query_strings', 1 ) ),
+            'cache_search'                => intval( get_option( 'uwb_cache_search', 1 ) )
         );
 
         $config_content = "<?php\n" .

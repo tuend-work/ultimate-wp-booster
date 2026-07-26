@@ -123,6 +123,39 @@ function uwb_advanced_cache_run() {
                     }
                 }
 
+                // Anti-DDoS & Caching for search param 's'
+                if ( $param === 's' ) {
+                    $cache_search = isset( $config['cache_search'] ) ? (bool)$config['cache_search'] : true;
+                    
+                    // Block search spam (long keyword or special character attacks)
+                    $clean_search_query = trim( (string) $val );
+                    if ( strlen( $clean_search_query ) > 40 || preg_match( '/[\{\}\[\]\(\)\<\>\\\\\^]/', $clean_search_query ) ) {
+                        if ( $debug ) {
+                            error_log( "UWB: Anti-DDoS matched. Blocked suspicious search query." );
+                        }
+                        $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
+                        $cache_file_404 = $wp_content_dir . '/cache/wp-rocket/' . $host . '/' . ( ( isset( $_SERVER['HTTPS'] ) && ( $_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1 ) ) ? "404-https.html" : "404.html" );
+                        header( 'HTTP/1.1 404 Not Found' );
+                        header( 'X-Ultimate-WP-Booster-Serving-Static: Yes (Anti-DDoS Block Search Spam)' );
+                        header( 'Content-Type: text/html; charset=UTF-8' );
+                        header( 'Cache-Control: no-cache, no-store, must-revalidate, private' );
+                        header( 'Pragma: no-cache' );
+                        
+                        if ( file_exists( $cache_file_404 ) ) {
+                            @readfile( $cache_file_404 );
+                        } else {
+                            echo '<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested URL was not found on this server.</p></body></html>';
+                        }
+                        exit;
+                    }
+
+                    if ( $cache_search ) {
+                        // Allow caching search parameter
+                        $active_cache_query_params[$param] = $val;
+                        continue;
+                    }
+                }
+
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Core WordPress routing parameter detected '{$param}'." );
                 }
@@ -464,11 +497,12 @@ function uwb_advanced_cache_shutdown() {
         }
     }
     
-    $is_special_page = is_admin() || is_search() || is_feed() || is_trackback() || is_robots();
+    $cache_search = ! empty( $config['cache_search'] );
+    $is_special_page = is_admin() || ( is_search() && ! $cache_search ) || is_feed() || is_trackback() || is_robots();
     if ( $is_special_page || ( is_404() && ! $cache_404 ) ) {
         $should_cache = false;
         if ( $debug ) {
-            error_log( "UWB: Caching bypassed: Special page matched: is_admin=" . (is_admin()?'yes':'no') . ", is_search=" . (is_search()?'yes':'no') . ", is_feed=" . (is_feed()?'yes':'no') . ", is_trackback=" . (is_trackback()?'yes':'no') . ", is_robots=" . (is_robots()?'yes':'no') . ", is_404=" . (is_404()?'yes':'no') );
+            error_log( "UWB: Caching bypassed: Special page matched: is_admin=" . (is_admin()?'yes':'no') . ", is_search=" . (is_search()?'yes':'no') . ", cache_search=" . ($cache_search?'yes':'no') . ", is_feed=" . (is_feed()?'yes':'no') . ", is_trackback=" . (is_trackback()?'yes':'no') . ", is_robots=" . (is_robots()?'yes':'no') . ", is_404=" . (is_404()?'yes':'no') );
         }
     }
 
@@ -553,7 +587,8 @@ function uwb_advanced_cache_shutdown() {
             }
         }
     }
-    if ( is_admin() || is_feed() || is_trackback() || is_robots() || $is_xml_response ) {
+    $is_search_page = is_search();
+    if ( is_admin() || is_feed() || is_trackback() || is_robots() || $is_xml_response || ( $is_search_page && ! $cache_search ) ) {
         $is_html = false;
     }
 

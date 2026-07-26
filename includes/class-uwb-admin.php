@@ -75,7 +75,8 @@ class Uwb_Admin {
             'uwb_tuning_js_defer_excludes',
             'uwb_tuning_ucss_excludes',
             'uwb_tuning_critical_css',
-            'uwb_ignore_all_query_strings'
+            'uwb_ignore_all_query_strings',
+            'uwb_cache_search'
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
@@ -234,6 +235,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_tuning_ucss_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_tuning_critical_css', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_ignore_all_query_strings', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cache_search', 'intval' );
     }
 
     public function sanitize_object_cache_enabled( $val ) {
@@ -1660,6 +1662,15 @@ class Uwb_Admin {
                                                 <option value="0" <?php selected( get_option( 'uwb_ignore_all_query_strings', 1 ), 0 ); ?>>Disabled (Bypass cache completely for unrecognized parameters)</option>
                                             </select>
                                             <p class="description">When enabled, strange URL queries like <code>?c=123</code> or <code>?xyz=999</code> will serve the cached main page instead of hitting PHP/database. (Recommended)</p>
+                                        </div>
+
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_cache_search">Cache Search Results</label>
+                                            <select name="uwb_cache_search" id="uwb_cache_search" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                                <option value="1" <?php selected( get_option( 'uwb_cache_search', 1 ), 1 ); ?>>Enabled (Cache search results page and protect against search parameter DDoS)</option>
+                                                <option value="0" <?php selected( get_option( 'uwb_cache_search', 1 ), 0 ); ?>>Disabled (Bypass cache for search queries - default WP behavior)</option>
+                                            </select>
+                                            <p class="description">When enabled, search queries like <code>?s=keyword</code> will be cached as static pages. High-risk keyword spam is automatically blocked. (Recommended)</p>
                                         </div>
 
                                         <div class="uwb-form-group">
