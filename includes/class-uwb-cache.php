@@ -20,6 +20,11 @@ class Uwb_Cache {
         // Cron actions for cleaning expired cache
         add_action( 'uwb_clean_expired_cache', array( $this, 'clean_expired_cache' ) );
         add_action( 'init', array( $this, 'schedule_cleanup_cron' ) );
+
+        // Invalidate homepage links transient whenever homepage cache is purged
+        add_action( 'wp_update_nav_menu', array( 'Uwb_Preloader', 'invalidate_homepage_links_cache' ) );
+        add_action( 'switch_theme', array( 'Uwb_Preloader', 'invalidate_homepage_links_cache' ) );
+        add_action( 'update_option_sidebars_widgets', array( 'Uwb_Preloader', 'invalidate_homepage_links_cache' ) );
     }
 
     /**
@@ -338,8 +343,9 @@ class Uwb_Cache {
             $this->purge_url( $permalink );
         }
 
-        // 2. Purge home page cache
+        // 2. Purge home page cache & invalidate homepage links transient
         $this->purge_url( home_url( '/' ) );
+        Uwb_Preloader::invalidate_homepage_links_cache();
 
         // 3. Purge parent post cache if exists
         if ( $post->post_parent ) {

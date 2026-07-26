@@ -120,7 +120,14 @@ class Uwb_Preloader {
             return;
         }
 
-        $urls = $this->get_priority_url_sitemap_entries();
+        // 1. Manual priority URLs (from settings)
+        $manual_urls = $this->get_manual_priority_urls();
+
+        // 2. All internal links scraped from homepage (cached)
+        $homepage_urls = $this->scrape_homepage_links();
+
+        // 3. Merge: manual first (higher priority), then homepage links
+        $all_urls = array_values( array_unique( array_merge( $manual_urls, $homepage_urls ) ) );
 
         status_header( 200 );
         header( 'Content-Type: application/xml; charset=UTF-8' );
@@ -128,7 +135,7 @@ class Uwb_Preloader {
 
         echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-        foreach ( $urls as $url ) {
+        foreach ( $all_urls as $url ) {
             echo "\t<url>\n";
             echo "\t\t<loc>" . esc_url( $url ) . "</loc>\n";
             echo "\t</url>\n";
@@ -137,7 +144,10 @@ class Uwb_Preloader {
         exit;
     }
 
-    private function get_priority_url_sitemap_entries() {
+    /**
+     * Get manually configured priority URLs from settings.
+     */
+    private function get_manual_priority_urls() {
         $priority_raw = get_option( 'uwb_priority_urls', '' );
         $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $priority_raw ) ) ) );
         $urls = array();
@@ -150,6 +160,150 @@ class Uwb_Preloader {
         }
 
         return array_values( array_unique( $urls ) );
+    }
+
+    /**
+     * @deprecated Kept for backward compatibility — use get_manual_priority_urls().
+     */
+    private function get_priority_url_sitemap_entries() {
+        return $this->get_manual_priority_urls();
+    }
+
+    /**
+     * Scrape all unique internal links from the homepage HTML.
+     * Results are cached in a transient for 1 hour to avoid repeated HTTP requests.
+     *
+     * @return array Absolute URLs
+     */
+    public function scrape_homepage_links() {
+        $cache_key = 'uwb_homepage_links_v1';
+        $cached    = get_transient( $cache_key );
+        if ( is_array( $cached ) ) {
+            return $cached;
+        }
+
+        $home_url  = home_url( '/' );
+        $parsed    = wp_parse_url( $home_url );
+        $home_host = isset( $parsed['host'] ) ? strtolower( $parsed['host'] ) : '';
+        $scheme    = isset( $parsed['scheme'] ) ? $parsed['scheme'] : 'https';
+        $base_path = isset( $parsed['path'] ) ? rtrim( $parsed['path'], '/' ) : '';
+
+        // Fetch homepage HTML (bypass our own cache header so we always get fresh HTML)
+        $response = wp_remote_get( $home_url, array(
+            'timeout'    => 20,
+            'sslverify'  => false,
+            'user-agent' => 'Ultimate-WP-Booster-Sitemap-Scraper',
+            'headers'    => array(
+                'Accept' => 'text/html',
+            ),
+        ) );
+
+        if ( is_wp_error( $response ) ) {
+            set_transient( $cache_key, array(), 5 * MINUTE_IN_SECONDS ); // short retry
+            return array();
+        }
+
+        $code = wp_remote_retrieve_response_code( $response );
+        if ( $code !== 200 ) {
+            set_transient( $cache_key, array(), 5 * MINUTE_IN_SECONDS );
+            return array();
+        }
+
+        $html = wp_remote_retrieve_body( $response );
+        if ( empty( $html ) ) {
+            set_transient( $cache_key, array(), 5 * MINUTE_IN_SECONDS );
+            return array();
+        }
+
+        // Extract all href values from <a> tags
+        preg_match_all( '/<a\s[^>]*href=["\']([^"\'#\s][^"\'>]*)["\'][^>]*>/i', $html, $matches );
+        $hrefs = isset( $matches[1] ) ? $matches[1] : array();
+
+        // Patterns that should never be preloaded
+        $skip_extensions = '/\.(jpg|jpeg|png|gif|svg|webp|ico|pdf|zip|mp4|mp3|ogg|wav|xml|json|css|js|woff|woff2|ttf|eot)$/i';
+        $skip_prefixes   = array( 'mailto:', 'tel:', 'javascript:', '#', 'data:' );
+        $skip_paths      = array(
+            '/wp-admin', '/wp-login', '/wp-json', '/wp-cron', '?add-to-cart',
+            '/cart', '/checkout', '/my-account', '/feed', '/trackback',
+        );
+
+        // Get excluded URLs from settings
+        $exclusions_raw    = get_option( 'uwb_excluded_urls', '' );
+        $excluded_patterns = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $exclusions_raw ) ) ) );
+
+        $urls = array();
+
+        foreach ( $hrefs as $href ) {
+            $href = html_entity_decode( trim( $href ) );
+
+            // Skip non-HTTP schemes and anchors
+            $lower_href = strtolower( $href );
+            $skip = false;
+            foreach ( $skip_prefixes as $prefix ) {
+                if ( strpos( $lower_href, $prefix ) === 0 ) {
+                    $skip = true;
+                    break;
+                }
+            }
+            if ( $skip ) continue;
+
+            // Resolve to absolute URL
+            if ( preg_match( '#^https?://#i', $href ) ) {
+                $abs_url = $href;
+            } elseif ( strpos( $href, '//' ) === 0 ) {
+                $abs_url = $scheme . ':' . $href;
+            } elseif ( strpos( $href, '/' ) === 0 ) {
+                $abs_url = $scheme . '://' . $home_host . $href;
+            } else {
+                // Relative path
+                $abs_url = $scheme . '://' . $home_host . $base_path . '/' . ltrim( $href, '/' );
+            }
+
+            // Must be a valid URL
+            if ( ! filter_var( $abs_url, FILTER_VALIDATE_URL ) ) continue;
+
+            // Must be same host (internal only)
+            $link_host = strtolower( (string) wp_parse_url( $abs_url, PHP_URL_HOST ) );
+            if ( $link_host !== $home_host ) continue;
+
+            // Strip query string and fragment for cleaner sitemap
+            $clean_url = strtok( $abs_url, '?' );
+            $clean_url = strtok( $clean_url, '#' );
+
+            // Skip file extensions
+            if ( preg_match( $skip_extensions, (string) wp_parse_url( $clean_url, PHP_URL_PATH ) ) ) continue;
+
+            // Skip known non-cacheable paths
+            $url_path = (string) wp_parse_url( $clean_url, PHP_URL_PATH );
+            $skip = false;
+            foreach ( $skip_paths as $sp ) {
+                if ( strpos( $url_path, $sp ) !== false || strpos( $clean_url, $sp ) !== false ) {
+                    $skip = true;
+                    break;
+                }
+            }
+            if ( $skip ) continue;
+
+            // Apply user exclusion patterns
+            if ( $this->is_excluded( $url_path, $excluded_patterns ) ) continue;
+
+            $urls[] = $clean_url;
+        }
+
+        $urls = array_values( array_unique( $urls ) );
+
+        // Cache for 1 hour
+        set_transient( $cache_key, $urls, HOUR_IN_SECONDS );
+
+        return $urls;
+    }
+
+    /**
+     * Invalidate the homepage links transient cache so the next sitemap
+     * request re-scrapes fresh content.
+     */
+    public static function invalidate_homepage_links_cache() {
+        delete_transient( 'uwb_homepage_links_v1' );
     }
 
     private function normalize_user_url( $value ) {
