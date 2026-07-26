@@ -82,6 +82,47 @@ function uwb_advanced_cache_run() {
             // Core WordPress query variables that must never be ignored (they route to specific inner pages)
             $core_wp_queries = array( 'p', 'page_id', 'cat', 'tag', 'm', 'name', 'category_name', 'post_type', 's', 'preview' );
             if ( in_array( $param, $core_wp_queries, true ) ) {
+                // If it is 'p' or 'page_id', validate against the static valid post IDs JSON whitelist (Anti-DDoS 404)
+                if ( ( $param === 'p' || $param === 'page_id' ) && ! empty( $val ) ) {
+                    $post_id_val = intval( $val );
+                    $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
+                    $whitelist_json_path = $wp_content_dir . '/cache/uwb-valid-post-ids.json';
+                    
+                    if ( file_exists( $whitelist_json_path ) ) {
+                        $whitelist_content = @file_get_contents( $whitelist_json_path );
+                        $valid_ids = @json_decode( $whitelist_content, true );
+                        
+                        if ( is_array( $valid_ids ) && ! in_array( $post_id_val, $valid_ids, true ) ) {
+                            // This Post ID is invalid (definitely a 404). Serve global 404 cache immediately!
+                            if ( $debug ) {
+                                error_log( "UWB: Anti-DDoS matched. Invalid routing parameter ID '{$post_id_val}'. Serving static 404." );
+                            }
+                            
+                            $cache_file_404 = $wp_content_dir . '/cache/wp-rocket/' . $host . '/' . ( ( isset( $_SERVER['HTTPS'] ) && ( $_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1 ) ) ? "404-https.html" : "404.html" );
+                            header( 'HTTP/1.1 404 Not Found' );
+                            header( 'X-Ultimate-WP-Booster-Serving-Static: Yes (Anti-DDoS 404 Whitelist)' );
+                            header( 'Content-Type: text/html; charset=UTF-8' );
+                            header( 'Cache-Control: no-cache, no-store, must-revalidate, private' );
+                            header( 'Pragma: no-cache' );
+                            
+                            if ( file_exists( $cache_file_404 ) ) {
+                                $supports_gzip = isset( $_SERVER['HTTP_ACCEPT_ENCODING'] ) && strpos( $_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip' ) !== false;
+                                $gzip_file = $cache_file_404 . '_gzip';
+                                if ( $supports_gzip && file_exists( $gzip_file ) && filesize( $gzip_file ) > 0 ) {
+                                    header( 'Content-Encoding: gzip' );
+                                    header( 'Vary: Accept-Encoding' );
+                                    @readfile( $gzip_file );
+                                } else {
+                                    @readfile( $cache_file_404 );
+                                }
+                            } else {
+                                echo '<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested URL was not found on this server.</p></body></html>';
+                            }
+                            exit;
+                        }
+                    }
+                }
+
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Core WordPress routing parameter detected '{$param}'." );
                 }

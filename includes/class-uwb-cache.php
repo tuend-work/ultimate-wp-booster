@@ -10,6 +10,8 @@ class Uwb_Cache {
     public function __construct() {
         // Purge cache hooks on content changes
         add_action( 'save_post', array( $this, 'purge_post_cache' ), 10, 3 );
+        add_action( 'save_post', array( 'Uwb_Cache', 'write_valid_post_ids_json' ), 20 );
+        add_action( 'delete_post', array( 'Uwb_Cache', 'write_valid_post_ids_json' ), 20 );
         add_action( 'wp_update_nav_menu', array( $this, 'purge_all' ) );
         add_action( 'switch_theme', array( $this, 'purge_all' ) );
         add_action( 'update_option_sidebars_widgets', array( $this, 'purge_all' ) );
@@ -255,6 +257,39 @@ class Uwb_Cache {
 
         // Auto-sync browser caching rules to root .htaccess
         self::write_htaccess_browser_cache();
+
+        // Write valid Post & Page IDs to whitelist JSON file
+        self::write_valid_post_ids_json();
+    }
+
+    /**
+     * Export all published Post and Page IDs to a static JSON file
+     * to protect against random ID parameter DDoS attacks.
+     */
+    public static function write_valid_post_ids_json() {
+        global $wpdb;
+        $cache_dir = self::get_cache_dir();
+        if ( ! file_exists( $cache_dir ) ) {
+            @mkdir( $cache_dir, 0755, true );
+        }
+
+        $json_path = dirname( $cache_dir ) . '/uwb-valid-post-ids.json';
+
+        // Query IDs of all published posts, pages, and custom post types
+        $ids = $wpdb->get_col(
+            "SELECT ID FROM {$wpdb->posts} 
+             WHERE post_status = 'publish' 
+               AND post_type NOT IN ('revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request')"
+        );
+
+        if ( ! is_array( $ids ) ) {
+            $ids = array();
+        }
+
+        // Convert values to integer
+        $ids = array_map( 'intval', $ids );
+
+        @file_put_contents( $json_path, json_encode( $ids ) );
     }
 
     /**

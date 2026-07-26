@@ -102,6 +102,10 @@ class Uwb_Activator {
         if ( ! wp_next_scheduled( 'uwb_clean_expired_cache' ) ) {
             wp_schedule_event( time(), 'hourly', 'uwb_clean_expired_cache' );
         }
+
+        // 7. Write valid post IDs JSON
+        require_once dirname( __FILE__ ) . '/class-uwb-cache.php';
+        Uwb_Cache::write_valid_post_ids_json();
     }
 
     /**
