@@ -126,8 +126,11 @@ class Uwb_Preloader {
         // 2. All internal links scraped from homepage (cached)
         $homepage_urls = $this->scrape_homepage_links();
 
-        // 3. Merge: manual first (higher priority), then homepage links
-        $all_urls = array_values( array_unique( array_merge( $manual_urls, $homepage_urls ) ) );
+        // 3. Public Taxonomy Terms (Categories, Tags, etc.)
+        $taxonomy_urls = $this->collect_public_taxonomy_urls();
+
+        // 4. Merge: manual first (highest priority), then homepage links, then taxonomy terms
+        $all_urls = array_values( array_unique( array_merge( $manual_urls, $homepage_urls, $taxonomy_urls ) ) );
 
         status_header( 200 );
         header( 'Content-Type: application/xml; charset=UTF-8' );
@@ -542,32 +545,6 @@ class Uwb_Preloader {
 
         libxml_clear_errors();
 
-        // Classify raw URLs
-        $tax_slugs = array( 'category', 'post_tag', 'tag', 'author', 'date', 'page', 'type', 'shop' );
-        if ( function_exists( 'get_taxonomies' ) ) {
-            $taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
-            foreach ( $taxonomies as $tax ) {
-                if ( ! empty( $tax->rewrite['slug'] ) ) {
-                    $tax_slugs[] = trim( $tax->rewrite['slug'], '/' );
-                }
-            }
-        }
-        $tax_slugs = array_unique( $tax_slugs );
-
-        $post_type_slugs = array( 'post', 'page' );
-        if ( function_exists( 'get_post_types' ) ) {
-            $post_types = get_post_types( array( 'public' => true ), 'objects' );
-            foreach ( $post_types as $pt ) {
-                if ( ! empty( $pt->rewrite['slug'] ) ) {
-                    $post_type_slugs[] = trim( $pt->rewrite['slug'], '/' );
-                }
-            }
-        }
-        $post_type_slugs = array_unique( $post_type_slugs );
-
-        $home_url = home_url( '/' );
-        $home_url_no_slash = rtrim( $home_url, '/' );
-
         foreach ( array_unique( $raw_urls ) as $url ) {
             if ( $this->is_xml_url( $url ) ) {
                 continue;
@@ -576,33 +553,7 @@ class Uwb_Preloader {
             if ( $is_priority_sitemap ) {
                 $result['priority'][] = $url;
             } else {
-                $is_taxonomy = false;
-                if ( $url === $home_url || $url === $home_url_no_slash ) {
-                    $is_taxonomy = true;
-                } else {
-                    $path = wp_parse_url( $url, PHP_URL_PATH );
-                    $path_segments = array_filter( explode( '/', trim( $path, '/' ) ) );
-                    if ( ! empty( $path_segments ) ) {
-                        $first_segment = reset( $path_segments );
-                        if ( in_array( $first_segment, $tax_slugs, true ) ) {
-                            $is_taxonomy = true;
-                        } elseif ( in_array( $first_segment, $post_type_slugs, true ) ) {
-                            $is_taxonomy = false;
-                        } else {
-                            if ( function_exists( 'url_to_postid' ) ) {
-                                if ( url_to_postid( $url ) === 0 ) {
-                                    $is_taxonomy = true;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if ( $is_taxonomy ) {
-                    $result['priority'][] = $url;
-                } else {
-                    $result['normal'][] = $url;
-                }
+                $result['normal'][] = $url;
             }
         }
 
@@ -910,8 +861,7 @@ class Uwb_Preloader {
 
         // 1. Collect and insert static priority URLs first (fastest)
         $manual_priority_urls = $this->get_priority_url_sitemap_entries();
-        $collected_priority_urls = $this->collect_public_taxonomy_urls();
-        $insert_urls_batch( array_merge( $manual_priority_urls, $collected_priority_urls ) );
+        $insert_urls_batch( $manual_priority_urls );
 
         // 2. Parse and insert sitemaps one by one (progressive loading)
         foreach ( $sitemap_urls as $sitemap_url ) {
