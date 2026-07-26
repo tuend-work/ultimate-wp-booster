@@ -231,8 +231,21 @@ function uwb_advanced_cache_run() {
     $cache_file = $cache_dir . '/' . $filename;
 
     // 10. Serve cached file if valid
+    $served = false;
+    $cache_file_404 = $cache_dir . '/' . ( $is_https ? "404-https.html" : "404.html" );
+    
+    // Check normal cache first, then 404 cache
+    $target_cache_file = '';
+    $is_serving_404 = false;
     if ( file_exists( $cache_file ) ) {
-        $file_time = @filemtime( $cache_file );
+        $target_cache_file = $cache_file;
+    } elseif ( file_exists( $cache_file_404 ) ) {
+        $target_cache_file = $cache_file_404;
+        $is_serving_404 = true;
+    }
+
+    if ( $target_cache_file !== '' ) {
+        $file_time = @filemtime( $target_cache_file );
         $lifespan  = intval( $config['cache_lifespan'] );
 
         if ( $is_xml ) {
@@ -246,17 +259,23 @@ function uwb_advanced_cache_run() {
         }
 
         if ( $lifespan === 0 || ( time() - $file_time ) < $lifespan ) {
-            $gzip_file     = $cache_file . '_gzip';
+            $gzip_file     = $target_cache_file . '_gzip';
             $supports_gzip = isset( $_SERVER['HTTP_ACCEPT_ENCODING'] ) &&
                              strpos( $_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip' ) !== false;
 
-            header( 'X-Ultimate-WP-Booster-Serving-Static: Yes' );
+            if ( $is_serving_404 ) {
+                header( 'HTTP/1.1 404 Not Found' );
+                header( 'X-Ultimate-WP-Booster-Serving-Static: Yes (404 Cache)' );
+            } else {
+                header( 'X-Ultimate-WP-Booster-Serving-Static: Yes' );
+            }
+            
             if ( $logged_in_cookie_hash !== '' ) {
                 header( 'Cache-Control: no-cache, no-store, must-revalidate, private' );
                 header( 'Pragma: no-cache' );
             } else {
                 $bc_enabled = isset( $config['browser_cache_enabled'] ) ? intval( $config['browser_cache_enabled'] ) : 1;
-                if ( $bc_enabled ) {
+                if ( $bc_enabled && ! $is_serving_404 ) { // Do not browser-cache 404 pages at edge level
                     $bc_lifespan = isset( $config['browser_cache_lifespan'] ) ? intval( $config['browser_cache_lifespan'] ) : 3600;
                     header( 'Pragma: public' );
                     header( 'Cache-Control: max-age=' . $bc_lifespan . ', public' );
@@ -276,10 +295,10 @@ function uwb_advanced_cache_run() {
                 header( 'Vary: Accept-Encoding' );
                 @readfile( $gzip_file );
             } else {
-                @readfile( $cache_file );
+                @readfile( $target_cache_file );
             }
             if ( $debug ) {
-                error_log( "UWB: Served static cache file: {$cache_file}" );
+                error_log( "UWB: Served static cache file: {$target_cache_file}" );
             }
             exit;
         } else {
@@ -451,6 +470,13 @@ function uwb_advanced_cache_shutdown() {
 
     $cache_file = isset( $GLOBALS['uwb_cache_file'] ) ? $GLOBALS['uwb_cache_file'] : '';
     $cache_dir  = isset( $GLOBALS['uwb_cache_dir'] ) ? $GLOBALS['uwb_cache_dir'] : '';
+
+    // If this is a 404 page, rename the cache file target to prevent overriding index.html
+    if ( $response_code === 404 && $cache_404 ) {
+        $is_https = (strpos(basename($cache_file), 'index-https') === 0);
+        $cache_file = $cache_dir . '/' . ($is_https ? '404-https.html' : '404.html');
+    }
+
     if ( ! $cache_file || ! $cache_dir ) {
         $should_cache = false;
         if ( $debug ) {
