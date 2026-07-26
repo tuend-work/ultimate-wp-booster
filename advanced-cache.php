@@ -78,9 +78,16 @@ function uwb_advanced_cache_run() {
                 $active_cache_query_params[$param] = $val;
                 continue;
             }
-            // Instead of bypassing cache completely for unrecognized query parameters,
-            // we ignore them and fall back to serving the base clean URL cache file.
-            // This ensures urls like ?c=123 serve the cached home/page content immediately.
+            
+            // Check if we should ignore strange query parameters and serve the clean URL cache
+            $ignore_all = isset( $config['ignore_all_query_strings'] ) ? (bool)$config['ignore_all_query_strings'] : true;
+            if ( ! $ignore_all ) {
+                // If disabled, bypass cache completely for unrecognized query parameters (default WP behavior)
+                if ( $debug ) {
+                    error_log( "UWB: Run bypassed: Query string contains non-allowed parameter '{$param}'." );
+                }
+                return;
+            }
         }
     }
 

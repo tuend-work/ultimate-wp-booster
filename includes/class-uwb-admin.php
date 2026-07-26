@@ -74,7 +74,8 @@ class Uwb_Admin {
             'uwb_tuning_js_excludes',
             'uwb_tuning_js_defer_excludes',
             'uwb_tuning_ucss_excludes',
-            'uwb_tuning_critical_css'
+            'uwb_tuning_critical_css',
+            'uwb_ignore_all_query_strings'
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
@@ -232,6 +233,7 @@ class Uwb_Admin {
 
         register_setting( 'uwb_settings_group', 'uwb_tuning_ucss_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_tuning_critical_css', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_ignore_all_query_strings', 'intval' );
     }
 
     public function sanitize_object_cache_enabled( $val ) {
@@ -1649,6 +1651,15 @@ class Uwb_Admin {
                                                 <code>/cart(.*)</code> to exclude the shopping cart pages<br>
                                                 <code>/checkout(.*)</code> to exclude checkout pages
                                             </p>
+                                        </div>
+
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_ignore_all_query_strings">Serve Cache for Strange Query Strings</label>
+                                            <select name="uwb_ignore_all_query_strings" id="uwb_ignore_all_query_strings" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                                <option value="1" <?php selected( get_option( 'uwb_ignore_all_query_strings', 1 ), 1 ); ?>>Enabled (Ignore unrecognized parameters and serve main cache)</option>
+                                                <option value="0" <?php selected( get_option( 'uwb_ignore_all_query_strings', 1 ), 0 ); ?>>Disabled (Bypass cache completely for unrecognized parameters)</option>
+                                            </select>
+                                            <p class="description">When enabled, strange URL queries like <code>?c=123</code> or <code>?xyz=999</code> will serve the cached main page instead of hitting PHP/database. (Recommended)</p>
                                         </div>
 
                                         <div class="uwb-form-group">
