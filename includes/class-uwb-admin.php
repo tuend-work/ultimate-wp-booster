@@ -1665,15 +1665,6 @@ class Uwb_Admin {
                                         </div>
 
                                         <div class="uwb-form-group">
-                                            <label for="uwb_cache_search">Cache Search Results</label>
-                                            <select name="uwb_cache_search" id="uwb_cache_search" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                                <option value="1" <?php selected( get_option( 'uwb_cache_search', 1 ), 1 ); ?>>Enabled (Cache search results page and protect against search parameter DDoS)</option>
-                                                <option value="0" <?php selected( get_option( 'uwb_cache_search', 1 ), 0 ); ?>>Disabled (Bypass cache for search queries - default WP behavior)</option>
-                                            </select>
-                                            <p class="description">When enabled, search queries like <code>?s=keyword</code> will be cached as static pages. High-risk keyword spam is automatically blocked. (Recommended)</p>
-                                        </div>
-
-                                        <div class="uwb-form-group">
                                             <label for="uwb_ignored_query">Ignored Query Parameters</label>
                                             <textarea name="uwb_ignored_query" id="uwb_ignored_query" rows="5"><?php 
                                                 $ignored_query_val = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
