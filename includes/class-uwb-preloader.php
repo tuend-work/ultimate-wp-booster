@@ -16,6 +16,9 @@ class Uwb_Preloader {
         // Background preloading runner hook
         add_action( 'uwb_preload_cron_job', array( $this, 'run_preload_batch' ) );
 
+        // Async hook: parse sitemap + populate queue in background (avoids 502 on large sites)
+        add_action( 'uwb_start_preload_async', array( $this, 'start_preload' ) );
+
         // AJAX handlers
         add_action( 'wp_ajax_uwb_start_preload', array( $this, 'ajax_start_preload' ) );
         add_action( 'wp_ajax_uwb_stop_preload', array( $this, 'ajax_stop_preload' ) );
@@ -702,6 +705,7 @@ class Uwb_Preloader {
 
     /**
      * AJAX action: populate queue and start preloading
+     * Schedules an async cron event to avoid 502/timeout on large sites.
      */
     public function ajax_start_preload() {
         check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
@@ -710,14 +714,18 @@ class Uwb_Preloader {
             wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
         }
 
-        $result = $this->start_preload();
-
-        if ( is_wp_error( $result ) ) {
-            wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+        // Prevent concurrent queue population
+        if ( get_transient( 'uwb_populating_queue' ) ) {
+            wp_send_json_error( array( 'message' => 'Queue is already being populated.' ) );
         }
 
+        // Schedule async: parse sitemap in background so this AJAX response returns immediately
+        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
+        wp_schedule_single_event( time(), 'uwb_start_preload_async' );
+        update_option( 'uwb_preload_running', 1 );
+
         wp_send_json_success( array(
-            'message' => 'Sitemap parsed successfully. Added ' . $result . ' links to the preloading queue!'
+            'message' => 'Sitemap parsing scheduled. URLs will be added to the preloading queue shortly!'
         ) );
     }
 

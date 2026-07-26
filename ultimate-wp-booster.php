@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.6.1
+ * Version:     1.6.2
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.6.1' );
+define( 'UWB_VERSION', '1.6.2' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -228,7 +228,7 @@ function uwb_handle_admin_bar_flush_all_preload() {
 
     check_admin_referer( 'uwb_flush_all_preload_action' );
 
-    // 1. Purge all page cache
+    // 1. Purge all page cache (fast – just deletes files)
     $uwb_cache = new Uwb_Cache();
     $uwb_cache->purge_all();
 
@@ -240,9 +240,11 @@ function uwb_handle_admin_bar_flush_all_preload() {
     // 3. Flush Object Cache
     uwb_flush_object_cache_internal();
 
-    // 4. Start preloader process
-    $uwb_preloader = new Uwb_Preloader();
-    $uwb_preloader->start_preload();
+    // 4. Schedule start_preload() as an async single-event cron so that
+    //    sitemap parsing (which makes multiple HTTP requests) does NOT run
+    //    inside this admin-bar HTTP request and cause 502/timeout on large sites.
+    wp_clear_scheduled_hook( 'uwb_start_preload_async' );
+    wp_schedule_single_event( time(), 'uwb_start_preload_async' );
 
     // Redirect back to settings page or referrer
     $referer = wp_get_referer();
