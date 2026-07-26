@@ -79,6 +79,15 @@ function uwb_advanced_cache_run() {
                 continue;
             }
             
+            // Core WordPress query variables that must never be ignored (they route to specific inner pages)
+            $core_wp_queries = array( 'p', 'page_id', 'cat', 'tag', 'm', 'name', 'category_name', 'post_type', 's', 'preview' );
+            if ( in_array( $param, $core_wp_queries, true ) ) {
+                if ( $debug ) {
+                    error_log( "UWB: Run bypassed: Core WordPress routing parameter detected '{$param}'." );
+                }
+                return; // Bypass cache and let PHP generate the correct inner page
+            }
+            
             // Check if we should ignore strange query parameters and serve the clean URL cache
             $ignore_all = isset( $config['ignore_all_query_strings'] ) ? (bool)$config['ignore_all_query_strings'] : true;
             if ( ! $ignore_all ) {
