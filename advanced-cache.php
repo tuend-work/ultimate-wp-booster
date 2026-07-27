@@ -588,6 +588,48 @@ function uwb_advanced_cache_shutdown() {
             $refresh_comment = ' | Cache: unlimited lifespan';
         }
 
+        $active_features = array();
+        if ( ! empty( $config['cache_page_enabled'] ) ) $active_features[] = "Page Cache";
+        if ( ! empty( $config['html_minify'] ) ) $active_features[] = "Minify HTML";
+        if ( ! empty( $config['css_minify'] ) ) $active_features[] = "Minify CSS";
+        if ( ! empty( $config['css_combine'] ) ) $active_features[] = "Combine CSS";
+        if ( ! empty( $config['js_minify'] ) ) $active_features[] = "Minify JS";
+        if ( ! empty( $config['js_combine'] ) ) $active_features[] = "Combine JS";
+        if ( ! empty( $config['js_load_defer'] ) ) $active_features[] = "Defer JS";
+        if ( ! empty( $config['html_remove_qs'] ) ) $active_features[] = "Remove Query Strings";
+        if ( ! empty( $config['html_remove_gfonts'] ) ) $active_features[] = "Remove Google Fonts";
+        if ( ! empty( $config['html_remove_emoji'] ) ) $active_features[] = "Remove Emoji";
+        if ( ! empty( $config['html_remove_noscript'] ) ) $active_features[] = "Remove Noscript";
+        if ( ! empty( $config['media_lazy_load_images'] ) ) $active_features[] = "Lazy Load Images";
+        if ( ! empty( $config['media_lazy_load_iframes'] ) ) $active_features[] = "Lazy Load Iframes";
+        if ( ! empty( $config['redis_enabled'] ) ) $active_features[] = "Redis Object Cache";
+
+        $box_comment = '';
+        if ( ! empty( $active_features ) ) {
+            $lines = array();
+            $lines[] = "Active Optimization Features:";
+            foreach ( $active_features as $feature ) {
+                $lines[] = "  [x] " . $feature;
+            }
+            
+            $max_len = 0;
+            foreach ( $lines as $line ) {
+                $len = strlen( $line );
+                if ( $len > $max_len ) {
+                    $max_len = $len;
+                }
+            }
+            $width = $max_len + 4;
+            
+            $border = "+" . str_repeat( "-", $width - 2 ) . "+";
+            $box_comment .= "\n" . $border . "\n";
+            foreach ( $lines as $line ) {
+                $padding = $width - 2 - strlen( $line );
+                $box_comment .= "| " . $line . str_repeat( " ", $padding ) . " |\n";
+            }
+            $box_comment .= $border;
+        }
+
         if ( $should_cache ) {
             // Run Page Optimization Processor
             $plugin_dir = isset( $config['plugin_dir'] ) ? $config['plugin_dir'] : '';
@@ -601,9 +643,9 @@ function uwb_advanced_cache_shutdown() {
                     $html = Uwb_Optimizer::process( $html, $config );
                 }
             }
-            $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment} -->\n";
+            $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} -->\n";
         } else {
-            $comment_to_append = "<!-- Dynamic Page{$oc_comment} -->\n";
+            $comment_to_append = "<!-- Dynamic Page{$oc_comment}{$box_comment} -->\n";
         }
 
         $html = $comment_to_append . $html;
