@@ -184,12 +184,7 @@ class Uwb_Optimizer {
                 return $matches[0];
             }
             
-            // Remove single line comments
-            $js = preg_replace('/(?<!:)\/\/.*$/m', '', $js);
-            // Remove multi-line comments
-            $js = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $js);
-            // Collapse whitespaces
-            $js = preg_replace('/\s+/', ' ', $js);
+            // To ensure 100% script safety, we avoid aggressive regex comment removal which can corrupt string/regex literals
             return '<script' . $attrs . '>' . trim( $js ) . '</script>';
         }, $html);
     }
@@ -585,13 +580,7 @@ class Uwb_Optimizer {
                 }
 
                 if ( ! empty( $content ) ) {
-                    // Minify JS if not already minified
-                    if ( stripos( $url_clean, '.min.js' ) === false ) {
-                        $content = preg_replace('/(?<!:)\/\/.*$/m', '', $content);
-                        $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
-                        $content = preg_replace('/\s+/', ' ', $content);
-                    }
-
+                    // Caching external JS file content safely as-is without unsafe regex minification
                     $write_ok = @file_put_contents( $cache_file, trim( $content ) );
                     if ( $debug_mode ) {
                         $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Written to cache: " . ($write_ok !== false ? 'YES' : 'NO');
