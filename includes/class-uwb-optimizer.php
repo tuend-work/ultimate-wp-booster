@@ -19,7 +19,7 @@ class Uwb_Optimizer {
             return $html;
         }
 
-        $debug_mode = isset( $_GET['uwb_debug'] );
+        $debug_mode = true;
         if ( $debug_mode ) {
             $GLOBALS['uwb_debug_log'] = array();
             $GLOBALS['uwb_debug_log'][] = "=== UWB OPTIMIZER DEBUG LOG ===";

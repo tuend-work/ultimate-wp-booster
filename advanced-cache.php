@@ -632,9 +632,9 @@ function uwb_advanced_cache_shutdown() {
 
         if ( $should_cache ) {
             // Run Page Optimization Processor
-            $plugin_dir = isset( $config['plugin_dir'] ) ? $config['plugin_dir'] : '';
-            if ( empty( $plugin_dir ) ) {
-                $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
+            $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
+            if ( ! file_exists( $plugin_dir . 'includes/class-uwb-optimizer.php' ) ) {
+                $plugin_dir = isset( $config['plugin_dir'] ) ? $config['plugin_dir'] : '';
             }
             $optimizer_path = $plugin_dir . 'includes/class-uwb-optimizer.php';
             if ( file_exists( $optimizer_path ) ) {
