@@ -184,8 +184,8 @@ class Uwb_Optimizer {
                 return $matches[0];
             }
             
-            // To ensure 100% script safety, we avoid aggressive regex comment removal which can corrupt string/regex literals
-            return '<script' . $attrs . '>' . trim( $js ) . '</script>';
+            $minified = self::minify_js_safe( $js );
+            return '<script' . $attrs . '>' . $minified . '</script>';
         }, $html);
     }
 
@@ -580,7 +580,11 @@ class Uwb_Optimizer {
                 }
 
                 if ( ! empty( $content ) ) {
-                    // Caching external JS file content safely as-is without unsafe regex minification
+                    // Minify JS if not already minified
+                    if ( stripos( $url_clean, '.min.js' ) === false ) {
+                        $content = self::minify_js_safe( $content );
+                    }
+
                     $write_ok = @file_put_contents( $cache_file, trim( $content ) );
                     if ( $debug_mode ) {
                         $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Written to cache: " . ($write_ok !== false ? 'YES' : 'NO');
@@ -757,5 +761,165 @@ class Uwb_Optimizer {
         }
         
         return $scheme . $host . $port . '/' . implode( '/', $stack );
+    }
+
+    /**
+     * Safe character-by-character JS minifier that preserves strings, template literals, and regexes.
+     */
+    private static function minify_js_safe( $js ) {
+        $len = strlen( $js );
+        $out = '';
+        $i = 0;
+        
+        $in_string = false; // false, or '"', "'", "`"
+        $in_regex = false;
+        $in_single_comment = false;
+        $in_multi_comment = false;
+        
+        while ( $i < $len ) {
+            $c = $js[$i];
+            $next = ($i + 1 < $len) ? $js[$i + 1] : '';
+            
+            // 1. If inside single-line comment
+            if ( $in_single_comment ) {
+                if ( $c === "\n" || $c === "\r" ) {
+                    $in_single_comment = false;
+                    $out .= "\n";
+                }
+                $i++;
+                continue;
+            }
+            
+            // 2. If inside multi-line comment
+            if ( $in_multi_comment ) {
+                if ( $c === '*' && $next === '/' ) {
+                    $in_multi_comment = false;
+                    $i += 2;
+                } else {
+                    $i++;
+                }
+                continue;
+            }
+            
+            // 3. If inside string literal
+            if ( $in_string !== false ) {
+                if ( $c === '\\' ) {
+                    // Skip escaped character
+                    $out .= $c . $next;
+                    $i += 2;
+                    continue;
+                }
+                if ( $c === $in_string ) {
+                    $in_string = false;
+                }
+                $out .= $c;
+                $i++;
+                continue;
+            }
+            
+            // 4. Check for comments start
+            if ( $c === '/' && $next === '/' ) {
+                $in_single_comment = true;
+                $i += 2;
+                continue;
+            }
+            if ( $c === '/' && $next === '*' ) {
+                $in_multi_comment = true;
+                $i += 2;
+                continue;
+            }
+            
+            // 5. Check for string literal start
+            if ( $c === '"' || $c === "'" || $c === '`' ) {
+                $in_string = $c;
+                $out .= $c;
+                $i++;
+                continue;
+            }
+            
+            // 6. Check for regular expression literal start
+            if ( $c === '/' ) {
+                $last_non_ws = '';
+                $out_len = strlen( $out );
+                for ( $k = $out_len - 1; $k >= 0; $k-- ) {
+                    if ( ! ctype_space( $out[$k] ) ) {
+                        $last_non_ws = $out[$k];
+                        break;
+                    }
+                }
+                
+                $is_regex_start = false;
+                if ( $last_non_ws === '' ) {
+                    $is_regex_start = true;
+                } else {
+                    $operators = array( '=', ':', ',', '?', '&', '|', '^', '!', '~', '*', '+', '-', '%', '/', '<', '>', '(', '[', '{', ';' );
+                    if ( in_array( $last_non_ws, $operators, true ) ) {
+                        $is_regex_start = true;
+                    } else {
+                        $last_word = '';
+                        for ( $k = $out_len - 1; $k >= 0; $k-- ) {
+                            if ( preg_match( '/[a-zA-Z0-9_$]/', $out[$k] ) ) {
+                                $last_word = $out[$k] . $last_word;
+                            } else {
+                                if ( ! empty( $last_word ) || ctype_space( $out[$k] ) ) {
+                                    if ( ! empty( $last_word ) ) break;
+                                }
+                            }
+                        }
+                        $keywords = array( 'return', 'yield', 'typeof', 'delete', 'throw', 'instanceof', 'new', 'in', 'void', 'case' );
+                        if ( in_array( $last_word, $keywords, true ) ) {
+                            $is_regex_start = true;
+                        }
+                    }
+                }
+                
+                if ( $is_regex_start ) {
+                    $out .= $c;
+                    $i++;
+                    while ( $i < $len ) {
+                        $rc = $js[$i];
+                        $rnext = ($i + 1 < $len) ? $js[$i + 1] : '';
+                        if ( $rc === '\\' ) {
+                            $out .= $rc . $rnext;
+                            $i += 2;
+                            continue;
+                        }
+                        if ( $rc === '[' ) {
+                            $out .= $rc;
+                            $i++;
+                            while ( $i < $len ) {
+                                $bc = $js[$i];
+                                $bnext = ($i + 1 < $len) ? $js[$i + 1] : '';
+                                if ( $bc === '\\' ) {
+                                    $out .= $bc . $bnext;
+                                    $i += 2;
+                                    continue;
+                                }
+                                $out .= $bc;
+                                $i++;
+                                if ( $bc === ']' ) {
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
+                        $out .= $rc;
+                        $i++;
+                        if ( $rc === '/' ) {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+            }
+            
+            $out .= $c;
+            $i++;
+        }
+        
+        $out = preg_replace('/[ \t]+/', ' ', $out);
+        $out = preg_replace('/[\r\n]+/', "\n", $out);
+        
+        return trim( $out );
     }
 }
