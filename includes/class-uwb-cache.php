@@ -302,6 +302,12 @@ class Uwb_Cache {
         } else {
             @mkdir( $cache_dir, 0755, true );
         }
+
+        // Also delete minified css/js cache folder
+        $minify_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
+        if ( file_exists( $minify_dir ) ) {
+            $this->recursive_delete( $minify_dir, true );
+        }
     }
 
     /**

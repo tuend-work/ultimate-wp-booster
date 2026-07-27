@@ -451,58 +451,65 @@ class Uwb_Optimizer {
 
             $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
             $debug_mode = isset( $_GET['uwb_debug'] );
-            if ( $debug_mode ) {
-                $exists = ( $local_path && file_exists( $local_path ) ) ? 'YES' : 'NO';
-                $GLOBALS['uwb_debug_log'][] = "CSS URL: $url -> Cleaned: $url_clean -> Local Path: " . ($local_path ? $local_path : 'false') . " (Exists: $exists)";
-            }
 
-            if ( ! $local_path || ! file_exists( $local_path ) ) {
-                return $tag;
-            }
-
-            if ( stripos( $url_clean, '.min.css' ) !== false ) {
-                if ( $debug_mode ) {
-                    $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean is already .min.css, skipping minify.";
+            // Check if sibling .min.css exists locally
+            if ( $local_path && file_exists( $local_path ) && stripos( $url_clean, '.min.css' ) === false ) {
+                $min_sibling = substr( $local_path, 0, -4 ) . '.min.css';
+                if ( file_exists( $min_sibling ) ) {
+                    $sibling_url = substr( $url_clean, 0, -4 ) . '.min.css';
+                    if ( $debug_mode ) {
+                        $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean has a .min.css sibling at $min_sibling, replacing.";
+                    }
+                    return str_replace( $url, $sibling_url, $tag );
                 }
-                return $tag;
             }
 
-            $min_sibling = substr( $local_path, 0, -4 ) . '.min.css';
-            if ( file_exists( $min_sibling ) ) {
-                $sibling_url = substr( $url_clean, 0, -4 ) . '.min.css';
-                if ( $debug_mode ) {
-                    $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean has a .min.css sibling at $min_sibling, replacing.";
-                }
-                return str_replace( $url, $sibling_url, $tag );
-            }
-
-            $hash = md5( $local_path . '_' . filemtime( $local_path ) );
+            $file_mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : '';
+            $hash = md5( $url_clean . '_' . $file_mtime );
             $cache_file = $cache_dir . '/' . $hash . '.css';
             $cache_url = content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.css' );
 
             if ( $debug_mode ) {
-                $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Cache file = $cache_file, Cache URL = $cache_url";
+                $GLOBALS['uwb_debug_log'][] = "CSS URL: $url -> Hash: $hash -> Cache path: $cache_file";
             }
 
             if ( ! file_exists( $cache_file ) ) {
-                $content = @file_get_contents( $local_path );
+                $content = '';
+                if ( $local_path && file_exists( $local_path ) ) {
+                    $content = @file_get_contents( $local_path );
+                }
+                
+                if ( empty( $content ) ) {
+                    if ( $debug_mode ) {
+                        $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Local file empty or missing, downloading...";
+                    }
+                    $content = self::download_url_content( $url );
+                }
+
                 if ( ! empty( $content ) ) {
-                    $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
-                    $content = preg_replace('/\s*([{}|;:,])\s*/', '$1', $content);
-                    $content = preg_replace('/\s+/', ' ', $content);
+                    // Rewrite relative URLs to absolute relative to the source CSS URL
+                    $content = self::rewrite_css_urls( $content, $url );
+
+                    // Minify if not already minified
+                    if ( stripos( $url_clean, '.min.css' ) === false ) {
+                        $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
+                        $content = preg_replace('/\s*([{}|;:,])\s*/', '$1', $content);
+                        $content = preg_replace('/\s+/', ' ', $content);
+                    }
+
                     $write_ok = @file_put_contents( $cache_file, trim( $content ) );
                     if ( $debug_mode ) {
-                        $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Minifying and writing to cache. Success: " . ($write_ok !== false ? 'YES' : 'NO');
+                        $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Written to cache: " . ($write_ok !== false ? 'YES' : 'NO');
+                    }
+
+                    if ( $write_ok === false ) {
+                        return $tag;
                     }
                 } else {
                     if ( $debug_mode ) {
-                        $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Failed to read local file content.";
+                        $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Failed to obtain content.";
                     }
                     return $tag;
-                }
-            } else {
-                if ( $debug_mode ) {
-                    $GLOBALS['uwb_debug_log'][] = "CSS URL $url_clean: Minified cache file already exists.";
                 }
             }
 
@@ -534,58 +541,62 @@ class Uwb_Optimizer {
 
             $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
             $debug_mode = isset( $_GET['uwb_debug'] );
-            if ( $debug_mode ) {
-                $exists = ( $local_path && file_exists( $local_path ) ) ? 'YES' : 'NO';
-                $GLOBALS['uwb_debug_log'][] = "JS URL: $url -> Cleaned: $url_clean -> Local Path: " . ($local_path ? $local_path : 'false') . " (Exists: $exists)";
-            }
 
-            if ( ! $local_path || ! file_exists( $local_path ) ) {
-                return $tag;
-            }
-
-            if ( stripos( $url_clean, '.min.js' ) !== false ) {
-                if ( $debug_mode ) {
-                    $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean is already .min.js, skipping minify.";
+            // Check if sibling .min.js exists locally
+            if ( $local_path && file_exists( $local_path ) && stripos( $url_clean, '.min.js' ) === false ) {
+                $min_sibling = substr( $local_path, 0, -3 ) . '.min.js';
+                if ( file_exists( $min_sibling ) ) {
+                    $sibling_url = substr( $url_clean, 0, -3 ) . '.min.js';
+                    if ( $debug_mode ) {
+                        $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean has a .min.js sibling at $min_sibling, replacing.";
+                    }
+                    return str_replace( $url, $sibling_url, $tag );
                 }
-                return $tag;
             }
 
-            $min_sibling = substr( $local_path, 0, -3 ) . '.min.js';
-            if ( file_exists( $min_sibling ) ) {
-                $sibling_url = substr( $url_clean, 0, -3 ) . '.min.js';
-                if ( $debug_mode ) {
-                    $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean has a .min.js sibling at $min_sibling, replacing.";
-                }
-                return str_replace( $url, $sibling_url, $tag );
-            }
-
-            $hash = md5( $local_path . '_' . filemtime( $local_path ) );
+            $file_mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : '';
+            $hash = md5( $url_clean . '_' . $file_mtime );
             $cache_file = $cache_dir . '/' . $hash . '.js';
             $cache_url = content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.js' );
 
             if ( $debug_mode ) {
-                $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Cache file = $cache_file, Cache URL = $cache_url";
+                $GLOBALS['uwb_debug_log'][] = "JS URL: $url -> Hash: $hash -> Cache path: $cache_file";
             }
 
             if ( ! file_exists( $cache_file ) ) {
-                $content = @file_get_contents( $local_path );
+                $content = '';
+                if ( $local_path && file_exists( $local_path ) ) {
+                    $content = @file_get_contents( $local_path );
+                }
+                
+                if ( empty( $content ) ) {
+                    if ( $debug_mode ) {
+                        $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Local file empty or missing, downloading...";
+                    }
+                    $content = self::download_url_content( $url );
+                }
+
                 if ( ! empty( $content ) ) {
-                    $content = preg_replace('/(?<!:)\/\/.*$/m', '', $content);
-                    $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
-                    $content = preg_replace('/\s+/', ' ', $content);
+                    // Minify JS if not already minified
+                    if ( stripos( $url_clean, '.min.js' ) === false ) {
+                        $content = preg_replace('/(?<!:)\/\/.*$/m', '', $content);
+                        $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
+                        $content = preg_replace('/\s+/', ' ', $content);
+                    }
+
                     $write_ok = @file_put_contents( $cache_file, trim( $content ) );
                     if ( $debug_mode ) {
-                        $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Minifying and writing to cache. Success: " . ($write_ok !== false ? 'YES' : 'NO');
+                        $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Written to cache: " . ($write_ok !== false ? 'YES' : 'NO');
+                    }
+
+                    if ( $write_ok === false ) {
+                        return $tag;
                     }
                 } else {
                     if ( $debug_mode ) {
-                        $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Failed to read local file content.";
+                        $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Failed to obtain content.";
                     }
                     return $tag;
-                }
-            } else {
-                if ( $debug_mode ) {
-                    $GLOBALS['uwb_debug_log'][] = "JS URL $url_clean: Minified cache file already exists.";
                 }
             }
 
@@ -604,11 +615,150 @@ class Uwb_Optimizer {
                 return false;
             }
         }
-        $relative = isset( $parsed['path'] ) ? $parsed['path'] : '';
-        $relative = ltrim( $relative, '/' );
+        $path = isset( $parsed['path'] ) ? $parsed['path'] : '';
+        
+        // Handle subdirectory installations
+        $home_path = parse_url( $home_url, PHP_URL_PATH );
+        $home_path = $home_path ? rtrim( $home_path, '/' ) : '';
+        
+        if ( ! empty( $home_path ) && strpos( $path, $home_path ) === 0 ) {
+            $path = substr( $path, strlen( $home_path ) );
+        }
+        
+        $relative = ltrim( $path, '/' );
         if ( empty( $relative ) ) {
             return false;
         }
         return ABSPATH . $relative;
+    }
+
+    /**
+     * Download CSS/JS contents via HTTP.
+     */
+    private static function download_url_content( $url ) {
+        if ( strpos( $url, '//' ) === 0 ) {
+            $is_https = ( isset( $_SERVER['HTTPS'] ) && ( $_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1 ) ) ||
+                        ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' );
+            $url = ( $is_https ? 'https:' : 'http:' ) . $url;
+        }
+        
+        if ( strpos( $url, 'http://' ) !== 0 && strpos( $url, 'https://' ) !== 0 ) {
+            $home_url = function_exists( 'home_url' ) ? home_url() : '';
+            $url = rtrim( $home_url, '/' ) . '/' . ltrim( $url, '/' );
+        }
+
+        if ( function_exists( 'wp_remote_get' ) ) {
+            $response = wp_remote_get( $url, array(
+                'timeout'    => 10,
+                'sslverify'  => false,
+                'headers'    => array( 'Accept-Encoding' => 'identity' ),
+                'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            ) );
+
+            if ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 ) {
+                return wp_remote_retrieve_body( $response );
+            }
+        }
+
+        if ( function_exists( 'curl_init' ) ) {
+            $ch = curl_init();
+            curl_setopt( $ch, CURLOPT_URL, $url );
+            curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
+            curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, true );
+            curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+            curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, false );
+            curl_setopt( $ch, CURLOPT_TIMEOUT, 10 );
+            curl_setopt( $ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' );
+            $content = curl_exec( $ch );
+            $code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+            curl_close( $ch );
+            if ( $code === 200 && $content !== false ) {
+                return $content;
+            }
+        }
+
+        if ( ini_get( 'allow_url_fopen' ) ) {
+            $context = stream_context_create( array(
+                'http' => array(
+                    'timeout' => 10,
+                    'header'  => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\r\n"
+                ),
+                'ssl' => array(
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                )
+            ) );
+            $content = @file_get_contents( $url, false, $context );
+            if ( $content !== false ) {
+                return $content;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Rewrite relative URLs in CSS content to absolute URLs.
+     */
+    private static function rewrite_css_urls( $css_content, $css_url ) {
+        // Resolve relative @import "path" (without url())
+        $css_content = preg_replace_callback('/@import\s+([\'"])(.*?)\1\s*;/', function( $matches ) use ( $css_url ) {
+            $url = $matches[2];
+            if ( empty( $url ) || strpos( $url, 'http://' ) === 0 || strpos( $url, 'https://' ) === 0 || strpos( $url, '//' ) === 0 ) {
+                return $matches[0];
+            }
+            $absolute_url = self::resolve_relative_url( $url, $css_url );
+            return '@import url("' . $absolute_url . '");';
+        }, $css_content);
+
+        // Resolve url(...)
+        return preg_replace_callback('/url\(\s*([\'"]?)(.*?)\1\s*\)/i', function( $matches ) use ( $css_url ) {
+            $url = $matches[2];
+            if ( empty( $url ) || strpos( $url, 'data:' ) === 0 || strpos( $url, 'http://' ) === 0 || strpos( $url, 'https://' ) === 0 || strpos( $url, '//' ) === 0 || strpos( $url, '#' ) === 0 ) {
+                return $matches[0];
+            }
+            $absolute_url = self::resolve_relative_url( $url, $css_url );
+            return 'url("' . $absolute_url . '")';
+        }, $css_content);
+    }
+
+    /**
+     * Resolve a relative URL based on a base URL.
+     */
+    private static function resolve_relative_url( $relative, $base ) {
+        if ( strpos( $relative, '/' ) === 0 ) {
+            $parsed_base = parse_url( $base );
+            $scheme = isset( $parsed_base['scheme'] ) ? $parsed_base['scheme'] . '://' : '//';
+            $host = isset( $parsed_base['host'] ) ? $parsed_base['host'] : '';
+            $port = isset( $parsed_base['port'] ) ? ':' . $parsed_base['port'] : '';
+            return $scheme . $host . $port . $relative;
+        }
+
+        $parsed_base = parse_url( $base );
+        $path = isset( $parsed_base['path'] ) ? $parsed_base['path'] : '/';
+        $dir = dirname( $path );
+        $dir = str_replace( '\\', '/', $dir );
+        $dir = rtrim( $dir, '/' ) . '/';
+
+        $scheme = isset( $parsed_base['scheme'] ) ? $parsed_base['scheme'] . '://' : '//';
+        $host = isset( $parsed_base['host'] ) ? $parsed_base['host'] : '';
+        $port = isset( $parsed_base['port'] ) ? ':' . $parsed_base['port'] : '';
+        
+        $abs_path = $dir . $relative;
+        
+        $parts = explode( '/', $abs_path );
+        $stack = array();
+        foreach ( $parts as $part ) {
+            if ( $part === '' || $part === '.' ) {
+                continue;
+            }
+            if ( $part === '..' ) {
+                array_pop( $stack );
+            } else {
+                $stack[] = $part;
+            }
+        }
+        
+        return $scheme . $host . $port . '/' . implode( '/', $stack );
     }
 }
