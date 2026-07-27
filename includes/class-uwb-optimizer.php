@@ -437,6 +437,11 @@ class Uwb_Optimizer {
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
 
+            $debug_mode = true;
+            if ( $debug_mode ) {
+                $GLOBALS['uwb_debug_log'][] = "Found CSS link: " . $url_clean;
+            }
+
             if ( strtolower( substr( $url_clean, -4 ) ) !== '.css' ) {
                 return $tag;
             }
@@ -450,7 +455,6 @@ class Uwb_Optimizer {
             }
 
             $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
-            $debug_mode = isset( $_GET['uwb_debug'] );
 
             // Check if sibling .min.css exists locally
             if ( $local_path && file_exists( $local_path ) && stripos( $url_clean, '.min.css' ) === false ) {
@@ -535,12 +539,16 @@ class Uwb_Optimizer {
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
 
+            $debug_mode = true;
+            if ( $debug_mode ) {
+                $GLOBALS['uwb_debug_log'][] = "Found JS script: " . $url_clean;
+            }
+
             if ( strtolower( substr( $url_clean, -3 ) ) !== '.js' ) {
                 return $tag;
             }
 
             $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
-            $debug_mode = isset( $_GET['uwb_debug'] );
 
             // Check if sibling .min.js exists locally
             if ( $local_path && file_exists( $local_path ) && stripos( $url_clean, '.min.js' ) === false ) {
