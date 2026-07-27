@@ -432,7 +432,7 @@ class Uwb_Optimizer {
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
 
-        return preg_replace_callback('#<link\b(?>[^>]*?)href=([\'"])(.*?)\1(?>[^>]*?)>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
+        return preg_replace_callback('#<link\b[^>]*?href=([\'"])(.*?)\1[^>]*?>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
             $tag = $matches[0];
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
@@ -534,7 +534,7 @@ class Uwb_Optimizer {
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
 
-        return preg_replace_callback('#<script\b(?>[^>]*?)src=([\'"])(.*?)\1(?>[^>]*?)>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
+        return preg_replace_callback('#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
             $tag = $matches[0];
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
