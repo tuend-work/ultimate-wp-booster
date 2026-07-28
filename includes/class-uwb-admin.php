@@ -92,6 +92,7 @@ class Uwb_Admin {
         // Redis AJAX hooks
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
         add_action( 'wp_ajax_uwb_flush_redis_cache', array( $this, 'ajax_flush_redis_cache' ) );
+        add_action( 'wp_ajax_uwb_clear_preload_log', array( $this, 'ajax_clear_preload_log' ) );
         add_action( 'admin_init', array( $this, 'handle_import_export' ) );
     }
 
@@ -2529,13 +2530,30 @@ class Uwb_Admin {
                                 <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( $this->get_priority_urls_setting_value() ); ?></textarea>
                                 <p class="description">Important URLs or matching keywords, one per line. Valid URLs and paths are also published at <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
                             </div>
-                           <div class="uwb-form-group">
+                            <div class="uwb-form-group">
                                 <label for="uwb_preload_links">Preload Links</label>
                                 <select name="uwb_preload_links" id="uwb_preload_links" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
                                     <option value="0" <?php selected( get_option( 'uwb_preload_links', 0 ), 0 ); ?>>Disabled</option>
                                     <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
                                 </select>
                                 <p class="description">Link preloading improves the perceived load time by downloading a page when a user hovers over the link. <a href="https://instant.page" target="_blank" rel="noopener noreferrer">More info</a></p>
+                            </div>
+
+                            <!-- Real-time Preloader Debug Logs -->
+                            <div class="uwb-form-group" style="margin-top:24px;">
+                                <label style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                                    <span>Preloader Crawl Logs</span>
+                                    <button type="button" id="uwb-clear-preload-log-btn" class="button button-secondary button-small" style="font-size:11px; height:24px; line-height:22px; padding:0 8px;">Clear Logs</button>
+                                </label>
+                                <?php
+                                $log_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/preload-debug.log';
+                                $log_content = 'No logs available. Start a preload run to generate logs.';
+                                if ( file_exists( $log_file ) ) {
+                                    $log_content = esc_html( @file_get_contents( $log_file ) );
+                                }
+                                ?>
+                                <textarea id="uwb-preload-log" readonly rows="8" style="width:100%; font-family:monospace; font-size:11px; background:#fafafa; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; margin-top:8px; line-height:1.4; color:#334155; white-space:pre; overflow-x:auto;"><?php echo $log_content; ?></textarea>
+                                <p class="description">Live logs for the crawler's sitemap parsing and batch processing stages. Updates automatically during preloading.</p>
                             </div>
 
                         </div>
@@ -3219,18 +3237,24 @@ class Uwb_Admin {
                                 $('#btn-start-preload').hide();
                                 $('#btn-stop-preload').show();
                             } else {
+                                if (total > 0 && processed >= total && data.pending === 0 && data.processing === 0) {
+                                    // Done! Stop polling.
+                                    if (checkInterval) {
+                                        clearInterval(checkInterval);
+                                        checkInterval = null;
+                                    }
+                                }
                                 $('#btn-start-preload').show();
                                 $('#btn-stop-preload').hide();
                             }
 
-                            if (total > 0 && processed >= total && data.pending === 0 && data.processing === 0) {
-                                // Done! Stop polling.
-                                if (checkInterval) {
-                                    clearInterval(checkInterval);
-                                    checkInterval = null;
+                            if (data.log !== undefined) {
+                                var $logTextarea = $('#uwb-preload-log');
+                                if ($logTextarea.length) {
+                                    $logTextarea.val(data.log);
+                                    // Auto scroll to bottom
+                                    $logTextarea.scrollTop($logTextarea[0].scrollHeight);
                                 }
-                                $('#btn-start-preload').show();
-                                $('#btn-stop-preload').hide();
                             }
                         }
                     }
@@ -3304,6 +3328,25 @@ class Uwb_Admin {
                             if (checkInterval) {
                                 clearInterval(checkInterval);
                                 checkInterval = null;
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Clear Preloader Logs
+            $(document).on('click', '#uwb-clear-preload-log-btn', function() {
+                if (confirm('Are you sure you want to clear the logs?')) {
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'uwb_clear_preload_log',
+                            nonce: nonce
+                        },
+                        success: function(res) {
+                            if (res.success) {
+                                $('#uwb-preload-log').val('No logs available. Start a preload run to generate logs.');
                             }
                         }
                     });
@@ -4015,6 +4058,16 @@ class Uwb_Admin {
         </script>
         <?php
 
+    }
+
+    public function ajax_clear_preload_log() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+        $log_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/preload-debug.log';
+        @unlink( $log_file );
+        wp_send_json_success( array( 'message' => 'Log cleared.' ) );
     }
 
     public function ajax_test_redis_connection() {

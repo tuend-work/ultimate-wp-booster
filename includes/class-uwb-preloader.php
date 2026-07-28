@@ -1328,6 +1328,21 @@ class Uwb_Preloader {
             document.addEventListener('touchstart', handle, { passive: true });
         });
         </script>
-        <?php
+    }
+
+    /**
+     * Write debug logs to a file for checking preloader stages in real-time.
+     */
+    private function log_debug( $message ) {
+        $log_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster';
+        if ( ! is_dir( $log_dir ) ) {
+            @mkdir( $log_dir, 0755, true );
+        }
+        $log_file = $log_dir . '/preload-debug.log';
+        $timestamp = current_time( 'mysql' );
+        @file_put_contents( $log_file, "[{$timestamp}] {$message}\n", FILE_APPEND );
+        
+        // Also log to standard PHP error log
+        error_log( "UWB Preloader: {$message}" );
     }
 }
