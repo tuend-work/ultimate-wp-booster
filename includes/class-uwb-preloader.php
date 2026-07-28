@@ -8,6 +8,10 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Uwb_Preloader {
 
     private $table_name;
+    private $inserted_hashes = array();
+    private $total_inserted = 0;
+    private $excluded_patterns = array();
+    private $priority_urls = array();
 
     public function __construct() {
         global $wpdb;
@@ -434,16 +438,11 @@ class Uwb_Preloader {
     }
 
     /**
-     * Parse sitemap and return list of URLs
+     * Parse sitemap and insert URLs directly to database
      */
     public function parse_sitemap( $sitemap_url, $depth = 0, $is_priority_sitemap = false ) {
-        $result = array(
-            'priority' => array(),
-            'normal'   => array(),
-        );
-
         if ( $depth > 5 ) {
-            return $result;
+            return;
         }
 
         $args = array(
@@ -455,17 +454,17 @@ class Uwb_Preloader {
         $response = wp_remote_get( $sitemap_url, $args );
 
         if ( is_wp_error( $response ) ) {
-            return $result;
+            return;
         }
 
         $code = wp_remote_retrieve_response_code( $response );
         if ( $code !== 200 ) {
-            return $result;
+            return;
         }
 
         $xml_content = wp_remote_retrieve_body( $response );
         if ( empty( $xml_content ) ) {
-            return $result;
+            return;
         }
 
         // Enable internal errors to handle invalid XML gracefully
@@ -486,9 +485,7 @@ class Uwb_Preloader {
                             $is_sub_priority = true;
                         }
                         
-                        $sub_result = $this->parse_sitemap( $sub_url, $depth + 1, $is_sub_priority );
-                        $result['priority'] = array_merge( $result['priority'], $sub_result['priority'] );
-                        $result['normal']   = array_merge( $result['normal'], $sub_result['normal'] );
+                        $this->parse_sitemap( $sub_url, $depth + 1, $is_sub_priority );
                     }
                 }
             }
@@ -504,9 +501,7 @@ class Uwb_Preloader {
                         $filename = strtolower( basename( wp_parse_url( $sub_url, PHP_URL_PATH ) ) );
                         $is_sub_priority = preg_match( '/(category|cat|tag|tax|author|archive|brand|important)/i', $filename ) === 1;
 
-                        $sub_result = $this->parse_sitemap( $sub_url, $depth + 1, $is_sub_priority );
-                        $result['priority'] = array_merge( $result['priority'], $sub_result['priority'] );
-                        $result['normal']   = array_merge( $result['normal'], $sub_result['normal'] );
+                        $this->parse_sitemap( $sub_url, $depth + 1, $is_sub_priority );
                     }
                 }
 
@@ -545,22 +540,17 @@ class Uwb_Preloader {
 
         libxml_clear_errors();
 
+        $urls_to_insert = array();
         foreach ( array_unique( $raw_urls ) as $url ) {
             if ( $this->is_xml_url( $url ) ) {
                 continue;
             }
-
-            if ( $is_priority_sitemap ) {
-                $result['priority'][] = $url;
-            } else {
-                $result['normal'][] = $url;
-            }
+            $urls_to_insert[] = $url;
         }
 
-        $result['priority'] = array_unique( $result['priority'] );
-        $result['normal']   = array_unique( $result['normal'] );
-
-        return $result;
+        if ( ! empty( $urls_to_insert ) ) {
+            $this->insert_urls_to_queue( $urls_to_insert, $is_priority_sitemap );
+        }
     }
 
     /**
@@ -778,106 +768,25 @@ class Uwb_Preloader {
 
         // Fetch URL exclusions
         $exclusions_raw = get_option( 'uwb_excluded_urls', '' );
-        $excluded_patterns = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclusions_raw ) ) ) );
+        $this->excluded_patterns = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclusions_raw ) ) ) );
 
         // Fetch Priority URLs
         $priority_raw = get_option( 'uwb_priority_urls', '' );
-        $priority_urls = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $priority_raw ) ) ) );
+        $this->priority_urls = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $priority_raw ) ) ) );
 
-        $total_inserted = 0;
-        $inserted_hashes = array(); // track duplicates in memory during this run
-
-        // Helper to filter, normalize and insert a batch of URLs into DB immediately
-        $insert_urls_batch = function( $raw_batch_urls ) use ( &$total_inserted, &$inserted_hashes, $exclusions_raw, $excluded_patterns, $priority_urls, $wpdb ) {
-            if ( empty( $raw_batch_urls ) ) {
-                return;
-            }
-
-            $normalized_uris = array();
-            foreach ( $raw_batch_urls as $url ) {
-                $normalized_url = $this->normalize_url( $url );
-                if ( ! $this->is_xml_url( $normalized_url ) ) {
-                    $parsed_url = wp_parse_url( $normalized_url );
-                    $path = isset( $parsed_url['path'] ) ? $parsed_url['path'] : '/';
-                    $query = isset( $parsed_url['query'] ) ? '?' . $parsed_url['query'] : '';
-                    $uri = '/' . ltrim( $path, '/' ) . $query;
-                    
-                    $hash = md5( $uri );
-                    if ( ! isset( $inserted_hashes[ $hash ] ) ) {
-                        $inserted_hashes[ $hash ] = true;
-                        $normalized_uris[] = $uri;
-                    }
-                }
-            }
-
-            if ( empty( $normalized_uris ) ) {
-                return;
-            }
-
-            $now = current_time( 'mysql' );
-            $values = array();
-            $placeholders = array();
-            $non_priority_counter = $total_inserted + 1;
-
-            foreach ( $normalized_uris as $url ) {
-                if ( $this->is_excluded( $url, $excluded_patterns ) ) {
-                    continue; // Skip excluded URLs
-                }
-
-                // Check if it matches priority list from settings
-                $is_priority = false;
-                foreach ( $priority_urls as $p_url ) {
-                    if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
-                        $is_priority = true;
-                        break;
-                    }
-                }
-
-                if ( $is_priority ) {
-                    $priority_value = 0;
-                } else {
-                    $priority_value = $non_priority_counter++;
-                }
-
-                $values[] = $url;
-                $values[] = $priority_value;
-                $values[] = 'pending';
-                $values[] = $now;
-
-                $placeholders[] = "(%s, %d, %s, %s)";
-            }
-
-            if ( ! empty( $values ) ) {
-                $chunks = array_chunk( $values, 2000 ); // 500 rows per chunk
-                foreach ( $chunks as $chunk ) {
-                    $rows_count = count( $chunk ) / 4;
-                    $chunk_placeholders = array_slice( $placeholders, 0, $rows_count );
-                    $sql = "INSERT IGNORE INTO {$this->table_name} (url, priority, status, created_at) VALUES " . implode( ',', $chunk_placeholders );
-                    $wpdb->query( $wpdb->prepare( $sql, $chunk ) );
-                    $total_inserted += $rows_count;
-                }
-            }
-        };
+        $this->total_inserted = 0;
+        $this->inserted_hashes = array(); // track duplicates in memory during this run
 
         // 1. Collect and insert static priority URLs first (fastest)
         $manual_priority_urls = $this->get_priority_url_sitemap_entries();
-        $insert_urls_batch( $manual_priority_urls );
+        $this->insert_urls_to_queue( $manual_priority_urls, true );
 
         // 2. Parse and insert sitemaps one by one (progressive loading)
         foreach ( $sitemap_urls as $sitemap_url ) {
-            $sitemap_result = $this->parse_sitemap( $sitemap_url, 0, $this->is_important_sitemap_url( $sitemap_url ) );
-            
-            // Insert priority sitemap entries immediately
-            if ( ! empty( $sitemap_result['priority'] ) ) {
-                $insert_urls_batch( $sitemap_result['priority'] );
-            }
-            // Insert normal sitemap entries immediately
-            if ( ! empty( $sitemap_result['normal'] ) ) {
-                $insert_urls_batch( $sitemap_result['normal'] );
-            }
+            $this->parse_sitemap( $sitemap_url, 0, $this->is_important_sitemap_url( $sitemap_url ) );
         }
 
-        if ( $total_inserted === 0 ) {
+        if ( $this->total_inserted === 0 ) {
             delete_transient( 'uwb_populating_queue' );
             return new WP_Error( 'no_urls', 'No URLs found in sitemaps, important URLs, or taxonomy terms.' );
         }
@@ -896,7 +805,84 @@ class Uwb_Preloader {
 
         delete_transient( 'uwb_populating_queue' );
 
-        return $total_inserted;
+        return $this->total_inserted;
+    }
+
+    /**
+     * Filter, normalize, and insert a batch of URLs into the DB immediately.
+     */
+    private function insert_urls_to_queue( $raw_batch_urls, $is_priority_sitemap = false ) {
+        global $wpdb;
+        if ( empty( $raw_batch_urls ) ) {
+            return;
+        }
+
+        $normalized_uris = array();
+        foreach ( $raw_batch_urls as $url ) {
+            $normalized_url = $this->normalize_url( $url );
+            if ( ! $this->is_xml_url( $normalized_url ) ) {
+                $parsed_url = wp_parse_url( $normalized_url );
+                $path = isset( $parsed_url['path'] ) ? $parsed_url['path'] : '/';
+                $query = isset( $parsed_url['query'] ) ? '?' . $parsed_url['query'] : '';
+                $uri = '/' . ltrim( $path, '/' ) . $query;
+                
+                $hash = md5( $uri );
+                if ( ! isset( $this->inserted_hashes[ $hash ] ) ) {
+                    $this->inserted_hashes[ $hash ] = true;
+                    $normalized_uris[] = $uri;
+                }
+            }
+        }
+
+        if ( empty( $normalized_uris ) ) {
+            return;
+        }
+
+        $now = current_time( 'mysql' );
+        $values = array();
+        $placeholders = array();
+        $non_priority_counter = $this->total_inserted + 1;
+
+        foreach ( $normalized_uris as $url ) {
+            if ( $this->is_excluded( $url, $this->excluded_patterns ) ) {
+                continue; // Skip excluded URLs
+            }
+
+            // Check if it matches priority list from settings or is from priority sitemap
+            $is_priority = $is_priority_sitemap;
+            if ( ! $is_priority ) {
+                foreach ( $this->priority_urls as $p_url ) {
+                    if ( ! empty( $p_url ) && strpos( $url, $p_url ) !== false ) {
+                        $is_priority = true;
+                        break;
+                    }
+                }
+            }
+
+            if ( $is_priority ) {
+                $priority_value = 0;
+            } else {
+                $priority_value = $non_priority_counter++;
+            }
+
+            $values[] = $url;
+            $values[] = $priority_value;
+            $values[] = 'pending';
+            $values[] = $now;
+
+            $placeholders[] = "(%s, %d, %s, %s)";
+        }
+
+        if ( ! empty( $values ) ) {
+            $chunks = array_chunk( $values, 2000 ); // 500 rows per chunk
+            foreach ( $chunks as $chunk ) {
+                $rows_count = count( $chunk ) / 4;
+                $chunk_placeholders = array_slice( $placeholders, 0, $rows_count );
+                $sql = "INSERT IGNORE INTO {$this->table_name} (url, priority, status, created_at) VALUES " . implode( ',', $chunk_placeholders );
+                $wpdb->query( $wpdb->prepare( $sql, $chunk ) );
+                $this->total_inserted += $rows_count;
+            }
+        }
     }
 
     /**
