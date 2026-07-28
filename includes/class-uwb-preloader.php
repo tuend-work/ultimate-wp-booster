@@ -896,8 +896,15 @@ class Uwb_Preloader {
             wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
         }
 
+        // Clean log file before starting new preload
+        $log_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/preload-debug.log';
+        @unlink( $log_file );
+
+        $this->log_debug( "ajax_start_preload(): Received AJAX start preload request." );
+
         // Prevent concurrent queue population
         if ( get_transient( 'uwb_populating_queue' ) ) {
+            $this->log_debug( "ajax_start_preload(): Transient lock 'uwb_populating_queue' is active. Aborting." );
             wp_send_json_error( array( 'message' => 'Queue is already being populated.' ) );
         }
 
@@ -905,6 +912,13 @@ class Uwb_Preloader {
         wp_clear_scheduled_hook( 'uwb_start_preload_async' );
         wp_schedule_single_event( time(), 'uwb_start_preload_async' );
         update_option( 'uwb_preload_running', 1 );
+
+        if ( function_exists( 'spawn_cron' ) ) {
+            $this->log_debug( "ajax_start_preload(): Calling spawn_cron() to force immediate execution of async event." );
+            spawn_cron();
+        } else {
+            $this->log_debug( "ajax_start_preload(): spawn_cron() function does not exist. Relying on default WP Cron trigger." );
+        }
 
         wp_send_json_success( array(
             'message' => 'Sitemap parsing scheduled. URLs will be added to the preloading queue shortly!'
@@ -967,13 +981,28 @@ class Uwb_Preloader {
 
         $running = intval( get_option( 'uwb_preload_running', 0 ) );
 
+        $log_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/preload-debug.log';
+        $log_content = 'No logs available. Start a preload run to generate logs.';
+        if ( file_exists( $log_file ) ) {
+            $fsize = filesize( $log_file );
+            $handle = @fopen( $log_file, "r" );
+            if ( $handle ) {
+                if ( $fsize > 15000 ) {
+                    @fseek( $handle, -15000, SEEK_END );
+                }
+                $log_content = @fread( $handle, 15000 );
+                @fclose( $handle );
+            }
+        }
+
         wp_send_json_success( array(
             'total'      => intval( $total ),
             'pending'    => $pending,
             'processing' => $processing,
             'completed'  => $completed,
             'failed'     => $failed,
-            'running'    => $running
+            'running'    => $running,
+            'log'        => $log_content
         ) );
     }
 
