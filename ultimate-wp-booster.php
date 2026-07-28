@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.9.8
+ * Version:     1.9.9
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.9.8' );
+define( 'UWB_VERSION', '1.9.9' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -23,6 +23,9 @@ require_once UWB_PLUGIN_DIR . 'includes/class-uwb-deactivator.php';
 require_once UWB_PLUGIN_DIR . 'includes/class-uwb-cache.php';
 require_once UWB_PLUGIN_DIR . 'includes/class-uwb-preloader.php';
 require_once UWB_PLUGIN_DIR . 'includes/class-uwb-admin.php';
+
+// 1.5. Include compatibility layers
+require_once UWB_PLUGIN_DIR . 'compatibility/wp-rocket.php';
 
 // 2. Register activation & deactivation hooks
 register_activation_hook( __FILE__, array( 'Uwb_Activator', 'activate' ) );
@@ -490,49 +493,4 @@ function uwb_handle_admin_bar_flush_opcache() {
     $referer = wp_get_referer() ? wp_get_referer() : admin_url( 'admin.php?page=ultimate-wp-booster' );
     wp_safe_redirect( add_query_arg( 'uwb_opcache_flushed', '1', $referer ) );
     exit;
-}
-
-// 8. WP Rocket Compatibility Layer
-// Expose common WP Rocket clean/purge functions to prevent custom code and 3rd party plugins from throwing fatal errors when WP Rocket is uninstalled.
-if ( ! function_exists( 'rocket_clean_domain' ) ) {
-    function rocket_clean_domain() {
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new Uwb_Cache();
-            $uwb_cache->purge_all();
-        }
-    }
-}
-
-if ( ! function_exists( 'rocket_clean_post' ) ) {
-    function rocket_clean_post( $post_id ) {
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new Uwb_Cache();
-            $uwb_cache->purge_post_cache( $post_id );
-        }
-    }
-}
-
-if ( ! function_exists( 'rocket_clean_home' ) ) {
-    function rocket_clean_home() {
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new Uwb_Cache();
-            $uwb_cache->purge_url( home_url( '/' ) );
-        }
-    }
-}
-
-if ( ! function_exists( 'rocket_clean_minify' ) ) {
-    function rocket_clean_minify() {
-        $minify_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
-        if ( file_exists( $minify_dir ) && is_dir( $minify_dir ) ) {
-            $delete_files = function( $dir, $self ) use ( &$delete_files ) {
-                $files = array_diff( scandir( $dir ), array( '.', '..' ) );
-                foreach ( $files as $file ) {
-                    ( is_dir( "$dir/$file" ) ) ? $delete_files( "$dir/$file", true ) : @unlink( "$dir/$file" );
-                }
-                return $self ? @rmdir( $dir ) : true;
-            };
-            $delete_files( $minify_dir, false );
-        }
-    }
 }

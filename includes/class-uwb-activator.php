@@ -106,13 +106,18 @@ class Uwb_Activator {
         // 7. Write valid post IDs JSON
         require_once dirname( __FILE__ ) . '/class-uwb-cache.php';
         Uwb_Cache::write_valid_post_ids_json();
+
+        // 8. Check for WP Rocket settings to prompt for import
+        if ( get_option( 'wp_rocket_settings' ) !== false ) {
+            update_option( 'uwb_show_rocket_import_prompt', 1 );
+        }
     }
 
     /**
      * Copy advanced-cache.php to wp-content/advanced-cache.php
      */
     public static function copy_advanced_cache_dropin() {
-        $source = dirname( __DIR__ ) . '/advanced-cache.php';
+        $source = dirname( __DIR__ ) . '/templates/advanced-cache.php';
         $destination = WP_CONTENT_DIR . '/advanced-cache.php';
 
         if ( file_exists( $source ) ) {
@@ -160,14 +165,14 @@ class Uwb_Activator {
         $destination = WP_CONTENT_DIR . '/object-cache.php';
 
         if ( $type === 1 ) {
-            $source = dirname( __DIR__ ) . '/object-cache.php';
+            $source = dirname( __DIR__ ) . '/templates/object-cache.php';
             if ( file_exists( $source ) ) {
                 if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
                     @copy( $source, $destination );
                 }
             }
         } elseif ( $type === 2 ) {
-            $source = dirname( __DIR__ ) . '/object-cache-memcached.php';
+            $source = dirname( __DIR__ ) . '/templates/object-cache-memcached.php';
             if ( file_exists( $source ) ) {
                 if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
                     @copy( $source, $destination );
