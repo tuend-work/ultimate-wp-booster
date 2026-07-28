@@ -439,66 +439,6 @@ class Uwb_Cache {
             }
         }
 
-        // 8. Custom Integration: Stories and Chapters cache synchronization
-        $post_type = get_post_type( $post_id );
-        if ( $post_type === 'post' ) {
-            // This is a Story -> Purge all related chapters
-            $chapters = get_posts( array(
-                'post_type'      => 'chapter',
-                'posts_per_page' => -1,
-                'fields'         => 'ids',
-                'meta_query'     => array(
-                    array(
-                        'key'     => 'wpc_chapter',
-                        'value'   => '"story_id";i:' . intval( $post_id ),
-                        'compare' => 'LIKE'
-                    )
-                )
-            ) );
-            if ( ! empty( $chapters ) && is_array( $chapters ) ) {
-                foreach ( $chapters as $chapter_id ) {
-                    $chapter_url = get_permalink( $chapter_id );
-                    if ( $chapter_url ) {
-                        $this->purge_url( $chapter_url );
-                    }
-                }
-            }
-        } elseif ( $post_type === 'chapter' ) {
-            // This is a Chapter -> Purge the parent Story and all other chapters
-            $meta = get_post_meta( $post_id, 'wpc_chapter', true );
-            $data = maybe_unserialize( $meta );
-            $story_id = isset( $data['story_id'] ) ? intval( $data['story_id'] ) : 0;
-            if ( $story_id > 0 ) {
-                $story_url = get_permalink( $story_id );
-                if ( $story_url ) {
-                    $this->purge_url( $story_url );
-                }
-
-                $chapters = get_posts( array(
-                    'post_type'      => 'chapter',
-                    'posts_per_page' => -1,
-                    'fields'         => 'ids',
-                    'meta_query'     => array(
-                        array(
-                            'key'     => 'wpc_chapter',
-                            'value'   => '"story_id";i:' . intval( $story_id ),
-                            'compare' => 'LIKE'
-                        )
-                    )
-                ) );
-                if ( ! empty( $chapters ) && is_array( $chapters ) ) {
-                    foreach ( $chapters as $chapter_id ) {
-                        if ( $chapter_id !== $post_id ) {
-                            $chapter_url = get_permalink( $chapter_id );
-                            if ( $chapter_url ) {
-                                $this->purge_url( $chapter_url );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         // Fire action hooks to allow themes/plugins to run custom cleanups (WP Rocket compatibility)
         do_action( 'after_rocket_clean_post', $post_id );
         do_action( 'uwb_after_purge_post', $post_id );
