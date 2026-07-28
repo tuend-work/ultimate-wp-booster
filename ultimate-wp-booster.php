@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.9.0
+ * Version:     1.9.1
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.9.0' );
+define( 'UWB_VERSION', '1.9.1' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -69,7 +69,18 @@ function uwb_init_preload_secret_key() {
 // 5. Admin Bar Menu Customization
 add_action( 'admin_bar_menu', 'uwb_add_admin_bar_nodes', 999 );
 function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
-    if ( ! current_user_can( 'manage_options' ) ) {
+    $can_manage = current_user_can( 'manage_options' );
+    $can_edit_current_post = false;
+    $current_post_id = 0;
+
+    if ( ! is_admin() && is_singular() ) {
+        $current_post_id = get_the_ID();
+        if ( $current_post_id && current_user_can( 'edit_post', $current_post_id ) ) {
+            $can_edit_current_post = true;
+        }
+    }
+
+    if ( ! $can_manage && ! $can_edit_current_post ) {
         return;
     }
 
@@ -77,14 +88,19 @@ function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
     $wp_admin_bar->add_node( array(
         'id'    => 'uwb-admin-bar',
         'title' => 'WP Booster',
-        'href'  => admin_url( 'admin.php?page=ultimate-wp-booster' ),
+        'href'  => $can_manage ? admin_url( 'admin.php?page=ultimate-wp-booster' ) : null,
     ) );
 
     // Add sub-node: Purge This URL (only on frontend)
     if ( ! is_admin() ) {
         $current_url = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
         $clean_url = strtok( $current_url, '?' );
-        $purge_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_purge_url&url=' . urlencode( $clean_url ) ), 'uwb_purge_url_action' );
+        
+        $action_url = 'admin-post.php?action=uwb_purge_url&url=' . urlencode( $clean_url );
+        if ( $current_post_id > 0 ) {
+            $action_url .= '&post_id=' . $current_post_id;
+        }
+        $purge_url = wp_nonce_url( admin_url( $action_url ), 'uwb_purge_url_action' );
         
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-purge-url',
@@ -92,6 +108,11 @@ function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
             'title'  => 'Purge This URL',
             'href'   => $purge_url,
         ) );
+    }
+
+    // Stop here if user only has permission to edit current post
+    if ( ! $can_manage ) {
+        return;
     }
 
     // Add sub-node: Clear Cache Page (only clear, no preload)
@@ -180,7 +201,16 @@ function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
 // 6. Handle Admin Bar Actions
 add_action( 'admin_post_uwb_purge_url', 'uwb_handle_admin_bar_purge_url' );
 function uwb_handle_admin_bar_purge_url() {
-    if ( ! current_user_can( 'manage_options' ) ) {
+    $post_id = isset( $_GET['post_id'] ) ? intval( $_GET['post_id'] ) : 0;
+    
+    $can_purge = false;
+    if ( current_user_can( 'manage_options' ) ) {
+        $can_purge = true;
+    } elseif ( $post_id > 0 && current_user_can( 'edit_post', $post_id ) ) {
+        $can_purge = true;
+    }
+
+    if ( ! $can_purge ) {
         wp_die( 'Permission denied.' );
     }
 
