@@ -1328,6 +1328,7 @@ class Uwb_Preloader {
             document.addEventListener('touchstart', handle, { passive: true });
         });
         </script>
+        <?php
     }
 
     /**
