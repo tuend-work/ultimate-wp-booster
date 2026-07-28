@@ -438,6 +438,10 @@ class Uwb_Cache {
                 $this->purge_url( $url_line );
             }
         }
+
+        // Fire action hooks to allow themes/plugins to run custom cleanups (WP Rocket compatibility)
+        do_action( 'after_rocket_clean_post', $post_id );
+        do_action( 'uwb_after_purge_post', $post_id );
     }
 
     /**
