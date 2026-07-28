@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.8.8
+ * Version:     1.8.9
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.8.8' );
+define( 'UWB_VERSION', '1.8.9' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -355,6 +355,39 @@ function uwb_handle_external_cron_trigger() {
                 global $wpdb;
                 $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
 
+                // Check for action=crawl request to start crawling sitemaps in background
+                $action = isset( $_GET['action'] ) ? sanitize_key( $_GET['action'] ) : '';
+                if ( $action === 'crawl' ) {
+                    if ( ! get_transient( 'uwb_populating_queue' ) ) {
+                        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
+                        wp_schedule_single_event( time(), 'uwb_start_preload_async' );
+                        update_option( 'uwb_preload_running', 1 );
+                        if ( function_exists( 'spawn_cron' ) ) {
+                            spawn_cron();
+                        }
+                        header( 'Content-Type: text/plain; charset=UTF-8' );
+                        echo "OK: Sitemap crawl scheduled in background.";
+                        exit;
+                    } else {
+                        header( 'Content-Type: text/plain; charset=UTF-8' );
+                        echo "ERROR: Sitemap crawler is already running.";
+                        exit;
+                    }
+                }
+
+                // If total queue size is 0, auto schedule a crawl so it starts populating
+                $total_count = intval( $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" ) );
+                if ( $total_count === 0 ) {
+                    if ( ! get_transient( 'uwb_populating_queue' ) ) {
+                        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
+                        wp_schedule_single_event( time(), 'uwb_start_preload_async' );
+                        update_option( 'uwb_preload_running', 1 );
+                        if ( function_exists( 'spawn_cron' ) ) {
+                            spawn_cron();
+                        }
+                    }
+                }
+
                 // Check if there are any pending or retriable failed URLs
                 $pending_count = intval( $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name} WHERE status = 'pending' OR (status = 'failed' AND attempts < 3)" ) );
 
@@ -363,8 +396,9 @@ function uwb_handle_external_cron_trigger() {
                     $completed_urls = $wpdb->get_col( "SELECT url FROM {$table_name} WHERE status = 'completed' ORDER BY priority ASC, id ASC" );
                     header( 'Content-Type: text/plain; charset=UTF-8' );
                     if ( empty( $completed_urls ) ) {
-                        echo "OK: Preload queue is empty or no URLs have been completed yet.";
+                        echo "OK: Preload queue is empty or sitemap is still being scanned. Crawl task was triggered.";
                     } else {
+                        echo "OK: Queue completed. Listing completed URLs:\n";
                         foreach ( $completed_urls as $url ) {
                             echo esc_url( $url ) . "\n";
                         }
