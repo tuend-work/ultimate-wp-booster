@@ -69,10 +69,10 @@ function uwb_advanced_cache_run() {
     if ( ! empty( $_SERVER['QUERY_STRING'] ) ) {
         parse_str( $_SERVER['QUERY_STRING'], $query_params );
         
-        // WooCommerce query bypass (never cache WooCommerce AJAX or Add to Cart queries)
-        if ( isset( $query_params['wc-ajax'] ) || isset( $query_params['add-to-cart'] ) || isset( $query_params['pay_for_order'] ) ) {
+        // WooCommerce and magic_login query bypass (never cache WooCommerce AJAX, Add to Cart or magic_login queries)
+        if ( isset( $query_params['wc-ajax'] ) || isset( $query_params['add-to-cart'] ) || isset( $query_params['pay_for_order'] ) || isset( $query_params['magic_login'] ) ) {
             if ( $debug ) {
-                error_log( "UWB: Run bypassed: WooCommerce query parameter detected." );
+                error_log( "UWB: Run bypassed: WooCommerce or magic_login query parameter detected." );
             }
             return;
         }
