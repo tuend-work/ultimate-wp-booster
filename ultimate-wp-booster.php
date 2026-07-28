@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.9.1
+ * Version:     1.9.2
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.9.1' );
+define( 'UWB_VERSION', '1.9.2' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -196,6 +196,21 @@ function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
         'title'  => 'Settings',
         'href'   => admin_url( 'admin.php?page=ultimate-wp-booster' ),
     ) );
+}
+
+// 5.5. Add Purge Link to Row Actions in Post List
+add_filter( 'post_row_actions', 'uwb_add_post_row_actions', 10, 2 );
+add_filter( 'page_row_actions', 'uwb_add_post_row_actions', 10, 2 );
+function uwb_add_post_row_actions( $actions, $post ) {
+    if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_post', $post->ID ) ) {
+        $clean_url = get_permalink( $post->ID );
+        $purge_url = wp_nonce_url( 
+            admin_url( 'admin-post.php?action=uwb_purge_url&url=' . urlencode( $clean_url ) . '&post_id=' . $post->ID ), 
+            'uwb_purge_url_action' 
+        );
+        $actions['uwb_purge'] = '<a href="' . esc_url( $purge_url ) . '" title="' . esc_attr__( 'Purge cache for this post', 'ultimate-wp-booster' ) . '" style="color:#bc00dd;font-weight:600;">' . esc_html__( 'Xóa cache', 'ultimate-wp-booster' ) . '</a>';
+    }
+    return $actions;
 }
 
 // 6. Handle Admin Bar Actions
