@@ -68,6 +68,15 @@ function uwb_advanced_cache_run() {
     $active_cache_query_params = array();
     if ( ! empty( $_SERVER['QUERY_STRING'] ) ) {
         parse_str( $_SERVER['QUERY_STRING'], $query_params );
+        
+        // WooCommerce query bypass (never cache WooCommerce AJAX or Add to Cart queries)
+        if ( isset( $query_params['wc-ajax'] ) || isset( $query_params['add-to-cart'] ) || isset( $query_params['pay_for_order'] ) ) {
+            if ( $debug ) {
+                error_log( "UWB: Run bypassed: WooCommerce query parameter detected." );
+            }
+            return;
+        }
+        
         $allowed_cache_queries = isset( $config['cache_query_strings'] ) ? $config['cache_query_strings'] : array();
         
         foreach ( $query_params as $param => $val ) {
@@ -177,7 +186,7 @@ function uwb_advanced_cache_run() {
     $logged_in_cookie_hash = '';
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
-            if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products)/', $key ) ) {
+            if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products|woocommerce_items_in_cart|woocommerce_cart_hash|wp_woocommerce_session_)/', $key ) ) {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Logged-in/Bypass cookie key matched: {$key}." );
                 }
@@ -209,6 +218,17 @@ function uwb_advanced_cache_run() {
     $uri_parts      = explode( '?', $request_uri );
     $uri_path       = rawurldecode( $uri_parts[0] );
     $normalized_uri = trim( $uri_path, '/' );
+
+    // 6.0. Bypass WooCommerce Cart, Checkout, and My Account pages
+    if ( preg_match( '#/(cart|checkout|my-account)/?#i', $uri_path ) ||
+         strpos( $normalized_uri, 'cart' ) === 0 || 
+         strpos( $normalized_uri, 'checkout' ) === 0 || 
+         strpos( $normalized_uri, 'my-account' ) === 0 ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: WooCommerce cart/checkout/my-account page detected." );
+        }
+        return;
+    }
 
     // 6.1 Check XML Sitemap Caching bypass
     $is_xml = ( substr( strtolower( $normalized_uri ), -4 ) === '.xml' );

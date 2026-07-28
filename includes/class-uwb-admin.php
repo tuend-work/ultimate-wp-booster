@@ -2547,10 +2547,10 @@ class Uwb_Admin {
 
                             <!-- Horizontal Sub-tabs Nav -->
                             <div class="uwb-sub-tabs-nav">
-                                <div class="uwb-sub-tab-item active" data-subtab="opt_css">[1] CSS Settings</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_js">[2] JS Settings</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_html">[3] HTML Settings</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_media">[4] Media Settings</div>
+                                <div class="uwb-sub-tab-item active" data-subtab="opt_css">[1] CSS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_js">[2] JS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_html">[3] HTML</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_media">[4] Media</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_vpi">[5] VPI</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_media_excludes">[6] Media Excludes</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_loc">[7] Localization</div>
