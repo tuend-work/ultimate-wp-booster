@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.9.9
+ * Version:     1.9.10
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.9.9' );
+define( 'UWB_VERSION', '1.9.10' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -405,6 +405,8 @@ function uwb_handle_external_cron_trigger() {
                 global $wpdb;
                 $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
 
+                $is_browser = ( isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'text/html' ) !== false );
+
                 // Check for action=crawl request to start crawling sitemaps in background
                 $action = isset( $_GET['action'] ) ? sanitize_key( $_GET['action'] ) : '';
                 if ( $action === 'crawl' ) {
@@ -415,12 +417,20 @@ function uwb_handle_external_cron_trigger() {
                         if ( function_exists( 'spawn_cron' ) ) {
                             spawn_cron();
                         }
-                        header( 'Content-Type: text/plain; charset=UTF-8' );
-                        echo "OK: Sitemap crawl scheduled in background.";
+                        if ( $is_browser ) {
+                            echo "<pre style='white-space: pre-wrap; font-family: monospace;'>OK: Sitemap crawl scheduled in background.</pre>";
+                        } else {
+                            header( 'Content-Type: text/plain; charset=UTF-8' );
+                            echo "OK: Sitemap crawl scheduled in background.";
+                        }
                         exit;
                     } else {
-                        header( 'Content-Type: text/plain; charset=UTF-8' );
-                        echo "ERROR: Sitemap crawler is already running.";
+                        if ( $is_browser ) {
+                            echo "<pre style='white-space: pre-wrap; font-family: monospace;'>ERROR: Sitemap crawler is already running.</pre>";
+                        } else {
+                            header( 'Content-Type: text/plain; charset=UTF-8' );
+                            echo "ERROR: Sitemap crawler is already running.";
+                        }
                         exit;
                     }
                 }
@@ -441,10 +451,15 @@ function uwb_handle_external_cron_trigger() {
                 // Check if there are any pending or retriable failed URLs
                 $pending_count = intval( $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name} WHERE status = 'pending' OR (status = 'failed' AND attempts < 3)" ) );
 
+                if ( $is_browser ) {
+                    echo "<pre style='white-space: pre-wrap; font-family: monospace; word-wrap: break-word;'>";
+                } else {
+                    header( 'Content-Type: text/plain; charset=UTF-8' );
+                }
+
                 if ( $pending_count === 0 ) {
                     // Queue is completed! Show all completed preload URLs
                     $completed_urls = $wpdb->get_col( "SELECT url FROM {$table_name} WHERE status = 'completed' ORDER BY priority ASC, id ASC" );
-                    header( 'Content-Type: text/plain; charset=UTF-8' );
                     if ( empty( $completed_urls ) ) {
                         echo "OK: Preload queue is empty or sitemap is still being scanned. Crawl task was triggered.";
                     } else {
@@ -459,7 +474,6 @@ function uwb_handle_external_cron_trigger() {
                     $processed = is_array( $result ) ? $result['count'] : 0;
                     $urls = is_array( $result ) ? $result['urls'] : array();
 
-                    header( 'Content-Type: text/plain; charset=UTF-8' );
                     echo "OK: Preloaded {$processed} URLs.\n";
                     if ( ! empty( $urls ) ) {
                         foreach ( $urls as $url ) {
@@ -467,8 +481,16 @@ function uwb_handle_external_cron_trigger() {
                         }
                     }
                 }
+
+                if ( $is_browser ) {
+                    echo "</pre>";
+                }
             } else {
-                echo "ERROR: Preloader class not found.";
+                if ( $is_browser ) {
+                    echo "<pre style='white-space: pre-wrap; font-family: monospace;'>ERROR: Preloader class not found.</pre>";
+                } else {
+                    echo "ERROR: Preloader class not found.";
+                }
             }
             exit;
         } else {
