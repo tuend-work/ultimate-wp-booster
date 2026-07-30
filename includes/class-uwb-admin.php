@@ -2590,52 +2590,55 @@ class Uwb_Admin {
                                 <div class="uwb-sub-tab-item" data-subtab="opt_html">[3] HTML</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_media">[4] Media</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_vpi">[5] VPI</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_media_excludes">[6] Media Excludes</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_loc">[7] Localization</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_tuning">[8] Tuning</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_tuning_css">[9] Tuning - CSS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_loc">[6] Localization</div>
                             </div>
 
-                            <!-- SUB-TAB 1: CSS Settings -->
+                            <!-- SUB-TAB 1: CSS Settings & Excludes -->
                             <div id="subtab-opt_css" class="uwb-subtab-content active">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_css_minify', 'CSS Minify', 'Minify CSS files and inline CSS code.' );
                                 $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS files and inline CSS code. <a href="#" target="_blank">How to Fix Problems Caused by CSS/JS Optimization.</a>', true );
-                                $this->render_toggle_switch( 'uwb_css_generate_ucss', 'Generate UCSS', '<div class="uwb-warning-box" style="margin: 10px 0; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #b45309;"><strong>WARNING:</strong> You will need to finish <strong>QUIC.cloud</strong> setup to use the online services. <a href="#">Click here to set.</a></div>Use QUIC.cloud online service to generate unique CSS. This will drop the unused CSS on each page from the combined file. <a href="#">Learn More</a><br>Automatic generation of unique CSS is in the background via a cron-based queue.<br>API Filter: <code>add_filter( \'litespeed_ucss_per_pagetype\', \'__return_true\' );</code> available for UCSS per page type generation.', true );
-                                $this->render_toggle_switch( 'uwb_css_ucss_inline', 'UCSS Inline', 'Inline UCSS to reduce the extra CSS file loading. This option will not be automatically turned on for <code>guest_mode</code> pages. To use it on <code>guest_mode</code> pages, please set it to ON.<br><a href="#">This option will automatically bypass Load CSS Asynchronously option.</a>', true );
-                                $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS and inline CSS in combined file when <code>css_combine</code> is also enabled. This option helps maintain the priorities of CSS, which should minimize potential errors caused by CSS Combine.', true );
-                                $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', '<div class="uwb-warning-box" style="margin: 10px 0; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #b45309;"><strong>WARNING:</strong> You will need to finish <strong>QUIC.cloud</strong> setup to use the online services. <a href="#">Click here to set.</a></div>Optimize CSS delivery. This can improve your speed score in services like Pingdom, GTmetrix and PageSpeed.<br>Use QUIC.cloud online service to generate critical CSS and load remaining CSS asynchronously. <a href="#">Learn More</a><br>Automatic generation of critical CSS is in the background via a cron-based queue.<br>When this option is turned on, it will also load Google Fonts asynchronously.<br>API: Elements with attribute <code>data-no-async="1"</code> in HTML code will be excluded.', true );
-                                $this->render_toggle_switch( 'uwb_css_ccss_per_url', 'CCSS Per URL', 'Disable this option to generate CCSS per Post Type instead of per page. This can save significant CCSS quota, however it may result in incorrect CSS styling if your site uses a page builder.', true );
+                                $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS and inline CSS in combined file when <code>css_combine</code> is also enabled.', true );
+                                $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
+                                $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Optimize CSS delivery. Use online service to generate critical CSS and load remaining CSS asynchronously.', true );
                                 $this->render_toggle_switch( 'uwb_css_inline_async_lib', 'Inline CSS Async Lib', 'This will inline the asynchronous CSS library to avoid render blocking.', true );
+                                $this->render_toggle_switch( 'uwb_css_generate_ucss', 'Generate UCSS', 'Use online service to generate unique CSS by dropping unused CSS on each page.', true );
+                                $this->render_toggle_switch( 'uwb_css_ucss_inline', 'UCSS Inline', 'Inline UCSS to reduce extra CSS file loading.', true );
+                                $this->render_toggle_switch( 'uwb_css_ccss_per_url', 'CCSS Per URL', 'Disable to generate CCSS per Post Type instead of per page to save CCSS quota.', true );
+                                $this->render_textarea_setting( 'uwb_tuning_ucss_excludes', 'UCSS Excludes', '', 'CSS selectors or files to exclude from UCSS generation (one per line).', true );
+                                $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Critical CSS', '', 'Custom Critical CSS to inject into &lt;head&gt;.' );
                                 ?>
-                                <div class="uwb-opt-row uwb-opt-disabled" style="display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; gap: 20px; flex-wrap: wrap; opacity: 0.65;">
-                                    <div style="flex: 1; min-width: 250px;">
-                                        <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 4px;">
-                                            Font Display Optimization
-                                            <span style="background: #cbd5e1; color: #475569; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 8px; vertical-align: middle;">Updating...</span>
-                                        </strong>
-                                        <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block;">Set this to append <code>font-display</code> to all <code>@font-face</code> rules before caching CSS to specify how fonts should be displayed while being downloaded. <code>Swap</code> is recommended.</span>
-                                    </div>
-                                    <div style="flex-shrink: 0;">
-                                        <div class="uwb-toggle-container disabled">
-                                            <label class="uwb-toggle-btn disabled active">
-                                                <input type="radio" name="uwb_css_font_display_opt" value="default" checked disabled class="uwb-toggle-input"> Default
-                                            </label>
-                                            <label class="uwb-toggle-btn disabled">
-                                                <input type="radio" name="uwb_css_font_display_opt" value="swap" disabled class="uwb-toggle-input"> Swap
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
 
-                            <!-- SUB-TAB 2: JS Settings -->
+                            <!-- SUB-TAB 2: JS Settings, Defer, Delay & Excludes -->
                             <div id="subtab-opt_js" class="uwb-subtab-content">
+                                <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Minification &amp; Combination</h4>
                                 <?php
                                 $this->render_toggle_switch( 'uwb_js_minify', 'JS Minify', 'Minify JS files and inline JS code.' );
                                 $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JS files and inline JS code.', true );
                                 $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS and inline JS in combined file.', true );
-                                $this->render_toggle_switch( 'uwb_js_load_defer', 'Load JS Deferred', 'Load JS with defer attribute to avoid render blocking.' );
+                                $this->render_textarea_setting( 'uwb_tuning_js_excludes', 'JS Minify & Combine Excludes', '', 'JS files or inline keywords to exclude from minification/combination (one per line).' );
+                                ?>
+
+                                <h4 style="margin: 24px 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Load JS Deferred</h4>
+                                <?php
+                                $this->render_toggle_switch( 'uwb_js_load_defer', 'Load JS Deferred', 'Load JS with defer attribute so scripts download in background without blocking DOM parsing.' );
+                                $this->render_textarea_setting( 'uwb_tuning_js_defer_excludes', 'JS Deferred Excludes', '', 'JS files or inline keywords to exclude from deferred loading (one per line).' );
+                                ?>
+
+                                <h4 style="margin: 24px 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px; display:flex; align-items:center; gap:8px;">
+                                    Delay JavaScript Execution
+                                    <span style="background:#7c3aed; color:#fff; font-size:10px; padding:2px 8px; border-radius:12px; font-weight:700;">NEW</span>
+                                </h4>
+                                <?php
+                                $this->render_toggle_switch( 'uwb_delay_js', 'Enable Delay JS', 'Delay execution of JavaScript until first user interaction (scroll, click, keypress). Dramatically improves <strong>LCP</strong> and <strong>TBT</strong> scores.' );
+                                $this->render_textarea_setting(
+                                    'uwb_delay_js_exclusions',
+                                    'Delay JS Exclusions',
+                                    "jquery.min.js\nga.js\ngtm.js",
+                                    'One pattern per line. Scripts matching these patterns will NOT be delayed. Always exclude jQuery and analytics.',
+                                    ! intval( get_option( 'uwb_delay_js', 0 ) )
+                                );
                                 ?>
                             </div>
 
@@ -2650,13 +2653,15 @@ class Uwb_Admin {
                                 ?>
                             </div>
 
-                            <!-- SUB-TAB 4: Media Settings -->
+                            <!-- SUB-TAB 4: Media Settings & Excludes -->
                             <div id="subtab-opt_media" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
                                 $this->render_toggle_switch( 'uwb_media_lazy_load_iframes', 'Lazy Load Iframes', 'Delay iframe loading until visible in viewport.' );
                                 $this->render_toggle_switch( 'uwb_media_image_placeholder', 'Use Image Placeholders', 'Use responsive placeholders for lazy loaded images.', true );
                                 $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
+                                $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
+                                $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', 'skip-lazy', 'CSS class names of images or containers to exclude from lazy loading (one per line).' );
                                 ?>
                             </div>
 
@@ -2668,37 +2673,12 @@ class Uwb_Admin {
                                 ?>
                             </div>
 
-                            <!-- SUB-TAB 6: Media Excludes -->
-                            <div id="subtab-opt_media_excludes" class="uwb-subtab-content">
-                                <?php
-                                $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
-                                $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', 'skip-lazy', 'CSS class names of images or containers to exclude from lazy loading (one per line).' );
-                                ?>
-                            </div>
-
-                            <!-- SUB-TAB 7: Localization -->
+                            <!-- SUB-TAB 6: Localization -->
                             <div id="subtab-opt_loc" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_loc_gravatar_cache', 'Gravatar Cache', 'Cache Gravatar images locally.', true );
                                 $this->render_toggle_switch( 'uwb_loc_gravatar_cache_cron', 'Gravatar Cache Cron', 'Refresh Gravatar cache in background.', true );
                                 $this->render_textarea_setting( 'uwb_loc_resources', 'Localization Resources', '', 'Specify scripts or styles to localize and cache (one per line).', true );
-                                ?>
-                            </div>
-
-                            <!-- SUB-TAB 8: Tuning -->
-                            <div id="subtab-opt_tuning" class="uwb-subtab-content">
-                                <?php
-                                $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
-                                $this->render_textarea_setting( 'uwb_tuning_js_excludes', 'JS Excludes', '', 'JS files or inline keywords to exclude from minification/combination (one per line).' );
-                                $this->render_textarea_setting( 'uwb_tuning_js_defer_excludes', 'JS Deferred Excludes', '', 'JS files or inline keywords to exclude from deferred loading (one per line).' );
-                                ?>
-                            </div>
-
-                            <!-- SUB-TAB 9: Tuning - CSS -->
-                            <div id="subtab-opt_tuning_css" class="uwb-subtab-content">
-                                <?php
-                                $this->render_textarea_setting( 'uwb_tuning_ucss_excludes', 'UCSS Excludes', '', 'CSS selectors or files to exclude from UCSS generation (one per line).', true );
-                                $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Critical CSS', '', 'Custom Critical CSS to inject for pages.' );
                                 ?>
                             </div>
                         </div>
@@ -3171,26 +3151,6 @@ class Uwb_Admin {
                                     <input type="number" name="uwb_heartbeat_interval" id="uwb_heartbeat_interval" min="15" max="300" value="<?php echo esc_attr( intval( get_option( 'uwb_heartbeat_interval', 60 ) ) ); ?>" style="width:120px; border:1px solid var(--uwb-border); border-radius:8px; padding:10px; margin-top:6px; display:block;" />
                                     <p class="description" style="margin-top:4px;">Minimum 15 seconds. Recommended: 60&ndash;120 seconds.</p>
                                 </div>
-                            </div>
-
-                            <!-- Delay JS -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                    Delay JavaScript Execution
-                                    <span style="background:#7c3aed; color:#fff; font-size:10px; padding:2px 8px; border-radius:12px; font-weight:700; margin-left:6px;">NEW</span>
-                                </h3>
-                                <p class="description" style="margin-bottom:16px;">Delay execution of all JavaScript until the user interacts with the page (scroll, click, keypress). This dramatically improves <strong>LCP</strong> and <strong>TBT</strong> scores.</p>
-
-                                <?php $this->render_toggle_switch( 'uwb_delay_js', 'Enable Delay JS', 'Scripts will be delayed until first user interaction. May cause issues with some themes &mdash; test thoroughly.' ); ?>
-
-                                <?php $this->render_textarea_setting(
-                                    'uwb_delay_js_exclusions',
-                                    'Delay JS Exclusions',
-                                    "jquery.min.js\nga.js\ngtm.js",
-                                    'One pattern per line. Scripts matching these patterns will NOT be delayed. Always exclude jQuery and analytics.',
-                                    ! intval( get_option( 'uwb_delay_js', 0 ) )
-                                ); ?>
                             </div>
 
                             <!-- Preconnect External Domains -->
