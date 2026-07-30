@@ -220,9 +220,6 @@ class Uwb_Optimizer {
             'jquery.js',
             'jquery.min.js',
             'jquery-migrate',
-            'flatsome',
-            'flatsome.js',
-            'flatsomeVars',
             'noscript',
             'uwb-lazy',
         );
@@ -658,7 +655,7 @@ class Uwb_Optimizer {
      */
     public static function defer_js( $html, $excludes_str = '' ) {
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'flatsome', 'flatsome.js', 'flatsomeVars' );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
         return preg_replace_callback('/<script\s+([^>]*src=[\'"][^\'"]+[\'"][^>]*)>/i', function( $matches ) use ( $excludes ) {
@@ -816,106 +813,109 @@ class Uwb_Optimizer {
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         
-        // Always exclude jQuery core & Flatsome scripts to avoid breakage with dependent inline scripts
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'flatsome', 'flatsome.js', 'flatsomeVars' );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
-        preg_match_all('#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>\s*</script>#is', $html, $matches, PREG_SET_ORDER);
+        preg_match_all('#<script\b([^>]*?)>(.*?)</script>#is', $html, $matches, PREG_SET_ORDER);
 
         if ( empty( $matches ) ) {
             return $html;
         }
 
-        $to_combine = array();
-        $urls_hashes = array();
+        $current_chunk = array();
+
+        $flush_chunk = function() use ( &$html, &$current_chunk, $cache_dir, $include_ext ) {
+            if ( count( $current_chunk ) < 2 ) {
+                $current_chunk = array();
+                return;
+            }
+
+            $urls_hashes = array();
+            foreach ( $current_chunk as $item ) {
+                $mtime = ( $item['local_path'] && file_exists( $item['local_path'] ) ) ? filemtime( $item['local_path'] ) : 0;
+                $urls_hashes[] = $item['url_clean'] . '_' . $mtime;
+            }
+
+            $hash = md5( implode( '|', $urls_hashes ) );
+            $cache_file = $cache_dir . '/uwb-js-' . $hash . '.js';
+            $cache_url = content_url( '/cache/ultimate-wp-booster/combine/uwb-js-' . $hash . '.js' );
+
+            if ( ! file_exists( $cache_file ) ) {
+                $combined_content = '';
+                foreach ( $current_chunk as $item ) {
+                    $content = '';
+                    if ( $item['local_path'] && file_exists( $item['local_path'] ) ) {
+                        $content = @file_get_contents( $item['local_path'] );
+                    } elseif ( $include_ext ) {
+                        $content = self::download_url_content( $item['url'] );
+                    }
+
+                    if ( ! empty( $content ) ) {
+                        if ( stripos( $item['url_clean'], '.min.js' ) === false ) {
+                            $content = self::minify_js_safe( $content );
+                        }
+                        $combined_content .= "\n;/* Combined: " . esc_html( $item['url_clean'] ) . " */\n" . trim( $content ) . ";";
+                    }
+                }
+
+                if ( ! empty( $combined_content ) ) {
+                    @file_put_contents( $cache_file, trim( $combined_content ) );
+                }
+            }
+
+            if ( file_exists( $cache_file ) ) {
+                $first = true;
+                foreach ( $current_chunk as $item ) {
+                    if ( $first ) {
+                        $new_tag = '<script src="' . esc_url( $cache_url ) . '"></script>';
+                        $html = str_replace( $item['tag'], $new_tag, $html );
+                        $first = false;
+                    } else {
+                        $html = str_replace( $item['tag'], '', $html );
+                    }
+                }
+            }
+
+            $current_chunk = array();
+        };
 
         foreach ( $matches as $m ) {
             $tag = $m[0];
-            $url = $m[2];
-            $url_clean = strtok( $url, '?' );
+            $attrs = $m[1];
 
-            if ( strtolower( substr( $url_clean, -3 ) ) !== '.js' ) {
-                continue;
-            }
+            if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
+                $url = $src_match[2];
+                $url_clean = strtok( $url, '?' );
 
-            // Skip async, lazyload, or module scripts
-            if ( stripos( $tag, 'async' ) !== false || stripos( $tag, 'text/uwb-lazyload' ) !== false || stripos( $tag, 'type="module"' ) !== false ) {
-                continue;
-            }
+                $is_js_file = strtolower( substr( $url_clean, -3 ) ) === '.js';
+                $is_special = stripos( $attrs, 'async' ) !== false || stripos( $attrs, 'text/uwb-lazyload' ) !== false || stripos( $attrs, 'type="module"' ) !== false;
 
-            // Check exclusions
-            $is_excluded = false;
-            foreach ( $excludes as $ex ) {
-                if ( ! empty( $ex ) && ( stripos( $url, $ex ) !== false || stripos( $tag, $ex ) !== false ) ) {
-                    $is_excluded = true;
-                    break;
-                }
-            }
-            if ( $is_excluded ) {
-                continue;
-            }
-
-            $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
-            if ( ! $local_path && ! $include_ext ) {
-                continue;
-            }
-
-            $mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : 0;
-            $urls_hashes[] = $url_clean . '_' . $mtime;
-
-            $to_combine[] = array(
-                'tag'        => $tag,
-                'url'        => $url,
-                'url_clean'  => $url_clean,
-                'local_path' => $local_path,
-            );
-        }
-
-        if ( count( $to_combine ) < 2 ) {
-            return $html;
-        }
-
-        $hash = md5( implode( '|', $urls_hashes ) );
-        $cache_file = $cache_dir . '/uwb-combined-' . $hash . '.js';
-        $cache_url = content_url( '/cache/ultimate-wp-booster/combine/uwb-combined-' . $hash . '.js' );
-
-        if ( ! file_exists( $cache_file ) ) {
-            $combined_content = '';
-            foreach ( $to_combine as $item ) {
-                $content = '';
-                if ( $item['local_path'] && file_exists( $item['local_path'] ) ) {
-                    $content = @file_get_contents( $item['local_path'] );
-                } elseif ( $include_ext ) {
-                    $content = self::download_url_content( $item['url'] );
-                }
-
-                if ( ! empty( $content ) ) {
-                    // Minify if not already minified
-                    if ( stripos( $item['url_clean'], '.min.js' ) === false ) {
-                        $content = self::minify_js_safe( $content );
+                $is_excluded = false;
+                foreach ( $excludes as $ex ) {
+                    if ( ! empty( $ex ) && ( stripos( $url, $ex ) !== false || stripos( $tag, $ex ) !== false ) ) {
+                        $is_excluded = true;
+                        break;
                     }
-                    $combined_content .= "\n;/* Combined: " . esc_html( $item['url_clean'] ) . " */\n" . trim( $content ) . ";";
                 }
-            }
 
-            if ( empty( $combined_content ) ) {
-                return $html;
-            }
+                $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
 
-            @file_put_contents( $cache_file, trim( $combined_content ) );
-        }
-
-        // Replace first combined tag with single <script>, remove the rest
-        $first = true;
-        foreach ( $to_combine as $item ) {
-            if ( $first ) {
-                $new_tag = '<script id="uwb-combined-js" src="' . esc_url( $cache_url ) . '" defer></script>';
-                $html = str_replace( $item['tag'], $new_tag, $html );
-                $first = false;
+                if ( $is_js_file && ! $is_special && ! $is_excluded && ( $local_path || $include_ext ) ) {
+                    $current_chunk[] = array(
+                        'tag'        => $tag,
+                        'url'        => $url,
+                        'url_clean'  => $url_clean,
+                        'local_path' => $local_path,
+                    );
+                } else {
+                    $flush_chunk();
+                }
             } else {
-                $html = str_replace( $item['tag'], '', $html );
+                $flush_chunk();
             }
         }
+
+        $flush_chunk();
 
         return $html;
     }

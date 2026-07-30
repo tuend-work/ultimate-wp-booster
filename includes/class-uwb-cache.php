@@ -243,7 +243,7 @@ class Uwb_Cache {
             'preconnect_domains'          => get_option( 'uwb_preconnect_domains', '' ),
             'preload_fonts'               => get_option( 'uwb_preload_fonts', '' ),
             'delay_js'                    => intval( get_option( 'uwb_delay_js', 0 ) ),
-            'delay_js_exclusions'         => get_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate.min.js\nflatsome\nga.js\ngtm.js" ),
+            'delay_js_exclusions'         => get_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js" ),
         );
 
         $config_content = "<?php\n" .
