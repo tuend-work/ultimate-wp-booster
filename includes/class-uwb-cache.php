@@ -228,13 +228,16 @@ class Uwb_Cache {
             'media_add_missing_sizes'     => intval( get_option( 'uwb_media_add_missing_sizes', 0 ) ),
             'css_minify'                  => intval( get_option( 'uwb_css_minify', 0 ) ),
             'css_combine'                 => intval( get_option( 'uwb_css_combine', 0 ) ),
+            'css_combine_ext_inline'      => intval( get_option( 'uwb_css_combine_ext_inline', 0 ) ),
             'js_minify'                   => intval( get_option( 'uwb_js_minify', 0 ) ),
             'js_combine'                  => intval( get_option( 'uwb_js_combine', 0 ) ),
+            'js_combine_ext_inline'       => intval( get_option( 'uwb_js_combine_ext_inline', 0 ) ),
             'js_load_defer'               => intval( get_option( 'uwb_js_load_defer', 0 ) ),
             'loc_gravatar_cache'          => intval( get_option( 'uwb_loc_gravatar_cache', 0 ) ),
             'tuning_critical_css'         => get_option( 'uwb_tuning_critical_css', '' ),
             'tuning_css_excludes'         => get_option( 'uwb_tuning_css_excludes', '' ),
             'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', '' ),
+            'tuning_js_defer_excludes'    => get_option( 'uwb_tuning_js_defer_excludes', '' ),
             'ignore_all_query_strings'    => intval( get_option( 'uwb_ignore_all_query_strings', 1 ) ),
             'debug_mode'                  => intval( get_option( 'uwb_debug_mode', 0 ) ),
             'preconnect_domains'          => get_option( 'uwb_preconnect_domains', '' ),
@@ -308,10 +311,15 @@ class Uwb_Cache {
             @mkdir( $cache_dir, 0755, true );
         }
 
-        // Also delete minified css/js cache folder
+        // Also delete minified & combined css/js cache folders
         $minify_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
         if ( file_exists( $minify_dir ) ) {
             $this->recursive_delete( $minify_dir, true );
+        }
+
+        $combine_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/combine';
+        if ( file_exists( $combine_dir ) ) {
+            $this->recursive_delete( $combine_dir, true );
         }
     }
 

@@ -2597,8 +2597,8 @@ class Uwb_Admin {
                             <div id="subtab-opt_css" class="uwb-subtab-content active">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_css_minify', 'CSS Minify', 'Minify CSS files and inline CSS code.' );
-                                $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS files and inline CSS code. <a href="#" target="_blank">How to Fix Problems Caused by CSS/JS Optimization.</a>', true );
-                                $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS and inline CSS in combined file when <code>css_combine</code> is also enabled.', true );
+                                $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS stylesheets into a single cached file to reduce HTTP requests.' );
+                                $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS files and inline CSS code in the combined CSS bundle.' );
                                 $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
                                 $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Optimize CSS delivery. Use online service to generate critical CSS and load remaining CSS asynchronously.', true );
                                 $this->render_toggle_switch( 'uwb_css_inline_async_lib', 'Inline CSS Async Lib', 'This will inline the asynchronous CSS library to avoid render blocking.', true );
@@ -2615,8 +2615,8 @@ class Uwb_Admin {
                                 <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Minification &amp; Combination</h4>
                                 <?php
                                 $this->render_toggle_switch( 'uwb_js_minify', 'JS Minify', 'Minify JS files and inline JS code.' );
-                                $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JS files and inline JS code.', true );
-                                $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS and inline JS in combined file.', true );
+                                $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JavaScript files into a single cached file to reduce HTTP requests.' );
+                                $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS files and inline JS code in the combined JS bundle.' );
                                 $this->render_textarea_setting( 'uwb_tuning_js_excludes', 'JS Minify & Combine Excludes', '', 'JS files or inline keywords to exclude from minification/combination (one per line).' );
                                 ?>
 
