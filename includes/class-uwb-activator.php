@@ -89,6 +89,10 @@ class Uwb_Activator {
             update_option( 'uwb_cache_php_lifespan', 10 ); // 10 minutes by default
         }
 
+        if ( get_option( 'uwb_delay_js_exclusions' ) === false ) {
+            update_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js" );
+        }
+
         // 3. Copy advanced-cache.php drop-in
         self::copy_advanced_cache_dropin();
 

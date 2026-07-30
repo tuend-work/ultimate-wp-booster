@@ -217,6 +217,7 @@ class Uwb_Optimizer {
     public static function delay_js_execution( $html, $excludes_str = '' ) {
         // Default exclusions — always exclude these critical scripts
         $default_excludes = array(
+            'jquery.js',
             'jquery.min.js',
             'jquery-migrate',
             'noscript',
