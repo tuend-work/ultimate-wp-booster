@@ -431,7 +431,7 @@ class Uwb_Optimizer {
 
             // Exclude matching strings
             foreach ( $excludes as $ex ) {
-                if ( stripos( $src, $ex ) !== false ) {
+                if ( ! empty( $ex ) && stripos( $src, $ex ) !== false ) {
                     return $matches[0];
                 }
             }
@@ -439,7 +439,7 @@ class Uwb_Optimizer {
             if ( preg_match('/class=([\'"])(.*?)\1/i', $attrs, $class_match) ) {
                 $class = $class_match[2];
                 foreach ( $class_excludes as $cx ) {
-                    if ( stripos( $class, $cx ) !== false ) {
+                    if ( ! empty( $cx ) && stripos( $class, $cx ) !== false ) {
                         return $matches[0];
                     }
                 }
@@ -449,12 +449,17 @@ class Uwb_Optimizer {
                 return $matches[0];
             }
 
-            // Replace src with lightweight inline SVG placeholder
-            $placeholder = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>';
-            $new_attrs = preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . $placeholder . '" data-src="$2"', $attrs);
+            // Safe Base64 SVG placeholder (1x1 transparent) to avoid HTML attribute quote breakage
+            $placeholder = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==';
+
+            $new_attrs = preg_replace_callback('/src=([\'"])(.*?)\1/i', function( $m ) use ( $placeholder ) {
+                return 'src="' . $placeholder . '" data-src="' . $m[2] . '"';
+            }, $attrs);
             
             if ( preg_match('/srcset=/i', $new_attrs) ) {
-                $new_attrs = preg_replace('/srcset=([\'"])(.*?)\1/i', 'data-srcset="$2"', $new_attrs);
+                $new_attrs = preg_replace_callback('/srcset=([\'"])(.*?)\1/i', function( $m ) {
+                    return 'data-srcset="' . $m[2] . '"';
+                }, $new_attrs);
             }
 
             if ( stripos( $new_attrs, 'loading=' ) === false ) {
@@ -464,40 +469,54 @@ class Uwb_Optimizer {
             return '<img ' . $new_attrs . '>';
         }, $html);
 
-        // Inject script to load images when visible (lazyload fallback in case native loading="lazy" is not enough or data-src needs swap)
+        // Inject script to load images when visible
         if ( $processed !== $html ) {
-            $lazy_js = "\n" . '<script id="uwb-lazy-load-js">
-            document.addEventListener("DOMContentLoaded", function() {
-                var lazyImages = [].slice.call(document.querySelectorAll("img[data-src]"));
-                if ("IntersectionObserver" in window) {
-                    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
-                        entries.forEach(function(entry) {
-                            if (entry.isIntersecting) {
-                                let lazyImage = entry.target;
-                                lazyImage.src = lazyImage.dataset.src;
-                                if (lazyImage.dataset.srcset) {
-                                    lazyImage.srcset = lazyImage.dataset.srcset;
-                                }
-                                lazyImage.removeAttribute("data-src");
-                                lazyImage.removeAttribute("data-srcset");
-                                lazyImageObserver.unobserve(lazyImage);
-                            }
-                        });
-                    });
-                    lazyImages.forEach(function(lazyImage) {
-                        lazyImageObserver.observe(lazyImage);
-                    });
-                } else {
-                    // Fallback
-                    lazyImages.forEach(function(img) {
-                        img.src = img.dataset.src;
-                        if (img.dataset.srcset) img.srcset = img.dataset.srcset;
-                    });
+            $lazy_js = "\n<script id=\"uwb-lazy-load-js\">
+(function() {
+    function uwbInitLazyImages() {
+        var lazyImages = [].slice.call(document.querySelectorAll(\"img[data-src]\"));
+        if (!lazyImages.length) return;
+        if (\"IntersectionObserver\" in window) {
+            let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting || entry.intersectionRatio > 0) {
+                        let lazyImage = entry.target;
+                        if (lazyImage.dataset.src) {
+                            lazyImage.src = lazyImage.dataset.src;
+                            lazyImage.removeAttribute(\"data-src\");
+                        }
+                        if (lazyImage.dataset.srcset) {
+                            lazyImage.srcset = lazyImage.dataset.srcset;
+                            lazyImage.removeAttribute(\"data-srcset\");
+                        }
+                        lazyImageObserver.unobserve(lazyImage);
+                    }
+                });
+            }, { rootMargin: \"300px 0px\" });
+            lazyImages.forEach(function(lazyImage) {
+                lazyImageObserver.observe(lazyImage);
+            });
+        } else {
+            lazyImages.forEach(function(img) {
+                if (img.dataset.src) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute(\"data-src\");
+                }
+                if (img.dataset.srcset) {
+                    img.srcset = img.dataset.srcset;
+                    img.removeAttribute(\"data-srcset\");
                 }
             });
-            </script>';
+        }
+    }
+    if (document.readyState === \"loading\") {
+        document.addEventListener(\"DOMContentLoaded\", uwbInitLazyImages);
+    } else {
+        uwbInitLazyImages();
+    }
+})();
+</script>";
             
-            // Append before body closure
             if ( stripos( $processed, '</body>' ) !== false ) {
                 $processed = str_ireplace( '</body>', $lazy_js . '</body>', $processed );
             } else {
@@ -518,7 +537,9 @@ class Uwb_Optimizer {
                 return $matches[0];
             }
             if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
-                $new_attrs = preg_replace('/src=([\'"])(.*?)\1/i', 'src="about:blank" data-src="$2"', $attrs);
+                $new_attrs = preg_replace_callback('/src=([\'"])(.*?)\1/i', function( $m ) {
+                    return 'src="about:blank" data-src="' . $m[2] . '"';
+                }, $attrs);
                 if ( stripos( $new_attrs, 'loading=' ) === false ) {
                     $new_attrs .= ' loading="lazy"';
                 }
@@ -528,30 +549,43 @@ class Uwb_Optimizer {
         }, $html);
 
         if ( $processed !== $html ) {
-            $lazy_js = "\n" . '<script id="uwb-lazy-iframe-js">
-            document.addEventListener("DOMContentLoaded", function() {
-                var lazyIframes = [].slice.call(document.querySelectorAll("iframe[data-src]"));
-                if ("IntersectionObserver" in window) {
-                    let lazyIframeObserver = new IntersectionObserver(function(entries, observer) {
-                        entries.forEach(function(entry) {
-                            if (entry.isIntersecting) {
-                                let iframe = entry.target;
-                                iframe.src = iframe.dataset.src;
-                                iframe.removeAttribute("data-src");
-                                lazyIframeObserver.unobserve(iframe);
-                            }
-                        });
-                    });
-                    lazyIframes.forEach(function(iframe) {
-                        lazyIframeObserver.observe(iframe);
-                    });
-                } else {
-                    lazyIframes.forEach(function(iframe) {
-                        iframe.src = iframe.dataset.src;
-                    });
+            $lazy_js = "\n<script id=\"uwb-lazy-iframe-js\">
+(function() {
+    function uwbInitLazyIframes() {
+        var lazyIframes = [].slice.call(document.querySelectorAll(\"iframe[data-src]\"));
+        if (!lazyIframes.length) return;
+        if (\"IntersectionObserver\" in window) {
+            let lazyIframeObserver = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting || entry.intersectionRatio > 0) {
+                        let iframe = entry.target;
+                        if (iframe.dataset.src) {
+                            iframe.src = iframe.dataset.src;
+                            iframe.removeAttribute(\"data-src\");
+                        }
+                        lazyIframeObserver.unobserve(iframe);
+                    }
+                });
+            }, { rootMargin: \"300px 0px\" });
+            lazyIframes.forEach(function(iframe) {
+                lazyIframeObserver.observe(iframe);
+            });
+        } else {
+            lazyIframes.forEach(function(iframe) {
+                if (iframe.dataset.src) {
+                    iframe.src = iframe.dataset.src;
+                    iframe.removeAttribute(\"data-src\");
                 }
             });
-            </script>';
+        }
+    }
+    if (document.readyState === \"loading\") {
+        document.addEventListener(\"DOMContentLoaded\", uwbInitLazyIframes);
+    } else {
+        uwbInitLazyIframes();
+    }
+})();
+</script>";
             if ( stripos( $processed, '</body>' ) !== false ) {
                 $processed = str_ireplace( '</body>', $lazy_js . '</body>', $processed );
             } else {

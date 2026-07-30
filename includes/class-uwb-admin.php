@@ -2686,7 +2686,7 @@ class Uwb_Admin {
                         <!-- TAB 5: Dashboard -->
                         <div id="tab-url_status" class="uwb-tab-content active">
                             <h2 style="margin-top:0;">Dashboard</h2>
-                            <p style="color:var(--uwb-text-muted); margin-bottom:20px;">View and manage all URLs in the preload queue. Filter b                            <!-- Horizontal Cache Pipeline Widget -->
+                            <!-- Horizontal Cache Pipeline Widget -->
                             <?php
                             // 1. Opcode Cache
                             $opcode_active = false;
