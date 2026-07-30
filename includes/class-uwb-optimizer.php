@@ -19,14 +19,12 @@ class Uwb_Optimizer {
             return $html;
         }
 
-        $debug_mode = true;
+        $debug_mode = ! empty( $config['debug_mode'] );
         if ( $debug_mode ) {
             $GLOBALS['uwb_debug_log'] = array();
             $GLOBALS['uwb_debug_log'][] = "=== UWB OPTIMIZER DEBUG LOG ===";
-            $GLOBALS['uwb_debug_log'][] = "ABSPATH: " . ABSPATH;
-            $GLOBALS['uwb_debug_log'][] = "WP_CONTENT_DIR: " . (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : 'undefined');
             $GLOBALS['uwb_debug_log'][] = "Home URL: " . (function_exists( 'home_url' ) ? home_url() : 'undefined');
-            $GLOBALS['uwb_debug_log'][] = "Config: " . json_encode( $config );
+            $GLOBALS['uwb_debug_log'][] = "Config keys: " . implode( ', ', array_keys( $config ) );
         }
 
         // 1. Critical CSS Injection
@@ -94,12 +92,239 @@ class Uwb_Optimizer {
             $html = self::minify_html( $html );
         }
 
+        // 13. Preconnect External Domains
+        if ( ! empty( $config['preconnect_domains'] ) ) {
+            $html = self::inject_preconnect( $html, $config['preconnect_domains'] );
+        }
+
+        // 14. Preload Key Fonts
+        if ( ! empty( $config['preload_fonts'] ) ) {
+            $html = self::inject_preload_fonts( $html, $config['preload_fonts'] );
+        }
+
+        // 15. Delay JS Execution
+        if ( ! empty( $config['delay_js'] ) ) {
+            $excludes = isset( $config['delay_js_exclusions'] ) ? $config['delay_js_exclusions'] : '';
+            $html = self::delay_js_execution( $html, $excludes );
+        }
+
         if ( $debug_mode && ! empty( $GLOBALS['uwb_debug_log'] ) ) {
             $html .= "\n<!-- UWB DEBUG LOG:\n" . implode( "\n", $GLOBALS['uwb_debug_log'] ) . "\n-->";
         }
 
         return $html;
     }
+
+    /**
+     * Inject <link rel="preconnect"> tags for external domains.
+     *
+     * @param string $html   HTML content.
+     * @param string $domains_raw Newline-separated list of domain URLs.
+     * @return string Modified HTML.
+     */
+    public static function inject_preconnect( $html, $domains_raw ) {
+        $domains = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $domains_raw ) ) ) );
+        if ( empty( $domains ) ) {
+            return $html;
+        }
+
+        $tags = '';
+        foreach ( $domains as $domain ) {
+            $domain = esc_url( $domain );
+            if ( empty( $domain ) ) {
+                continue;
+            }
+            $tags .= "\n<link rel=\"preconnect\" href=\"{$domain}\" crossorigin>";
+        }
+
+        if ( empty( $tags ) ) {
+            return $html;
+        }
+
+        // Inject after opening <head> tag
+        if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+            return str_replace( $matches[0], $matches[0] . $tags, $html );
+        }
+
+        return $html;
+    }
+
+    /**
+     * Inject <link rel="preload" as="font"> tags for critical fonts.
+     *
+     * @param string $html      HTML content.
+     * @param string $fonts_raw Newline-separated list of font URLs.
+     * @return string Modified HTML.
+     */
+    public static function inject_preload_fonts( $html, $fonts_raw ) {
+        $fonts = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $fonts_raw ) ) ) );
+        if ( empty( $fonts ) ) {
+            return $html;
+        }
+
+        $home_url = function_exists( 'home_url' ) ? home_url() : '';
+        $tags = '';
+        foreach ( $fonts as $font_url ) {
+            // Normalize relative paths to absolute URLs
+            if ( strpos( $font_url, 'http' ) !== 0 ) {
+                $font_url = rtrim( $home_url, '/' ) . '/' . ltrim( $font_url, '/' );
+            }
+            $font_url = esc_url( $font_url );
+            if ( empty( $font_url ) ) {
+                continue;
+            }
+            // Determine format from extension
+            $ext = strtolower( pathinfo( parse_url( $font_url, PHP_URL_PATH ), PATHINFO_EXTENSION ) );
+            $type_map = array(
+                'woff2' => 'font/woff2',
+                'woff'  => 'font/woff',
+                'ttf'   => 'font/ttf',
+                'otf'   => 'font/otf',
+                'eot'   => 'application/vnd.ms-fontobject',
+            );
+            $font_type = isset( $type_map[ $ext ] ) ? $type_map[ $ext ] : 'font/woff2';
+            $tags .= "\n<link rel=\"preload\" href=\"{$font_url}\" as=\"font\" type=\"{$font_type}\" crossorigin>";
+        }
+
+        if ( empty( $tags ) ) {
+            return $html;
+        }
+
+        if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+            return str_replace( $matches[0], $matches[0] . $tags, $html );
+        }
+
+        return $html;
+    }
+
+    /**
+     * Delay JavaScript execution until first user interaction.
+     * Transforms script type to "text/uwb-lazyload" and injects a tiny loader
+     * that restores and executes scripts on scroll/click/keydown/touchstart.
+     *
+     * @param string $html        HTML content.
+     * @param string $excludes_str Newline-separated exclusion patterns.
+     * @return string Modified HTML.
+     */
+    public static function delay_js_execution( $html, $excludes_str = '' ) {
+        // Default exclusions — always exclude these critical scripts
+        $default_excludes = array(
+            'jquery.min.js',
+            'jquery-migrate',
+            'noscript',
+            'uwb-lazy',
+        );
+        $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
+        $excludes = array_merge( $default_excludes, $user_excludes );
+
+        $processed = preg_replace_callback(
+            '#<script\b([^>]*?)>(.*?)</script>#ims',
+            function( $matches ) use ( $excludes ) {
+                $attrs   = $matches[1];
+                $content = $matches[2];
+
+                // Skip if already processed
+                if ( stripos( $attrs, 'text/uwb-lazyload' ) !== false ) {
+                    return $matches[0];
+                }
+
+                // Check exclusion patterns against attrs + content
+                foreach ( $excludes as $ex ) {
+                    if ( ! empty( $ex ) && stripos( $matches[0], $ex ) !== false ) {
+                        return $matches[0];
+                    }
+                }
+
+                // Only delay scripts with JS type or no type
+                if ( preg_match( '/type\s*=\s*["\']([^"\']+)["\']/i', $attrs, $type_match ) ) {
+                    $type = strtolower( trim( $type_match[1] ) );
+                    $allowed = array( 'text/javascript', 'application/javascript', 'module' );
+                    if ( ! in_array( $type, $allowed, true ) ) {
+                        return $matches[0];
+                    }
+                    // Replace type attr
+                    $attrs = preg_replace( '/type\s*=\s*["\'][^"\']*["\']/i', 'type="text/uwb-lazyload"', $attrs );
+                } else {
+                    // No type attr — add our delay type
+                    $attrs = ' type="text/uwb-lazyload"' . $attrs;
+                }
+
+                // For external scripts: rename src → data-uwb-src
+                if ( preg_match( '/\bsrc\s*=/i', $attrs ) ) {
+                    $attrs = preg_replace( '/\bsrc\s*=\s*(["\'])/i', 'data-uwb-src=$1', $attrs );
+                }
+
+                return '<script' . $attrs . '>' . $content . '</script>';
+            },
+            $html
+        );
+
+        if ( $processed === null || $processed === $html ) {
+            return $html;
+        }
+
+        // Inject the tiny loader script before </body>
+        $loader = "\n<script id=\"uwb-delay-js-loader\">
+(function(){
+    var loaded = false;
+    function uwbLoadDelayedScripts() {
+        if (loaded) return;
+        loaded = true;
+        var scripts = document.querySelectorAll('script[type=\"text/uwb-lazyload\"]');
+        var len = scripts.length;
+        var idx = 0;
+        function loadNext() {
+            if (idx >= len) return;
+            var s = scripts[idx++];
+            var n = document.createElement('script');
+            for (var i = 0; i < s.attributes.length; i++) {
+                var attr = s.attributes[i];
+                if (attr.name === 'type') {
+                    n.type = 'text/javascript';
+                } else if (attr.name === 'data-uwb-src') {
+                    n.src = attr.value;
+                    n.onload = n.onerror = loadNext;
+                } else {
+                    n.setAttribute(attr.name, attr.value);
+                }
+            }
+            if (!n.src) {
+                n.text = s.innerHTML;
+            }
+            s.parentNode.replaceChild(n, s);
+            if (!n.src) { loadNext(); }
+        }
+        loadNext();
+        ['scroll','click','keydown','touchstart','mousemove'].forEach(function(e){
+            document.removeEventListener(e, uwbLoadDelayedScripts, {passive:true});
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            ['scroll','click','keydown','touchstart','mousemove'].forEach(function(e){
+                document.addEventListener(e, uwbLoadDelayedScripts, {passive:true});
+            });
+            setTimeout(uwbLoadDelayedScripts, 5000);
+        });
+    } else {
+        ['scroll','click','keydown','touchstart','mousemove'].forEach(function(e){
+            document.addEventListener(e, uwbLoadDelayedScripts, {passive:true});
+        });
+        setTimeout(uwbLoadDelayedScripts, 5000);
+    }
+})();
+</script>";
+
+        if ( stripos( $processed, '</body>' ) !== false ) {
+            $processed = str_ireplace( '</body>', $loader . '</body>', $processed );
+        } else {
+            $processed .= $loader;
+        }
+
+        return $processed;
+    }
+
+
 
     /**
      * Minify HTML source code.
@@ -432,7 +657,7 @@ class Uwb_Optimizer {
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
 
-            $debug_mode = true;
+            $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
             if ( $debug_mode ) {
                 $GLOBALS['uwb_debug_log'][] = "Found CSS link: " . $url_clean;
             }
@@ -534,7 +759,7 @@ class Uwb_Optimizer {
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
 
-            $debug_mode = true;
+            $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
             if ( $debug_mode ) {
                 $GLOBALS['uwb_debug_log'][] = "Found JS script: " . $url_clean;
             }

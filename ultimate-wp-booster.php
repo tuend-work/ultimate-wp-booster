@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.9.11
+ * Version:     1.10.0
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.9.11' );
+define( 'UWB_VERSION', '1.10.0' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -80,7 +80,38 @@ function uwb_init_preload_secret_key() {
     }
 }
 
-// 5. Admin Bar Menu Customization
+// 5.1. Heartbeat API Control
+add_action( 'init', 'uwb_heartbeat_control', 10 );
+function uwb_heartbeat_control() {
+    $mode = get_option( 'uwb_heartbeat_control', 'default' );
+    if ( $mode === 'default' ) {
+        return;
+    }
+
+    if ( $mode === 'disable_all' ) {
+        add_action( 'init', function() {
+            wp_deregister_script( 'heartbeat' );
+        }, 1 );
+        return;
+    }
+
+    if ( $mode === 'disable_frontend' && ! is_admin() ) {
+        add_action( 'wp_enqueue_scripts', function() {
+            wp_deregister_script( 'heartbeat' );
+        }, 1 );
+        return;
+    }
+
+    if ( $mode === 'reduce' ) {
+        $interval = max( 15, intval( get_option( 'uwb_heartbeat_interval', 60 ) ) );
+        add_filter( 'heartbeat_settings', function( $settings ) use ( $interval ) {
+            $settings['interval'] = $interval;
+            return $settings;
+        } );
+    }
+}
+
+// 5.2. Admin Bar Menu Customization
 add_action( 'admin_bar_menu', 'uwb_add_admin_bar_nodes', 999 );
 function uwb_add_admin_bar_nodes( $wp_admin_bar ) {
     $can_manage = current_user_can( 'manage_options' );

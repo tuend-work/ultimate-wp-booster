@@ -235,7 +235,12 @@ class Uwb_Cache {
             'tuning_critical_css'         => get_option( 'uwb_tuning_critical_css', '' ),
             'tuning_css_excludes'         => get_option( 'uwb_tuning_css_excludes', '' ),
             'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', '' ),
-            'ignore_all_query_strings'    => intval( get_option( 'uwb_ignore_all_query_strings', 1 ) )
+            'ignore_all_query_strings'    => intval( get_option( 'uwb_ignore_all_query_strings', 1 ) ),
+            'debug_mode'                  => intval( get_option( 'uwb_debug_mode', 0 ) ),
+            'preconnect_domains'          => get_option( 'uwb_preconnect_domains', '' ),
+            'preload_fonts'               => get_option( 'uwb_preload_fonts', '' ),
+            'delay_js'                    => intval( get_option( 'uwb_delay_js', 0 ) ),
+            'delay_js_exclusions'         => get_option( 'uwb_delay_js_exclusions', '' ),
         );
 
         $config_content = "<?php\n" .
