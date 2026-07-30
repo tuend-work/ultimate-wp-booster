@@ -90,7 +90,7 @@ class Uwb_Activator {
         }
 
         if ( get_option( 'uwb_delay_js_exclusions' ) === false ) {
-            update_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js" );
+            update_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate.min.js\nflatsome\nga.js\ngtm.js" );
         }
 
         // 3. Copy advanced-cache.php drop-in

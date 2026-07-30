@@ -220,6 +220,9 @@ class Uwb_Optimizer {
             'jquery.js',
             'jquery.min.js',
             'jquery-migrate',
+            'flatsome',
+            'flatsome.js',
+            'flatsomeVars',
             'noscript',
             'uwb-lazy',
         );
@@ -655,7 +658,7 @@ class Uwb_Optimizer {
      */
     public static function defer_js( $html, $excludes_str = '' ) {
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'flatsome', 'flatsome.js', 'flatsomeVars' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
         return preg_replace_callback('/<script\s+([^>]*src=[\'"][^\'"]+[\'"][^>]*)>/i', function( $matches ) use ( $excludes ) {
@@ -813,8 +816,8 @@ class Uwb_Optimizer {
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         
-        // Always exclude jQuery core to avoid breakage with dependent inline scripts
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
+        // Always exclude jQuery core & Flatsome scripts to avoid breakage with dependent inline scripts
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'flatsome', 'flatsome.js', 'flatsomeVars' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
         preg_match_all('#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>\s*</script>#is', $html, $matches, PREG_SET_ORDER);

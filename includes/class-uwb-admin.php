@@ -2635,8 +2635,8 @@ class Uwb_Admin {
                                 $this->render_textarea_setting(
                                     'uwb_delay_js_exclusions',
                                     'Delay JS Exclusions',
-                                    "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js",
-                                    'One pattern per line. Scripts matching these patterns will NOT be delayed. jQuery scripts (jquery.js, jquery.min.js) are excluded by default.',
+                                    "jquery.js\njquery.min.js\njquery-migrate.min.js\nflatsome\nga.js\ngtm.js",
+                                    'One pattern per line. Scripts matching these patterns will NOT be delayed. jQuery and Flatsome scripts are excluded by default to preserve theme sliders.',
                                     ! intval( get_option( 'uwb_delay_js', 0 ) )
                                 );
                                 ?>
