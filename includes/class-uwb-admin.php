@@ -3139,7 +3139,6 @@ class Uwb_Admin {
                             </div>
                         </form>
                     </div>
-                    </div>
 
                     <!-- TAB 5: Advanced Tools -->
                     <div id="tab-advanced_tools" class="uwb-tab-content">
