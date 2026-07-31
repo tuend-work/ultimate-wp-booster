@@ -910,17 +910,23 @@ class Uwb_Optimizer {
 
                 $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
 
+                // Auto-detect webpack bundles — they use document.currentScript.src to set
+                // __webpack_require__.p (public path). When combined into a different URL,
+                // chunk loading (dynamic import) breaks with wrong path → 404.
+                $is_webpack = $local_path && self::is_webpack_bundle( $local_path );
+
                 if ( $debug_mode ) {
                     $skip_reason = '';
-                    if ( ! $is_js_file )       { $skip_reason = 'not a .js file'; }
-                    elseif ( $is_special )      { $skip_reason = 'async/module/lazyload'; }
-                    elseif ( $is_excluded )     { $skip_reason = 'excluded by: "' . $matched_ex . '"'; }
+                    if ( ! $is_js_file )         { $skip_reason = 'not a .js file'; }
+                    elseif ( $is_special )        { $skip_reason = 'async/module/lazyload'; }
+                    elseif ( $is_excluded )       { $skip_reason = 'excluded by: "' . $matched_ex . '"'; }
+                    elseif ( $is_webpack )        { $skip_reason = 'auto-excluded (webpack bundle — contains __webpack_require__)'; }
                     elseif ( ! $local_path && ! $include_ext ) { $skip_reason = 'external & include_ext=false'; }
-                    else                       { $skip_reason = 'ADDED to chunk'; }
+                    else                         { $skip_reason = 'ADDED to chunk'; }
                     $GLOBALS['uwb_debug_log'][] = "[combine_js] " . $url_clean . " → " . $skip_reason;
                 }
 
-                if ( $is_js_file && ! $is_special && ! $is_excluded && ( $local_path || $include_ext ) ) {
+                if ( $is_js_file && ! $is_special && ! $is_excluded && ! $is_webpack && ( $local_path || $include_ext ) ) {
                     // Combineable script — add to current chunk
                     $current_chunk[] = array(
                         'tag'        => $tag,
@@ -929,7 +935,7 @@ class Uwb_Optimizer {
                         'local_path' => $local_path,
                     );
                 }
-                // else: external/excluded/async scripts — skip, do not flush.
+                // else: excluded/async/webpack/external scripts — skip, do not flush.
             } else {
                 // Inline script (no src) — skip, do not flush.
                 // External scripts before and after inline scripts are all combined
@@ -1463,5 +1469,38 @@ class Uwb_Optimizer {
         $out = preg_replace('/[\r\n]+/', "\n", $out);
         
         return trim( $out );
+    }
+    /**
+     * Detect if a JS file is a webpack bundle by scanning the first 8 KB.
+     * Webpack bundles use document.currentScript.src to calculate __webpack_require__.p
+     * (public path) for dynamic imports. When combined into a different URL, chunk
+     * loading breaks because paths are resolved relative to the combined file.
+     *
+     * @param string $local_path Absolute server path to the JS file.
+     * @return bool True if the file appears to be a webpack bundle.
+     */
+    private static function is_webpack_bundle( $local_path ) {
+        $handle = @fopen( $local_path, 'r' );
+        if ( ! $handle ) {
+            return false;
+        }
+        $sample = fread( $handle, 8192 ); // Read first 8 KB
+        fclose( $handle );
+
+        $webpack_signatures = array(
+            '__webpack_require__',
+            'webpackChunk',
+            'webpackJsonp',
+            '__webpack_exports__',
+            '__webpack_module_cache__',
+        );
+
+        foreach ( $webpack_signatures as $sig ) {
+            if ( strpos( $sample, $sig ) !== false ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
