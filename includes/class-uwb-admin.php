@@ -3173,24 +3173,16 @@ class Uwb_Admin {
                         <h2 style="margin-top:0;">Advanced &amp; Tools</h2>
                         <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Developer settings for debugging and troubleshooting.</p>
 
-                        <form method="post" action="options.php" novalidate>
-                            <?php settings_fields( 'uwb_settings_group' ); ?>
+                        <!-- Debug Mode -->
+                        <div style="background:#fff8e1; border:1px solid #fcd34d; border-radius:12px; padding:24px; margin-bottom:24px;">
+                            <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px; color:#92400e;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                Developer: Debug Mode
+                            </h3>
+                            <p class="description" style="margin-bottom:16px; color:#92400e;"><strong>Warning:</strong> When enabled, the optimizer appends a debug log as an HTML comment to every cached page. <strong>Disable on production.</strong></p>
 
-                            <!-- Debug Mode -->
-                            <div style="background:#fff8e1; border:1px solid #fcd34d; border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px; color:#92400e;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                    Developer: Debug Mode
-                                </h3>
-                                <p class="description" style="margin-bottom:16px; color:#92400e;"><strong>Warning:</strong> When enabled, the optimizer appends a debug log as an HTML comment to every cached page. <strong>Disable on production.</strong></p>
-
-                                <?php $this->render_toggle_switch( 'uwb_debug_mode', 'Enable Optimizer Debug Log', 'Appends debug info as HTML comments. Use only for troubleshooting.' ); ?>
-                            </div>
-
-                            <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--uwb-border); display:flex; gap:12px;">
-                                <input type="submit" name="submit" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:8px 20px; height:auto; font-weight:600; border-radius:6px;" value="Save Advanced Settings" />
-                            </div>
-                        </form>
+                            <?php $this->render_toggle_switch( 'uwb_debug_mode', 'Enable Optimizer Debug Log', 'Appends debug info as HTML comments. Use only for troubleshooting.' ); ?>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3231,7 +3223,7 @@ class Uwb_Admin {
                 localStorage.setItem('uwb_active_tab', tabId);
 
                 // Hide submit row on non-settings tabs (these tabs have their own forms)
-                if (['url_status', 'import_export', 'advanced_tools'].indexOf(tabId) !== -1) {
+                if (['url_status', 'import_export'].indexOf(tabId) !== -1) {
                     $('#uwb-submit-row').hide();
                 } else {
                     $('#uwb-submit-row').show();
@@ -4119,7 +4111,7 @@ class Uwb_Admin {
                 $('.uwb-tab-content').removeClass('active');
                 $('#tab-' + savedTab).addClass('active');
                 
-                if (['url_status', 'import_export', 'advanced_tools'].indexOf(savedTab) !== -1) {
+                if (['url_status', 'import_export'].indexOf(savedTab) !== -1) {
                     $('#uwb-submit-row').hide();
                 } else {
                     $('#uwb-submit-row').show();
