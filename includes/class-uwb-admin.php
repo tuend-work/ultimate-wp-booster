@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Admin Panel Dashboard & Settings
  */
@@ -3130,6 +3130,9 @@ class Uwb_Admin {
 
                             <!-- Toast notification -->
                             <div id="uwb-url-toast" style="display:none; position:fixed; bottom:24px; right:24px; background:#1e293b; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.2);"></div>
+                        </div>
+
+                        <!-- TAB 5: Advanced Tools -->
                         <div id="tab-advanced_tools" class="uwb-tab-content">
                             <h2 style="margin-top:0;">Advanced &amp; Tools</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Developer settings for debugging and troubleshooting.</p>
