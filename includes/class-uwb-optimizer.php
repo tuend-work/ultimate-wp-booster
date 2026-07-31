@@ -69,12 +69,6 @@ class Uwb_Optimizer {
             $html = self::add_missing_sizes( $html );
         }
 
-        // 9. Defer Javascript
-        if ( ! empty( $config['js_load_defer'] ) ) {
-            $js_defer_excludes = isset( $config['tuning_js_defer_excludes'] ) ? $config['tuning_js_defer_excludes'] : ( isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '' );
-            $html = self::defer_js( $html, $js_defer_excludes );
-        }
-
         // 10. Combine or Minify CSS
         if ( ! empty( $config['css_combine'] ) ) {
             $css_excludes = isset( $config['tuning_css_excludes'] ) ? $config['tuning_css_excludes'] : '';
@@ -83,6 +77,11 @@ class Uwb_Optimizer {
         } elseif ( ! empty( $config['css_minify'] ) ) {
             $html = self::minify_external_css( $html );
             $html = self::minify_inline_css( $html );
+        }
+
+        // 10.2. Load CSS Asynchronously
+        if ( ! empty( $config['css_load_async'] ) ) {
+            $html = self::make_css_async( $html );
         }
 
         // 10.5. Font Display Swap Optimization
@@ -98,6 +97,12 @@ class Uwb_Optimizer {
         } elseif ( ! empty( $config['js_minify'] ) ) {
             $html = self::minify_external_js( $html );
             $html = self::minify_inline_js( $html );
+        }
+
+        // 11.5. Defer Javascript (Runs AFTER combine_js so combined JS bundle & standalone JS get deferred!)
+        if ( ! empty( $config['js_load_defer'] ) ) {
+            $js_defer_excludes = isset( $config['tuning_js_defer_excludes'] ) ? $config['tuning_js_defer_excludes'] : ( isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '' );
+            $html = self::defer_js( $html, $js_defer_excludes );
         }
 
         // 12. Minify HTML markup
@@ -221,6 +226,79 @@ class Uwb_Optimizer {
                 }
             },
             $css
+        );
+    }
+
+    /**
+     * Defer JavaScript execution by adding the `defer` attribute to external script tags.
+     *
+     * @param string $html         HTML content.
+     * @param string $excludes_str Newline-separated list of script URLs or keywords to exclude.
+     * @return string Modified HTML.
+     */
+    public static function defer_js( $html, $excludes_str = '' ) {
+        $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
+
+        return preg_replace_callback(
+            '#<script\b([^>]*?)src=([\'"])(.*?)\2([^>]*?)>\s*</script>#is',
+            function( $matches ) use ( $excludes ) {
+                $full_tag     = $matches[0];
+                $attrs_before = $matches[1];
+                $url          = $matches[3];
+                $attrs_after  = $matches[4];
+                $all_attrs    = $attrs_before . ' ' . $attrs_after;
+
+                // Skip if already has defer/async or type="module" or lazyload
+                if ( stripos( $all_attrs, 'defer' ) !== false ||
+                     stripos( $all_attrs, 'async' ) !== false ||
+                     stripos( $all_attrs, 'type="module"' ) !== false ||
+                     stripos( $all_attrs, 'text/uwb-lazyload' ) !== false ) {
+                    return $full_tag;
+                }
+
+                // Check exclusions
+                foreach ( $excludes as $ex ) {
+                    if ( ! empty( $ex ) && ( stripos( $url, $ex ) !== false || stripos( $full_tag, $ex ) !== false ) ) {
+                        return $full_tag;
+                    }
+                }
+
+                // Inject defer attribute
+                return '<script defer="defer"' . $attrs_before . 'src="' . esc_url( $url ) . '"' . $attrs_after . '></script>';
+            },
+            $html
+        );
+    }
+
+    /**
+     * Load CSS stylesheets asynchronously to eliminate render-blocking CSS warnings.
+     *
+     * @param string $html HTML content.
+     * @return string Modified HTML.
+     */
+    public static function make_css_async( $html ) {
+        return preg_replace_callback(
+            '#<link\b([^>]*?)href=([\'"])(.*?)\2([^>]*?)>#is',
+            function( $m ) {
+                $tag = $m[0];
+                $url = $m[3];
+
+                if ( stripos( $tag, 'rel=' ) === false || stripos( $tag, 'stylesheet' ) === false ) {
+                    return $tag;
+                }
+
+                if ( stripos( $tag, 'media="print"' ) !== false || stripos( $tag, 'onload=' ) !== false ) {
+                    return $tag;
+                }
+
+                // Convert stylesheet link to async media="print" onload="this.media='all'"
+                $async_tag = preg_replace( '/media=([\'"])(.*?)\1/i', 'media="print" onload="this.media=\'all\'"', $tag );
+                if ( $async_tag === $tag ) {
+                    $async_tag = str_replace( '>', ' media="print" onload="this.media=\'all\'">', $tag );
+                }
+                return $async_tag . '<noscript>' . $tag . '</noscript>';
+            },
+            $html
         );
     }
 
