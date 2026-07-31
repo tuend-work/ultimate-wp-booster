@@ -85,6 +85,11 @@ class Uwb_Optimizer {
             $html = self::minify_inline_css( $html );
         }
 
+        // 10.5. Font Display Swap Optimization
+        if ( ! empty( $config['css_font_display_opt'] ) ) {
+            $html = self::apply_font_display_swap( $html );
+        }
+
         // 11. Combine or Minify JS
         if ( ! empty( $config['js_combine'] ) ) {
             $js_excludes = isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '';
@@ -155,6 +160,68 @@ class Uwb_Optimizer {
         }
 
         return $html;
+    }
+
+    /**
+     * Ensure all @font-face CSS declarations have font-display: swap;
+     * and Google Fonts URLs include &display=swap.
+     *
+     * @param string $html HTML content.
+     * @return string Modified HTML.
+     */
+    public static function apply_font_display_swap( $html ) {
+        // 1. Process inline <style> tags
+        $html = preg_replace_callback(
+            '#(<style\b[^>]*?>)(.*?)(</style>)#is',
+            function( $m ) {
+                $css = self::add_font_display_to_css( $m[2] );
+                return $m[1] . $css . $m[3];
+            },
+            $html
+        );
+
+        // 2. Process Google Fonts <link> tags (ensure &display=swap)
+        $html = preg_replace_callback(
+            '#<link\b[^>]*?href=[\'"]([^\'"]*fonts\.googleapis\.com[^\'"]*)[\'"][^>]*?>#is',
+            function( $m ) {
+                $url = $m[1];
+                if ( stripos( $url, 'display=' ) === false ) {
+                    $sep = ( strpos( $url, '?' ) !== false ) ? '&' : '?';
+                    $new_url = $url . $sep . 'display=swap';
+                    return str_replace( $url, $new_url, $m[0] );
+                }
+                return $m[0];
+            },
+            $html
+        );
+
+        return $html;
+    }
+
+    /**
+     * Helper to inject font-display: swap into @font-face rules in a CSS string.
+     *
+     * @param string $css CSS text content.
+     * @return string Modified CSS.
+     */
+    public static function add_font_display_to_css( $css ) {
+        if ( stripos( $css, '@font-face' ) === false ) {
+            return $css;
+        }
+
+        return preg_replace_callback(
+            '#@font-face\s*\{([^}]+)\}#is',
+            function( $font_m ) {
+                $block = $font_m[1];
+                if ( stripos( $block, 'font-display' ) === false ) {
+                    return '@font-face{' . trim( $block, " \t\n\r\0\x0B;" ) . ';font-display:swap;}';
+                } else {
+                    $block = preg_replace( '#font-display\s*:\s*[^;]+;?#i', 'font-display:swap;', $block );
+                    return '@font-face{' . $block . '}';
+                }
+            },
+            $css
+        );
     }
 
     /**
@@ -775,6 +842,11 @@ class Uwb_Optimizer {
 
             if ( empty( $combined_content ) ) {
                 return $html;
+            }
+
+            // Ensure font-display: swap is added if enabled
+            if ( get_option( 'uwb_css_font_display_opt', 1 ) ) {
+                $combined_content = self::add_font_display_to_css( $combined_content );
             }
 
             @file_put_contents( $cache_file, trim( $combined_content ) );

@@ -229,6 +229,7 @@ class Uwb_Cache {
             'css_minify'                  => intval( get_option( 'uwb_css_minify', 0 ) ),
             'css_combine'                 => intval( get_option( 'uwb_css_combine', 0 ) ),
             'css_combine_ext_inline'      => intval( get_option( 'uwb_css_combine_ext_inline', 0 ) ),
+            'css_font_display_opt'        => intval( get_option( 'uwb_css_font_display_opt', 1 ) ),
             'js_minify'                   => intval( get_option( 'uwb_js_minify', 0 ) ),
             'js_combine'                  => intval( get_option( 'uwb_js_combine', 0 ) ),
             'js_combine_ext_inline'       => intval( get_option( 'uwb_js_combine_ext_inline', 0 ) ),

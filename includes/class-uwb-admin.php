@@ -2608,8 +2608,9 @@ class Uwb_Admin {
                                 <div class="uwb-sub-tab-item" data-subtab="opt_js">[2] JS</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_html">[3] HTML</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_media">[4] Media</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_vpi">[5] VPI</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_loc">[6] Localization</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_font">[5] Font</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_vpi">[6] VPI</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_loc">[7] Localization</div>
                             </div>
 
                             <!-- SUB-TAB 1: CSS Settings & Excludes -->
@@ -2692,7 +2693,27 @@ class Uwb_Admin {
                                 ?>
                             </div>
 
-                            <!-- SUB-TAB 5: VPI -->
+                            <!-- SUB-TAB 5: Font Optimization -->
+                            <div id="subtab-opt_font" class="uwb-subtab-content">
+                                <?php
+                                $this->render_toggle_switch( 'uwb_css_font_display_opt', 'Font Display Swap', 'Automatically injects <code>font-display: swap</code> into all CSS <code>@font-face</code> declarations (including theme icon fonts like <code>fl-icons.woff2</code>) and Google Fonts to ensure text remains visible during font load and pass PageSpeed Insights audit.' );
+                                $this->render_textarea_setting(
+                                    'uwb_preload_fonts',
+                                    'Preload Key Fonts',
+                                    "/wp-content/themes/flatsome/assets/css/icons/fl-icons.woff2?v=3.20.7\n/wp-content/themes/your-theme/fonts/font.woff2",
+                                    'Inject <code>&lt;link rel="preload" as="font" crossorigin&gt;</code> tags to prioritize critical font loading and eliminate FOUT/FOIT. One font URL per line (.woff2 recommended).'
+                                );
+                                $this->render_textarea_setting(
+                                    'uwb_preconnect_domains',
+                                    'Preconnect External Font Domains',
+                                    "https://fonts.googleapis.com\nhttps://fonts.gstatic.com",
+                                    'Inject <code>&lt;link rel="preconnect"&gt;</code> tags into HTML <code>&lt;head&gt;</code> to preconnect external font domains (one per line).'
+                                );
+                                $this->render_toggle_switch( 'uwb_html_remove_gfonts', 'Remove Google Fonts', 'Completely remove Google Fonts requests to improve page load speed and privacy compliance.' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 6: VPI -->
                             <div id="subtab-opt_vpi" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_vpi_enabled', 'Viewport Images Generation', 'Automatically generate viewport critical images.', true );
@@ -2700,7 +2721,7 @@ class Uwb_Admin {
                                 ?>
                             </div>
 
-                            <!-- SUB-TAB 6: Localization -->
+                            <!-- SUB-TAB 7: Localization -->
                             <div id="subtab-opt_loc" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_loc_gravatar_cache', 'Gravatar Cache', 'Cache Gravatar images locally.', true );
