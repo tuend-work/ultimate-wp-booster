@@ -27,6 +27,9 @@ class Uwb_Cache {
         add_action( 'wp_update_nav_menu', array( 'Uwb_Preloader', 'invalidate_homepage_links_cache' ) );
         add_action( 'switch_theme', array( 'Uwb_Preloader', 'invalidate_homepage_links_cache' ) );
         add_action( 'update_option_sidebars_widgets', array( 'Uwb_Preloader', 'invalidate_homepage_links_cache' ) );
+
+        // Auto collect GET parameters on frontend requests when HTTP status is 200
+        add_action( 'shutdown', array( 'Uwb_Cache', 'maybe_auto_collect_get_params' ) );
     }
 
     /**
@@ -241,6 +244,8 @@ class Uwb_Cache {
             'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', '' ),
             'tuning_js_defer_excludes'    => get_option( 'uwb_tuning_js_defer_excludes', '' ),
             'ignore_all_query_strings'    => intval( get_option( 'uwb_ignore_all_query_strings', 1 ) ),
+            'auto_collect_params'         => intval( get_option( 'uwb_auto_collect_params', 0 ) ),
+            'collected_params'            => get_option( 'uwb_collected_params', '' ),
             'debug_mode'                  => intval( get_option( 'uwb_debug_mode', 0 ) ),
             'preconnect_domains'          => get_option( 'uwb_preconnect_domains', '' ),
             'preload_fonts'               => get_option( 'uwb_preload_fonts', '' ),
@@ -606,6 +611,46 @@ class Uwb_Cache {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         if ( function_exists( 'insert_with_markers' ) ) {
             insert_with_markers( $htaccess_path, 'Ultimate WP Booster Browser Cache', $rules );
+        }
+    }
+
+    /**
+     * Automatically collect GET parameters when a frontend page finishes loading with HTTP status 200
+     */
+    public static function maybe_auto_collect_get_params() {
+        if ( is_admin() || empty( $_GET ) ) {
+            return;
+        }
+
+        $response_code = http_response_code();
+        if ( $response_code !== 200 ) {
+            return;
+        }
+
+        $auto_collect = intval( get_option( 'uwb_auto_collect_params', 0 ) );
+        if ( ! $auto_collect ) {
+            return;
+        }
+
+        $raw_collected = get_option( 'uwb_collected_params', '' );
+        $existing = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw_collected ) ) ) );
+        $existing_map = array_flip( $existing );
+
+        $updated = false;
+        foreach ( array_keys( $_GET ) as $param ) {
+            $param = trim( sanitize_text_field( $param ) );
+            if ( ! empty( $param ) && ! isset( $existing_map[ $param ] ) ) {
+                $existing[] = $param;
+                $existing_map[ $param ] = true;
+                $updated = true;
+            }
+        }
+
+        if ( $updated ) {
+            sort( $existing );
+            $new_val = implode( "\n", array_unique( $existing ) );
+            update_option( 'uwb_collected_params', $new_val );
+            self::write_config_file();
         }
     }
 }

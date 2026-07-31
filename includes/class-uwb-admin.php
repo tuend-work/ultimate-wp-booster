@@ -71,6 +71,8 @@ class Uwb_Admin {
             'uwb_tuning_js_defer_excludes',
             'uwb_tuning_critical_css',
             'uwb_ignore_all_query_strings',
+            'uwb_auto_collect_params',
+            'uwb_collected_params',
             'uwb_cache_search',
             'uwb_heartbeat_control',
             'uwb_heartbeat_interval',
@@ -233,6 +235,8 @@ class Uwb_Admin {
 
         register_setting( 'uwb_settings_group', 'uwb_tuning_critical_css', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_ignore_all_query_strings', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_auto_collect_params', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_collected_params', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_cache_search', 'intval' );
 
         // Advanced / Tools Settings
@@ -553,27 +557,8 @@ class Uwb_Admin {
                 'uwb_browser_cache_font_lifespan',
                 'uwb_browser_cache_other',
                 'uwb_browser_cache_other_lifespan',
-                'uwb_ignored_query',
-                'uwb_redis_enabled',
-                'uwb_redis_conn_type',
-                'uwb_redis_host',
-                'uwb_redis_port',
-                'uwb_redis_socket',
-                'uwb_redis_password',
-                'uwb_redis_db',
-                'uwb_redis_prefix',
-                'uwb_redis_timeout',
-                'uwb_redis_read_timeout',
-                'uwb_redis_retry_interval',
-                'uwb_cache_404',
-                'uwb_exclude_cookies',
-                'uwb_exclude_user_agents',
-                'uwb_always_purge_urls',
-                'uwb_cache_query_strings',
-                'uwb_cache_xml_sitemaps',
                 'uwb_preload_enabled',
                 'uwb_preload_sitemap',
-                'uwb_priority_urls',
                 'uwb_preload_batch_size',
                 'uwb_preload_links',
                 'uwb_css_minify',
@@ -604,7 +589,10 @@ class Uwb_Admin {
                 'uwb_tuning_css_excludes',
                 'uwb_tuning_js_excludes',
                 'uwb_tuning_js_defer_excludes',
-                'uwb_tuning_critical_css'
+                'uwb_tuning_critical_css',
+                'uwb_ignore_all_query_strings',
+                'uwb_auto_collect_params',
+                'uwb_collected_params'
             );
 
             $export_data = array();
@@ -700,7 +688,10 @@ class Uwb_Admin {
                         'uwb_tuning_css_excludes',
                         'uwb_tuning_js_excludes',
                         'uwb_tuning_js_defer_excludes',
-                        'uwb_tuning_critical_css'
+                        'uwb_tuning_critical_css',
+                        'uwb_ignore_all_query_strings',
+                        'uwb_auto_collect_params',
+                        'uwb_collected_params'
                     );
 
                     foreach ( $options_to_import as $opt ) {
@@ -1682,6 +1673,24 @@ class Uwb_Admin {
                                                 <option value="0" <?php selected( get_option( 'uwb_ignore_all_query_strings', 1 ), 0 ); ?>>Disabled (Bypass cache completely for unrecognized parameters)</option>
                                             </select>
                                             <p class="description">When enabled, strange URL queries like <code>?c=123</code> or <code>?xyz=999</code> will serve the cached main page instead of hitting PHP/database. (Recommended)</p>
+                                        </div>
+
+                                        <div class="uwb-form-group" style="margin-top: 16px;">
+                                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                                                <input type="checkbox" name="uwb_auto_collect_params" id="uwb_auto_collect_params" value="1" <?php checked( get_option( 'uwb_auto_collect_params', 0 ), 1 ); ?> />
+                                                Tự động thu thập URL Parameters (Auto Collect GET Parameters)
+                                            </label>
+                                            <p class="description" style="margin-top: 4px;">
+                                                Tự động thu thập các GET parameter truyền trên URL khi trang được tải thành công (HTTP Status 200).
+                                            </p>
+                                        </div>
+
+                                        <div class="uwb-form-group" id="uwb-collected-params-group" style="margin-top: 16px; <?php echo get_option( 'uwb_auto_collect_params', 0 ) ? '' : 'display:none;'; ?>">
+                                            <label for="uwb_collected_params">Danh sách Parameter đã thu thập (Discovered GET Parameters)</label>
+                                            <textarea name="uwb_collected_params" id="uwb_collected_params" rows="5" placeholder="Các parameter thu thập tự động sẽ hiển thị ở đây (mỗi tham số 1 dòng)..."><?php echo esc_textarea( get_option( 'uwb_collected_params', '' ) ); ?></textarea>
+                                            <p class="description">
+                                                Toàn bộ tham số URL (GET parameters) đã tìm thấy trên trang web (mỗi tham số 1 dòng). Bạn có thể thêm, sửa hoặc xóa các tham số tại đây.
+                                            </p>
                                         </div>
 
                                         <div class="uwb-form-group">
@@ -3166,6 +3175,14 @@ class Uwb_Admin {
 
         <script>
         jQuery(document).ready(function($) {
+            $('#uwb_auto_collect_params').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#uwb-collected-params-group').slideDown();
+                } else {
+                    $('#uwb-collected-params-group').slideUp();
+                }
+            });
+
             // Show/hide heartbeat interval based on control mode
             $('#uwb_heartbeat_control').on('change', function() {
                 if ($(this).val() === 'reduce') {
