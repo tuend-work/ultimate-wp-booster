@@ -912,13 +912,12 @@ class Uwb_Optimizer {
                         'local_path' => $local_path,
                     );
                 }
-                // else: external/excluded/async scripts — just SKIP (do not flush).
-                // They have their own src and cannot depend on variables from chunks above them
-                // because they load independently from an external server.
+                // else: external/excluded/async scripts — skip, do not flush.
             } else {
-                // Inline script (no src) — MUST flush because inline scripts can use
-                // variables or globals set by preceding external scripts.
-                $flush_chunk();
+                // Inline script (no src) — skip, do not flush.
+                // External scripts before and after inline scripts are all combined
+                // into one chunk. Inline scripts remain in their original position.
+                // Users should exclude scripts that depend on load order via the exclude list.
             }
         }
 
