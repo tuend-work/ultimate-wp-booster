@@ -1482,47 +1482,12 @@ class Uwb_Optimizer {
      * @return bool True if the file appears to be a webpack bundle or dynamic chunk.
      */
     private static function is_webpack_bundle( $local_path, $url = '' ) {
-        if ( ! empty( $url ) ) {
-            if ( stripos( $url, 'chunk.' ) !== false ) {
-                return true;
-            }
-        }
-
-        if ( ! $local_path || ! file_exists( $local_path ) ) {
-            return false;
-        }
-
-        if ( stripos( $local_path, 'chunk.' ) !== false ) {
+        if ( ! empty( $url ) && stripos( $url, 'chunk.' ) !== false ) {
             return true;
         }
 
-        $handle = @fopen( $local_path, 'r' );
-        if ( ! $handle ) {
-            return false;
-        }
-        $sample = fread( $handle, 262144 ); // Read up to 256 KB to catch Webpack runtime at bottom of file
-        fclose( $handle );
-
-        $webpack_signatures = array(
-            '__webpack_require__',
-            'webpackChunk',
-            'webpackJsonp',
-            '__webpack_exports__',
-            '__webpack_module_cache__',
-            'flatsomeChunks',
-            'flatsomeVars',
-            'ChunkLoadError',
-            '.flatsomeChunks',
-            'a.u=function',
-            'a.e=function',
-            'a.l=function',
-            'a.p=',
-        );
-
-        foreach ( $webpack_signatures as $sig ) {
-            if ( stripos( $sample, $sig ) !== false ) {
-                return true;
-            }
+        if ( $local_path && stripos( $local_path, 'chunk.' ) !== false ) {
+            return true;
         }
 
         return false;
