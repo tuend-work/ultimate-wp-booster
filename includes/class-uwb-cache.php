@@ -600,7 +600,12 @@ class Uwb_Cache {
             $rules[] = '</IfModule>';
         }
         
+        if ( ! function_exists( 'insert_with_markers' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/misc.php';
+        }
         require_once ABSPATH . 'wp-admin/includes/file.php';
-        insert_with_markers( $htaccess_path, 'Ultimate WP Booster Browser Cache', $rules );
+        if ( function_exists( 'insert_with_markers' ) ) {
+            insert_with_markers( $htaccess_path, 'Ultimate WP Booster Browser Cache', $rules );
+        }
     }
 }
