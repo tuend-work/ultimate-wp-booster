@@ -884,11 +884,14 @@ class Uwb_Optimizer {
             $attrs = $m[1];
 
             if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
+                // Script with src attribute
                 $url = $src_match[2];
                 $url_clean = strtok( $url, '?' );
 
                 $is_js_file = strtolower( substr( $url_clean, -3 ) ) === '.js';
-                $is_special = stripos( $attrs, 'async' ) !== false || stripos( $attrs, 'text/uwb-lazyload' ) !== false || stripos( $attrs, 'type="module"' ) !== false;
+                $is_special = stripos( $attrs, 'async' ) !== false
+                           || stripos( $attrs, 'text/uwb-lazyload' ) !== false
+                           || stripos( $attrs, 'type="module"' ) !== false;
 
                 $is_excluded = false;
                 foreach ( $excludes as $ex ) {
@@ -901,16 +904,20 @@ class Uwb_Optimizer {
                 $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
 
                 if ( $is_js_file && ! $is_special && ! $is_excluded && ( $local_path || $include_ext ) ) {
+                    // Combineable script — add to current chunk
                     $current_chunk[] = array(
                         'tag'        => $tag,
                         'url'        => $url,
                         'url_clean'  => $url_clean,
                         'local_path' => $local_path,
                     );
-                } else {
-                    $flush_chunk();
                 }
+                // else: external/excluded/async scripts — just SKIP (do not flush).
+                // They have their own src and cannot depend on variables from chunks above them
+                // because they load independently from an external server.
             } else {
+                // Inline script (no src) — MUST flush because inline scripts can use
+                // variables or globals set by preceding external scripts.
                 $flush_chunk();
             }
         }
