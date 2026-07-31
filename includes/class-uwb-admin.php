@@ -43,11 +43,8 @@ class Uwb_Admin {
             'uwb_cache_php_lifespan',
             'uwb_css_minify',
             'uwb_css_combine',
-            'uwb_css_generate_ucss',
-            'uwb_css_ucss_inline',
             'uwb_css_combine_ext_inline',
             'uwb_css_load_async',
-            'uwb_css_ccss_per_url',
             'uwb_css_font_display_opt',
             'uwb_js_minify',
             'uwb_js_combine',
@@ -72,7 +69,6 @@ class Uwb_Admin {
             'uwb_tuning_css_excludes',
             'uwb_tuning_js_excludes',
             'uwb_tuning_js_defer_excludes',
-            'uwb_tuning_ucss_excludes',
             'uwb_tuning_critical_css',
             'uwb_ignore_all_query_strings',
             'uwb_cache_search',
@@ -201,11 +197,8 @@ class Uwb_Admin {
         // Page Optimization Settings
         register_setting( 'uwb_settings_group', 'uwb_css_minify', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_css_combine', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_css_generate_ucss', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_css_ucss_inline', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_css_combine_ext_inline', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_css_load_async', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_css_ccss_per_url', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_css_font_display_opt', 'sanitize_text_field' );
 
         register_setting( 'uwb_settings_group', 'uwb_js_minify', 'intval' );
@@ -238,7 +231,6 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_tuning_js_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_tuning_js_defer_excludes', 'sanitize_textarea_field' );
 
-        register_setting( 'uwb_settings_group', 'uwb_tuning_ucss_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_tuning_critical_css', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_ignore_all_query_strings', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_search', 'intval' );
@@ -586,11 +578,8 @@ class Uwb_Admin {
                 'uwb_preload_links',
                 'uwb_css_minify',
                 'uwb_css_combine',
-                'uwb_css_generate_ucss',
-                'uwb_css_ucss_inline',
                 'uwb_css_combine_ext_inline',
                 'uwb_css_load_async',
-                'uwb_css_ccss_per_url',
                 'uwb_css_font_display_opt',
                 'uwb_js_minify',
                 'uwb_js_combine',
@@ -615,7 +604,6 @@ class Uwb_Admin {
                 'uwb_tuning_css_excludes',
                 'uwb_tuning_js_excludes',
                 'uwb_tuning_js_defer_excludes',
-                'uwb_tuning_ucss_excludes',
                 'uwb_tuning_critical_css'
             );
 
@@ -686,11 +674,8 @@ class Uwb_Admin {
                         'uwb_preload_links',
                         'uwb_css_minify',
                         'uwb_css_combine',
-                        'uwb_css_generate_ucss',
-                        'uwb_css_ucss_inline',
                         'uwb_css_combine_ext_inline',
                         'uwb_css_load_async',
-                        'uwb_css_ccss_per_url',
                         'uwb_css_font_display_opt',
                         'uwb_js_minify',
                         'uwb_js_combine',
@@ -715,7 +700,6 @@ class Uwb_Admin {
                         'uwb_tuning_css_excludes',
                         'uwb_tuning_js_excludes',
                         'uwb_tuning_js_defer_excludes',
-                        'uwb_tuning_ucss_excludes',
                         'uwb_tuning_critical_css'
                     );
 
@@ -2617,10 +2601,6 @@ class Uwb_Admin {
                                 $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS files and inline CSS code in the combined CSS bundle.' );
                                 $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
                                 $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Load CSS files asynchronously to eliminate render-blocking CSS and speed up page rendering.' );
-                                $this->render_toggle_switch( 'uwb_css_generate_ucss', 'Generate UCSS', 'Use online service to generate unique CSS by dropping unused CSS on each page.', true );
-                                $this->render_toggle_switch( 'uwb_css_ucss_inline', 'UCSS Inline', 'Inline UCSS to reduce extra CSS file loading.', true );
-                                $this->render_toggle_switch( 'uwb_css_ccss_per_url', 'CCSS Per URL', 'Disable to generate CCSS per Post Type instead of per page to save CCSS quota.', true );
-                                $this->render_textarea_setting( 'uwb_tuning_ucss_excludes', 'UCSS Excludes', '', 'CSS selectors or files to exclude from UCSS generation (one per line).', true );
                                 $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Critical CSS', '', 'Custom Critical CSS to inject into &lt;head&gt;.' );
                                 ?>
                             </div>
