@@ -2620,7 +2620,7 @@ class Uwb_Admin {
                                 $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS stylesheets into a single cached file to reduce HTTP requests.' );
                                 $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS files and inline CSS code in the combined CSS bundle.' );
                                 $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
-                                $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Optimize CSS delivery. Use online service to generate critical CSS and load remaining CSS asynchronously.', true );
+                                $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Load CSS files asynchronously to eliminate render-blocking CSS and speed up page rendering.' );
                                 $this->render_toggle_switch( 'uwb_css_inline_async_lib', 'Inline CSS Async Lib', 'This will inline the asynchronous CSS library to avoid render blocking.', true );
                                 $this->render_toggle_switch( 'uwb_css_generate_ucss', 'Generate UCSS', 'Use online service to generate unique CSS by dropping unused CSS on each page.', true );
                                 $this->render_toggle_switch( 'uwb_css_ucss_inline', 'UCSS Inline', 'Inline UCSS to reduce extra CSS file loading.', true );

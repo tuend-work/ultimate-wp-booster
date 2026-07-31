@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * HTML Optimization & Processing Engine
  */
@@ -306,20 +306,24 @@ class Uwb_Optimizer {
                 $tag = $m[0];
                 $url = $m[3];
 
+                // Only process stylesheet links
                 if ( stripos( $tag, 'rel=' ) === false || stripos( $tag, 'stylesheet' ) === false ) {
                     return $tag;
                 }
 
-                if ( stripos( $tag, 'media="print"' ) !== false || stripos( $tag, 'onload=' ) !== false ) {
+                // Skip if already async
+                if ( stripos( $tag, 'media="print"' ) !== false || stripos( $tag, "media='print'" ) !== false || stripos( $tag, 'onload=' ) !== false ) {
                     return $tag;
                 }
 
-                // Convert stylesheet link to async media="print" onload="this.media='all'"
-                $async_tag = preg_replace( '/media=([\'"])(.*?)\1/i', 'media="print" onload="this.media=\'all\'"', $tag );
-                if ( $async_tag === $tag ) {
-                    $async_tag = str_replace( '>', ' media="print" onload="this.media=\'all\'">', $tag );
-                }
-                return $async_tag . '<noscript>' . $tag . '</noscript>';
+                // Build async version: strip existing media attr, then add media="print" + onload
+                $async_tag = preg_replace( '/\s*media=([\'"])[^\'"]*\1/i', '', $tag );   // remove old media attr
+                // Insert media="print" and onload before the closing > or />
+                $async_tag = preg_replace( '/\s*\/?>\s*$/', ' media="print" onload="this.media=\'all\'">', $async_tag );
+
+                return '<link rel="preload" as="style" href="' . esc_attr( $url ) . '">' . "\n" .
+                       $async_tag . "\n" .
+                       '<noscript>' . $tag . '</noscript>';
             },
             $html
         );
