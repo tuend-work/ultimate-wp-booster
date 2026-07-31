@@ -816,6 +816,11 @@ class Uwb_Optimizer {
         $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
+        $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
+        if ( $debug_mode ) {
+            $GLOBALS['uwb_debug_log'][] = "[combine_js] Excludes list: [" . implode( ', ', $excludes ) . "]";
+        }
+
         preg_match_all('#<script\b([^>]*?)>(.*?)</script>#is', $html, $matches, PREG_SET_ORDER);
 
         if ( empty( $matches ) ) {
@@ -894,14 +899,26 @@ class Uwb_Optimizer {
                            || stripos( $attrs, 'type="module"' ) !== false;
 
                 $is_excluded = false;
+                $matched_ex  = '';
                 foreach ( $excludes as $ex ) {
                     if ( ! empty( $ex ) && ( stripos( $url, $ex ) !== false || stripos( $tag, $ex ) !== false ) ) {
                         $is_excluded = true;
+                        $matched_ex  = $ex;
                         break;
                     }
                 }
 
                 $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
+
+                if ( $debug_mode ) {
+                    $skip_reason = '';
+                    if ( ! $is_js_file )       { $skip_reason = 'not a .js file'; }
+                    elseif ( $is_special )      { $skip_reason = 'async/module/lazyload'; }
+                    elseif ( $is_excluded )     { $skip_reason = 'excluded by: "' . $matched_ex . '"'; }
+                    elseif ( ! $local_path && ! $include_ext ) { $skip_reason = 'external & include_ext=false'; }
+                    else                       { $skip_reason = 'ADDED to chunk'; }
+                    $GLOBALS['uwb_debug_log'][] = "[combine_js] " . $url_clean . " → " . $skip_reason;
+                }
 
                 if ( $is_js_file && ! $is_special && ! $is_excluded && ( $local_path || $include_ext ) ) {
                     // Combineable script — add to current chunk
