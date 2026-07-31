@@ -406,8 +406,7 @@ function uwb_advanced_cache_ob_callback( $buffer, $phase = 0 ) {
         $GLOBALS['uwb_accumulated_html'] = '';
     }
 
-    $is_clean = ( $phase & PHP_OUTPUT_HANDLER_CLEAN ) || 
-                ( $phase & PHP_OUTPUT_HANDLER_CLEANABLE ) === PHP_OUTPUT_HANDLER_CLEANABLE;
+    $is_clean = ( $phase & PHP_OUTPUT_HANDLER_CLEAN ) && ! ( $phase & PHP_OUTPUT_HANDLER_FINAL );
 
     if ( $is_clean ) {
         if ( $debug ) {

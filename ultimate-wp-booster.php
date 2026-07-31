@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.13.2
+ * Version:     1.13.3
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.13.2' );
+define( 'UWB_VERSION', '1.13.3' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -28,12 +28,17 @@ require_once UWB_PLUGIN_DIR . 'includes/class-uwb-admin.php';
 require_once UWB_PLUGIN_DIR . 'compatibility/wp-rocket.php';
 
 // 1.8. Automated Version Upgrade Check (Sync drop-ins on version bump)
-add_action( 'admin_init', 'uwb_check_upgrade' );
+add_action( 'init', 'uwb_check_upgrade' );
 function uwb_check_upgrade() {
     $db_version = get_option( 'uwb_version' );
-    if ( $db_version !== UWB_VERSION ) {
+    $dropin_file = WP_CONTENT_DIR . '/advanced-cache.php';
+    if ( $db_version !== UWB_VERSION || ! file_exists( $dropin_file ) ) {
         Uwb_Activator::copy_advanced_cache_dropin();
         Uwb_Activator::copy_object_cache_dropin();
+        Uwb_Activator::toggle_wp_cache( true );
+        if ( class_exists( 'Uwb_Cache' ) ) {
+            Uwb_Cache::write_config_file();
+        }
         update_option( 'uwb_version', UWB_VERSION );
     }
 }
