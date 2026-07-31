@@ -813,7 +813,7 @@ class Uwb_Optimizer {
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'flatsome.js', 'flatsome-loader', 'chunk.', 'flatsomeVars' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
         $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
@@ -913,7 +913,7 @@ class Uwb_Optimizer {
                 // Auto-detect webpack bundles — they use document.currentScript.src to set
                 // __webpack_require__.p (public path). When combined into a different URL,
                 // chunk loading (dynamic import) breaks with wrong path → 404.
-                $is_webpack = $local_path && self::is_webpack_bundle( $local_path );
+                $is_webpack = self::is_webpack_bundle( $local_path, $url_clean );
 
                 if ( $debug_mode ) {
                     $skip_reason = '';
@@ -934,13 +934,14 @@ class Uwb_Optimizer {
                         'url_clean'  => $url_clean,
                         'local_path' => $local_path,
                     );
+                } else {
+                    // Excluded/async/webpack script — flush chunk to preserve execution order
+                    $flush_chunk();
                 }
-                // else: excluded/async/webpack/external scripts — skip, do not flush.
             } else {
-                // Inline script (no src) — skip, do not flush.
-                // External scripts before and after inline scripts are all combined
-                // into one chunk. Inline scripts remain in their original position.
-                // Users should exclude scripts that depend on load order via the exclude list.
+                // Inline script (no src) — flush chunk to preserve execution order
+                // External scripts after inline scripts (e.g. flatsomeVars) must NOT be dragged before them.
+                $flush_chunk();
             }
         }
 
@@ -1476,20 +1477,35 @@ class Uwb_Optimizer {
         return trim( $out );
     }
     /**
-     * Detect if a JS file is a webpack bundle by scanning the first 8 KB.
-     * Webpack bundles use document.currentScript.src to calculate __webpack_require__.p
-     * (public path) for dynamic imports. When combined into a different URL, chunk
-     * loading breaks because paths are resolved relative to the combined file.
+     * Detect if a JS file is a webpack bundle by scanning its path, URL, or up to 256 KB.
+     * Webpack bundles use document.currentScript.src or global variables (like flatsomeVars)
+     * to calculate public path for dynamic imports. When combined into a different URL,
+     * chunk loading breaks with wrong path → 404.
      *
      * @param string $local_path Absolute server path to the JS file.
-     * @return bool True if the file appears to be a webpack bundle.
+     * @param string $url        Optional script URL.
+     * @return bool True if the file appears to be a webpack bundle or dynamic chunk.
      */
-    private static function is_webpack_bundle( $local_path ) {
+    private static function is_webpack_bundle( $local_path, $url = '' ) {
+        if ( ! empty( $url ) ) {
+            if ( stripos( $url, 'chunk.' ) !== false || stripos( $url, 'flatsome' ) !== false ) {
+                return true;
+            }
+        }
+
+        if ( ! $local_path || ! file_exists( $local_path ) ) {
+            return false;
+        }
+
+        if ( stripos( $local_path, 'chunk.' ) !== false || stripos( $local_path, 'flatsome.js' ) !== false ) {
+            return true;
+        }
+
         $handle = @fopen( $local_path, 'r' );
         if ( ! $handle ) {
             return false;
         }
-        $sample = fread( $handle, 8192 ); // Read first 8 KB
+        $sample = fread( $handle, 262144 ); // Read up to 256 KB to catch Webpack runtime at bottom of file
         fclose( $handle );
 
         $webpack_signatures = array(
@@ -1498,10 +1514,18 @@ class Uwb_Optimizer {
             'webpackJsonp',
             '__webpack_exports__',
             '__webpack_module_cache__',
+            'flatsomeChunks',
+            'flatsomeVars',
+            'ChunkLoadError',
+            '.flatsomeChunks',
+            'a.u=function',
+            'a.e=function',
+            'a.l=function',
+            'a.p=',
         );
 
         foreach ( $webpack_signatures as $sig ) {
-            if ( strpos( $sample, $sig ) !== false ) {
+            if ( stripos( $sample, $sig ) !== false ) {
                 return true;
             }
         }
