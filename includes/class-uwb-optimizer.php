@@ -813,7 +813,7 @@ class Uwb_Optimizer {
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'flatsome.js', 'flatsome-loader', 'chunk.', 'flatsomeVars' );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'flatsome-loader', 'chunk.', 'flatsomeVars' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
         $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
@@ -1493,7 +1493,7 @@ class Uwb_Optimizer {
             return false;
         }
 
-        if ( stripos( $local_path, 'chunk.' ) !== false || stripos( $local_path, 'flatsome.js' ) !== false ) {
+        if ( stripos( $local_path, 'chunk.' ) !== false ) {
             return true;
         }
 
