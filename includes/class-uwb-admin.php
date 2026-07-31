@@ -211,7 +211,7 @@ class Uwb_Admin {
         register_setting( 'uwb_settings_group', 'uwb_css_font_display_opt', 'sanitize_text_field' );
 
         register_setting( 'uwb_settings_group', 'uwb_js_minify', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_js_combine', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_js_combine', array( $this, 'sanitize_js_combine' ) );
         register_setting( 'uwb_settings_group', 'uwb_js_combine_ext_inline', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_js_load_defer', 'intval' );
 
@@ -263,6 +263,25 @@ class Uwb_Admin {
         }
         if ( $val === 2 && ! extension_loaded( 'memcached' ) ) {
             add_settings_error( 'uwb_redis_enabled', 'memcached_missing', 'Không thể kích hoạt Memcached Object Cache do PHP Memcached extension chưa được cài đặt trên máy chủ.', 'error' );
+            return 0;
+        }
+        return $val;
+    }
+
+    /**
+     * Sanitize uwb_js_combine: force 0 if Delay JS is enabled.
+     * JS Combine and Delay JS are incompatible — the combined file executes before
+     * the Delay JS loader can re-inject delayed scripts in the correct order.
+     */
+    public function sanitize_js_combine( $val ) {
+        $val = intval( $val );
+        if ( $val === 1 && intval( get_option( 'uwb_delay_js', 0 ) ) === 1 ) {
+            add_settings_error(
+                'uwb_js_combine',
+                'js_combine_delay_conflict',
+                'JS Combine has been automatically disabled because Delay JavaScript Execution is enabled. Disable Delay JS first to use JS Combine.',
+                'warning'
+            );
             return 0;
         }
         return $val;
@@ -2614,17 +2633,17 @@ class Uwb_Admin {
                             <div id="subtab-opt_js" class="uwb-subtab-content">
                                 <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Minification &amp; Combination</h4>
                                 <?php
+                                $delay_js_on = (bool) get_option( 'uwb_delay_js', 0 );
                                 $this->render_toggle_switch( 'uwb_js_minify', 'JS Minify', 'Minify JS files and inline JS code.' );
-                                $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JavaScript files into a single cached file to reduce HTTP requests.' );
-                                ?>
-                                <?php if ( get_option( 'uwb_delay_js', 0 ) ) : ?>
-                                <div id="uwb-js-combine-delay-warning" style="display:flex; align-items:flex-start; gap:10px; background:#fffbeb; border:1px solid #fbbf24; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#92400e;">
+                                $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JavaScript files into a single cached file to reduce HTTP requests.', $delay_js_on );
+                                if ( $delay_js_on ) : ?>
+                                <div style="display:flex; align-items:flex-start; gap:10px; background:#fffbeb; border:1px solid #fbbf24; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#92400e; margin-top:-8px;">
                                     <svg style="flex-shrink:0; margin-top:1px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                    <span><strong>Compatibility Notice:</strong> For compatibility and best results, JS Combine is not recommended when Delay JavaScript Execution is enabled. Both options active simultaneously may cause scripts to load out of order or fail to execute correctly.</span>
+                                    <span><strong>Disabled automatically:</strong> JS Combine is not compatible with Delay JavaScript Execution. Disable Delay JS first to enable JS Combine.</span>
                                 </div>
                                 <?php endif; ?>
                                 <?php
-                                $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS files and inline JS code in the combined JS bundle.' );
+                                $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS files and inline JS code in the combined JS bundle.', $delay_js_on );
                                 $this->render_textarea_setting( 'uwb_tuning_js_excludes', 'JS Minify & Combine Excludes', '', 'JS files or inline keywords to exclude from minification/combination (one per line).' );
                                 ?>
 
