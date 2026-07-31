@@ -69,10 +69,10 @@ function uwb_advanced_cache_run() {
     if ( ! empty( $_SERVER['QUERY_STRING'] ) ) {
         parse_str( $_SERVER['QUERY_STRING'], $query_params );
         
-        // WooCommerce, magic_login and preloader query bypass (never cache WooCommerce, magic_login, or preload trigger queries)
-        if ( isset( $query_params['wc-ajax'] ) || isset( $query_params['add-to-cart'] ) || isset( $query_params['pay_for_order'] ) || isset( $query_params['magic_login'] ) || isset( $query_params['uwb_preload_key'] ) ) {
+        // WooCommerce, magic_login, orderby and preloader query bypass (never cache WooCommerce, magic_login, orderby, or preload trigger queries)
+        if ( isset( $query_params['wc-ajax'] ) || isset( $query_params['add-to-cart'] ) || isset( $query_params['pay_for_order'] ) || isset( $query_params['magic_login'] ) || isset( $query_params['uwb_preload_key'] ) || isset( $query_params['orderby'] ) || isset( $query_params['order'] ) ) {
             if ( $debug ) {
-                error_log( "UWB: Run bypassed: WooCommerce, magic_login or preloader query parameter detected." );
+                error_log( "UWB: Run bypassed: WooCommerce, magic_login, orderby or preloader query parameter detected." );
             }
             return;
         }
@@ -89,7 +89,7 @@ function uwb_advanced_cache_run() {
             }
             
             // Core WordPress query variables that must never be ignored (they route to specific inner pages)
-            $core_wp_queries = array( 'p', 'page_id', 'cat', 'tag', 'm', 'name', 'category_name', 'post_type', 's', 'preview' );
+            $core_wp_queries = array( 'p', 'page_id', 'cat', 'tag', 'm', 'name', 'category_name', 'post_type', 's', 'preview', 'orderby', 'order' );
             if ( in_array( $param, $core_wp_queries, true ) ) {
                 // If it is 'p' or 'page_id', validate against the static valid post IDs JSON whitelist (Anti-DDoS 404)
                 if ( ( $param === 'p' || $param === 'page_id' ) && ! empty( $val ) ) {
