@@ -946,6 +946,11 @@ class Uwb_Optimizer {
 
         $flush_chunk();
 
+        // Post-process: ensure jQuery & jQuery Migrate load before the combined file.
+        // The combined tag is placed at the first combined script's position,
+        // which may be before jQuery if some scripts were enqueued before jQuery in HTML.
+        $html = self::ensure_jquery_before_combined( $html );
+
         return $html;
     }
 
@@ -1502,5 +1507,71 @@ class Uwb_Optimizer {
         }
 
         return false;
+    }
+
+    /**
+     * Ensure jQuery and jQuery Migrate script tags load before the UWB combined JS file.
+     *
+     * Problem: combine_js places the combined tag at the first combined script's position,
+     * which can be BEFORE jQuery if some scripts were enqueued earlier in the HTML.
+     * Scripts in the combined file that depend on jQuery would then throw
+     * "jQuery is not defined" because jQuery hadn't loaded yet.
+     *
+     * Fix: After combining, detect if jQuery tags appear after the combined file tag
+     * and move them immediately before it.
+     *
+     * @param string $html HTML content after combining.
+     * @return string Modified HTML.
+     */
+    private static function ensure_jquery_before_combined( $html ) {
+        // Locate the UWB combined JS tag (unique hash in filename)
+        if ( ! preg_match(
+            '#<script\b[^>]*?src=[\'"][^\'"]*uwb-js-[a-f0-9]+\.js[^\'"]*[\'"][^>]*?>\s*</script>#is',
+            $html,
+            $combined_m
+        ) ) {
+            return $html; // No combined file in HTML
+        }
+
+        $combined_tag = $combined_m[0];
+        $combined_pos = strpos( $html, $combined_tag );
+
+        // jQuery-related script tag patterns
+        $jq_patterns = array(
+            '#<script\b[^>]*?src=[\'"][^\'"]*jquery\.min\.js[^\'"]*[\'"][^>]*?>\s*</script>#is',
+            '#<script\b[^>]*?src=[\'"][^\'"]*jquery-migrate[^\'"]*[\'"][^>]*?>\s*</script>#is',
+        );
+
+        $to_move = array();
+        foreach ( $jq_patterns as $pat ) {
+            if ( preg_match( $pat, $html, $m ) ) {
+                $jq_pos = strpos( $html, $m[0] );
+                if ( $jq_pos !== false && $jq_pos > $combined_pos ) {
+                    $to_move[] = $m[0];
+                }
+            }
+        }
+
+        if ( empty( $to_move ) ) {
+            return $html; // jQuery already before combined file — nothing to do
+        }
+
+        // Remove jQuery tags from their current (post-combined) positions
+        foreach ( $to_move as $tag ) {
+            $html = str_replace( $tag, '', $html );
+        }
+
+        // Re-insert jQuery tags immediately before the combined file tag
+        $html = str_replace(
+            $combined_tag,
+            implode( "\n", $to_move ) . "\n" . $combined_tag,
+            $html
+        );
+
+        if ( ! empty( $GLOBALS['uwb_debug_log'] ) ) {
+            $GLOBALS['uwb_debug_log'][] = '[combine_js] Moved ' . count( $to_move ) . ' jQuery tag(s) before combined file to fix load order.';
+        }
+
+        return $html;
     }
 }
