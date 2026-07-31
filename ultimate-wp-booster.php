@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.14.4
+ * Version:     1.15.0
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.14.4' );
+define( 'UWB_VERSION', '1.15.0' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -24,8 +24,10 @@ require_once UWB_PLUGIN_DIR . 'includes/class-uwb-cache.php';
 require_once UWB_PLUGIN_DIR . 'includes/class-uwb-preloader.php';
 require_once UWB_PLUGIN_DIR . 'includes/class-uwb-admin.php';
 
-// 1.5. Include compatibility layers
-require_once UWB_PLUGIN_DIR . 'compatibility/wp-rocket.php';
+// 1.5. Include compatibility layers (dynamically load all files in compatibility directory)
+foreach ( glob( UWB_PLUGIN_DIR . 'compatibility/*.php' ) as $compat_file ) {
+    require_once $compat_file;
+}
 
 // 1.8. Automated Version Upgrade Check (Sync drop-ins on version bump)
 add_action( 'init', 'uwb_check_upgrade' );
