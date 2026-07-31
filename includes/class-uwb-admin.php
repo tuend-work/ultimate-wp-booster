@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Admin Panel Dashboard & Settings
  */
@@ -3130,6 +3130,20 @@ class Uwb_Admin {
 
                             <!-- Toast notification -->
                             <div id="uwb-url-toast" style="display:none; position:fixed; bottom:24px; right:24px; background:#1e293b; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.2);"></div>
+                        <div id="tab-advanced_tools" class="uwb-tab-content">
+                            <h2 style="margin-top:0;">Advanced &amp; Tools</h2>
+                            <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Developer settings for debugging and troubleshooting.</p>
+
+                            <!-- Debug Mode -->
+                            <div style="background:#fff8e1; border:1px solid #fcd34d; border-radius:12px; padding:24px; margin-bottom:24px;">
+                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px; color:#92400e;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    Developer: Debug Mode
+                                </h3>
+                                <p class="description" style="margin-bottom:16px; color:#92400e;"><strong>Warning:</strong> When enabled, the optimizer appends a debug log as an HTML comment to every cached page. <strong>Disable on production.</strong></p>
+
+                                <?php $this->render_toggle_switch( 'uwb_debug_mode', 'Enable Optimizer Debug Log', 'Appends debug info as HTML comments. Use only for troubleshooting.' ); ?>
+                            </div>
                         </div>
 
                         <!-- Form Submit (Floating Panel) -->
@@ -3140,7 +3154,7 @@ class Uwb_Admin {
 
                     <!-- TAB 4: Import & Export Settings -->
                     <div id="tab-import_export" class="uwb-tab-content">
-                        <h2 style="margin-top:0;">Import & Export Settings</h2>
+                        <h2 style="margin-top:0;">Import &amp; Export Settings</h2>
                         <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Export current settings to a JSON file or import settings from a previously saved JSON file.</p>
                         
                         <form method="post" action="" enctype="multipart/form-data">
@@ -3168,22 +3182,6 @@ class Uwb_Admin {
                         </form>
                     </div>
 
-                    <!-- TAB 5: Advanced Tools -->
-                    <div id="tab-advanced_tools" class="uwb-tab-content">
-                        <h2 style="margin-top:0;">Advanced &amp; Tools</h2>
-                        <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Developer settings for debugging and troubleshooting.</p>
-
-                        <!-- Debug Mode -->
-                        <div style="background:#fff8e1; border:1px solid #fcd34d; border-radius:12px; padding:24px; margin-bottom:24px;">
-                            <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px; color:#92400e;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                Developer: Debug Mode
-                            </h3>
-                            <p class="description" style="margin-bottom:16px; color:#92400e;"><strong>Warning:</strong> When enabled, the optimizer appends a debug log as an HTML comment to every cached page. <strong>Disable on production.</strong></p>
-
-                            <?php $this->render_toggle_switch( 'uwb_debug_mode', 'Enable Optimizer Debug Log', 'Appends debug info as HTML comments. Use only for troubleshooting.' ); ?>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
