@@ -1508,7 +1508,7 @@ class Uwb_Admin {
 
                 <div class="uwb-content-panel">
                     <?php settings_errors(); ?>
-                    <form method="post" action="options.php">
+                    <form method="post" action="options.php" novalidate>
                         <?php settings_fields( 'uwb_settings_group' ); ?>
 
                         <!-- TAB 1: Cache Settings -->
@@ -3171,69 +3171,10 @@ class Uwb_Admin {
                     <!-- TAB 5: Advanced Tools -->
                     <div id="tab-advanced_tools" class="uwb-tab-content">
                         <h2 style="margin-top:0;">Advanced &amp; Tools</h2>
-                        <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Fine-tune WordPress performance, inject resource hints, and control developer tools.</p>
+                        <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Developer settings for debugging and troubleshooting.</p>
 
                         <form method="post" action="options.php" novalidate>
                             <?php settings_fields( 'uwb_settings_group' ); ?>
-
-                            <!-- Heartbeat Control -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                                    Heartbeat API Control
-                                </h3>
-                                <p class="description" style="margin-bottom:16px;">WordPress Heartbeat API sends AJAX requests every 15&ndash;60 seconds. On shared hosting this wastes CPU. You can disable or slow it down to reduce server load.</p>
-
-                                <div class="uwb-form-group" style="margin-bottom:16px;">
-                                    <label for="uwb_heartbeat_control"><strong>Heartbeat Control</strong></label>
-                                    <select name="uwb_heartbeat_control" id="uwb_heartbeat_control" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; margin-top:6px;">
-                                        <option value="default" <?php selected( get_option( 'uwb_heartbeat_control', 'default' ), 'default' ); ?>>Default (No change)</option>
-                                        <option value="reduce" <?php selected( get_option( 'uwb_heartbeat_control', 'default' ), 'reduce' ); ?>>Reduce frequency</option>
-                                        <option value="disable_frontend" <?php selected( get_option( 'uwb_heartbeat_control', 'default' ), 'disable_frontend' ); ?>>Disable on frontend only</option>
-                                        <option value="disable_all" <?php selected( get_option( 'uwb_heartbeat_control', 'default' ), 'disable_all' ); ?>>Disable everywhere (not recommended)</option>
-                                    </select>
-                                </div>
-
-                                <div id="uwb-heartbeat-interval-row" style="<?php echo get_option( 'uwb_heartbeat_control', 'default' ) === 'reduce' ? '' : 'display:none;'; ?>">
-                                    <label for="uwb_heartbeat_interval"><strong>Heartbeat Interval (seconds)</strong></label>
-                                    <input type="number" name="uwb_heartbeat_interval" id="uwb_heartbeat_interval" min="15" max="300" value="<?php echo esc_attr( intval( get_option( 'uwb_heartbeat_interval', 60 ) ) ); ?>" style="width:120px; border:1px solid var(--uwb-border); border-radius:8px; padding:10px; margin-top:6px; display:block;" />
-                                    <p class="description" style="margin-top:4px;">Minimum 15 seconds. Recommended: 60&ndash;120 seconds.</p>
-                                </div>
-                            </div>
-
-                            <!-- Preconnect External Domains -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                                    Preconnect External Domains
-                                    <span style="background:#7c3aed; color:#fff; font-size:10px; padding:2px 8px; border-radius:12px; font-weight:700; margin-left:6px;">NEW</span>
-                                </h3>
-                                <p class="description" style="margin-bottom:16px;">Inject <code>&lt;link rel="preconnect"&gt;</code> tags into the HTML <code>&lt;head&gt;</code> to reduce latency for external resources (fonts, CDNs, analytics).</p>
-
-                                <?php $this->render_textarea_setting(
-                                    'uwb_preconnect_domains',
-                                    'Domains to Preconnect',
-                                    "https://fonts.googleapis.com\nhttps://fonts.gstatic.com\nhttps://cdn.jsdelivr.net",
-                                    'One domain per line (including scheme). Example: <code>https://fonts.googleapis.com</code>'
-                                ); ?>
-                            </div>
-
-                            <!-- Preload Local Fonts -->
-                            <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-                                    Preload Key Fonts
-                                    <span style="background:#7c3aed; color:#fff; font-size:10px; padding:2px 8px; border-radius:12px; font-weight:700; margin-left:6px;">NEW</span>
-                                </h3>
-                                <p class="description" style="margin-bottom:16px;">Inject <code>&lt;link rel="preload" as="font"&gt;</code> tags to prioritize critical font loading and eliminate FOUT/FOIT.</p>
-
-                                <?php $this->render_textarea_setting(
-                                    'uwb_preload_fonts',
-                                    'Font URLs to Preload',
-                                    '/wp-content/themes/your-theme/fonts/font.woff2',
-                                    'One font URL per line (.woff2 recommended). Both relative paths and full URLs are supported.'
-                                ); ?>
-                            </div>
 
                             <!-- Debug Mode -->
                             <div style="background:#fff8e1; border:1px solid #fcd34d; border-radius:12px; padding:24px; margin-bottom:24px;">
