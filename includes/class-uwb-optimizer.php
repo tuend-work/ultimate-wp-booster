@@ -7,6 +7,28 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class Uwb_Optimizer {
 
+    private static function safe_esc_url( $url ) {
+        if ( function_exists( 'esc_url' ) ) {
+            return esc_url( $url );
+        }
+        return htmlspecialchars( $url, ENT_QUOTES, 'UTF-8' );
+    }
+
+    private static function safe_esc_html( $text ) {
+        if ( function_exists( 'esc_html' ) ) {
+            return esc_html( $text );
+        }
+        return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+    }
+
+    private static function safe_content_url( $path = '' ) {
+        if ( function_exists( 'content_url' ) ) {
+            return content_url( $path );
+        }
+        $home_url = function_exists( 'home_url' ) ? home_url() : '';
+        return rtrim( $home_url, '/' ) . '/wp-content' . $path;
+    }
+
     /**
      * Process the HTML buffer with enabled optimization options.
      * 
@@ -73,7 +95,8 @@ class Uwb_Optimizer {
         if ( ! empty( $config['css_combine'] ) ) {
             $css_excludes = isset( $config['tuning_css_excludes'] ) ? $config['tuning_css_excludes'] : '';
             $include_ext = ! empty( $config['css_combine_ext_inline'] );
-            $html = self::combine_css( $html, $css_excludes, $include_ext );
+            $font_display_opt = ! empty( $config['css_font_display_opt'] );
+            $html = self::combine_css( $html, $css_excludes, $include_ext, $font_display_opt );
         } elseif ( ! empty( $config['css_minify'] ) ) {
             $html = self::minify_external_css( $html );
             $html = self::minify_inline_css( $html );
@@ -264,7 +287,7 @@ class Uwb_Optimizer {
                 }
 
                 // Inject defer attribute
-                return '<script defer="defer"' . $attrs_before . 'src="' . esc_url( $url ) . '"' . $attrs_after . '></script>';
+                return '<script defer="defer"' . $attrs_before . 'src="' . self::safe_esc_url( $url ) . '"' . $attrs_after . '></script>';
             },
             $html
         );
@@ -820,12 +843,13 @@ class Uwb_Optimizer {
     /**
      * Combine external CSS stylesheets into a single cached stylesheet.
      *
-     * @param string $html         HTML content.
-     * @param string $excludes_str Newline-separated list of exclusion keywords/urls.
-     * @param bool   $include_ext  Whether to combine external domain assets as well.
+     * @param string $html             HTML content.
+     * @param string $excludes_str     Newline-separated list of exclusion keywords/urls.
+     * @param bool   $include_ext      Whether to combine external domain assets as well.
+     * @param bool   $font_display_opt Whether to inject font-display: swap into @font-face rules.
      * @return string Modified HTML.
      */
-    public static function combine_css( $html, $excludes_str = '', $include_ext = false ) {
+    public static function combine_css( $html, $excludes_str = '', $include_ext = false, $font_display_opt = true ) {
         $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/combine';
         if ( ! is_dir( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
@@ -896,7 +920,7 @@ class Uwb_Optimizer {
 
         $hash = md5( implode( '|', $urls_hashes ) );
         $cache_file = $cache_dir . '/uwb-combined-' . $hash . '.css';
-        $cache_url = content_url( '/cache/ultimate-wp-booster/combine/uwb-combined-' . $hash . '.css' );
+        $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/combine/uwb-combined-' . $hash . '.css' );
 
         if ( ! file_exists( $cache_file ) ) {
             $combined_content = '';
@@ -914,7 +938,7 @@ class Uwb_Optimizer {
                     $content = preg_replace('!/\*[^*]*\*+([^/*][^*]*\*+)*/!', '', $content);
                     $content = preg_replace('/\s*([{}|;:,])\s*/', '$1', $content);
                     $content = preg_replace('/\s+/', ' ', $content);
-                    $combined_content .= "\n/* Combined: " . esc_html( $item['url_clean'] ) . " */\n" . trim( $content );
+                    $combined_content .= "\n/* Combined: " . self::safe_esc_html( $item['url_clean'] ) . " */\n" . trim( $content );
                 }
             }
 
@@ -923,7 +947,7 @@ class Uwb_Optimizer {
             }
 
             // Ensure font-display: swap is added if enabled
-            if ( get_option( 'uwb_css_font_display_opt', 1 ) ) {
+            if ( $font_display_opt ) {
                 $combined_content = self::add_font_display_to_css( $combined_content );
             }
 
@@ -934,7 +958,7 @@ class Uwb_Optimizer {
         $first = true;
         foreach ( $to_combine as $item ) {
             if ( $first ) {
-                $new_tag = '<link rel="stylesheet" id="uwb-combined-css" href="' . esc_url( $cache_url ) . '" media="all">';
+                $new_tag = '<link rel="stylesheet" id="uwb-combined-css" href="' . self::safe_esc_url( $cache_url ) . '" media="all">';
                 $html = str_replace( $item['tag'], $new_tag, $html );
                 $first = false;
             } else {
@@ -993,7 +1017,7 @@ class Uwb_Optimizer {
 
             $hash = md5( implode( '|', $urls_hashes ) );
             $cache_file = $cache_dir . '/uwb-js-' . $hash . '.js';
-            $cache_url = content_url( '/cache/ultimate-wp-booster/combine/uwb-js-' . $hash . '.js' );
+            $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/combine/uwb-js-' . $hash . '.js' );
 
             if ( ! file_exists( $cache_file ) ) {
                 $combined_content = '';
@@ -1009,7 +1033,7 @@ class Uwb_Optimizer {
                         if ( stripos( $item['url_clean'], '.min.js' ) === false ) {
                             $content = self::minify_js_safe( $content );
                         }
-                        $combined_content .= "\n;/* Combined: " . esc_html( $item['url_clean'] ) . " */\n" . trim( $content ) . ";";
+                        $combined_content .= "\n;/* Combined: " . self::safe_esc_html( $item['url_clean'] ) . " */\n" . trim( $content ) . ";";
                     }
                 }
 
@@ -1022,7 +1046,7 @@ class Uwb_Optimizer {
                 foreach ( $current_chunk as $item ) {
                     $html = str_replace( $item['tag'], '', $html );
                 }
-                $new_tag = '<script src="' . esc_url( $cache_url ) . '"></script>';
+                $new_tag = '<script src="' . self::safe_esc_url( $cache_url ) . '"></script>';
                 if ( stripos( $html, '</body>' ) !== false ) {
                     $html = str_ireplace( '</body>', $new_tag . "\n" . '</body>', $html );
                 } else {
@@ -1165,7 +1189,7 @@ class Uwb_Optimizer {
             $file_mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : '';
             $hash = md5( $url_clean . '_' . $file_mtime );
             $cache_file = $cache_dir . '/' . $hash . '.css';
-            $cache_url = content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.css' );
+            $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.css' );
 
             if ( $debug_mode ) {
                 $GLOBALS['uwb_debug_log'][] = "CSS URL: $url -> Hash: $hash -> Cache path: $cache_file";
@@ -1211,7 +1235,7 @@ class Uwb_Optimizer {
                 }
             }
 
-            $new_tag = preg_replace('/href=([\'"])(.*?)\1/i', 'href="' . esc_url( $cache_url ) . '"', $tag);
+            $new_tag = preg_replace('/href=([\'"])(.*?)\1/i', 'href="' . self::safe_esc_url( $cache_url ) . '"', $tag);
             return $new_tag;
         }, $html);
     }
@@ -1259,7 +1283,7 @@ class Uwb_Optimizer {
             $file_mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : '';
             $hash = md5( $url_clean . '_' . $file_mtime );
             $cache_file = $cache_dir . '/' . $hash . '.js';
-            $cache_url = content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.js' );
+            $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.js' );
 
             if ( $debug_mode ) {
                 $GLOBALS['uwb_debug_log'][] = "JS URL: $url -> Hash: $hash -> Cache path: $cache_file";
@@ -1300,7 +1324,7 @@ class Uwb_Optimizer {
                 }
             }
 
-            $new_tag = preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . esc_url( $cache_url ) . '"', $tag);
+            $new_tag = preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . self::safe_esc_url( $cache_url ) . '"', $tag);
             return $new_tag;
         }, $html);
     }
