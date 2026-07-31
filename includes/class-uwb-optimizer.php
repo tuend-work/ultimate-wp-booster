@@ -934,14 +934,10 @@ class Uwb_Optimizer {
                         'url_clean'  => $url_clean,
                         'local_path' => $local_path,
                     );
-                } else {
-                    // Excluded/async/webpack script — flush chunk to preserve execution order
-                    $flush_chunk();
                 }
+                // Excluded/async/webpack scripts — skip, stay in original position in HTML.
             } else {
-                // Inline script (no src) — flush chunk to preserve execution order
-                // External scripts after inline scripts (e.g. flatsomeVars) must NOT be dragged before them.
-                $flush_chunk();
+                // Inline scripts (no src) — skip, stay in original position in HTML.
             }
         }
 
