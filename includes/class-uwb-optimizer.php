@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * HTML Optimization & Processing Engine
  */
@@ -815,28 +815,6 @@ class Uwb_Optimizer {
                 }
             }
             return $matches[0];
-        }, $html);
-    }
-
-    /**
-     * Defer script tags.
-     */
-    public static function defer_js( $html, $excludes_str = '' ) {
-        $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
-        $excludes = array_merge( $default_excludes, $user_excludes );
-
-        return preg_replace_callback('/<script\s+([^>]*src=[\'"][^\'"]+[\'"][^>]*)>/i', function( $matches ) use ( $excludes ) {
-            $attrs = $matches[1];
-            if ( stripos( $attrs, 'defer' ) !== false || stripos( $attrs, 'async' ) !== false || stripos( $attrs, 'text/uwb-lazyload' ) !== false ) {
-                return $matches[0];
-            }
-            foreach ( $excludes as $ex ) {
-                if ( ! empty( $ex ) && stripos( $matches[0], $ex ) !== false ) {
-                    return $matches[0];
-                }
-            }
-            return '<script ' . $attrs . ' defer>';
         }, $html);
     }
 
