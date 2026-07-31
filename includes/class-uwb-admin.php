@@ -3173,7 +3173,7 @@ class Uwb_Admin {
                         <h2 style="margin-top:0;">Advanced &amp; Tools</h2>
                         <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Fine-tune WordPress performance, inject resource hints, and control developer tools.</p>
 
-                        <form method="post" action="options.php">
+                        <form method="post" action="options.php" novalidate>
                             <?php settings_fields( 'uwb_settings_group' ); ?>
 
                             <!-- Heartbeat Control -->
