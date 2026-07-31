@@ -813,7 +813,7 @@ class Uwb_Optimizer {
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'flatsome-loader', 'chunk.', 'flatsomeVars' );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
         $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
@@ -869,15 +869,14 @@ class Uwb_Optimizer {
             }
 
             if ( file_exists( $cache_file ) ) {
-                $first = true;
                 foreach ( $current_chunk as $item ) {
-                    if ( $first ) {
-                        $new_tag = '<script src="' . esc_url( $cache_url ) . '"></script>';
-                        $html = str_replace( $item['tag'], $new_tag, $html );
-                        $first = false;
-                    } else {
-                        $html = str_replace( $item['tag'], '', $html );
-                    }
+                    $html = str_replace( $item['tag'], '', $html );
+                }
+                $new_tag = '<script src="' . esc_url( $cache_url ) . '"></script>';
+                if ( stripos( $html, '</body>' ) !== false ) {
+                    $html = str_ireplace( '</body>', $new_tag . "\n" . '</body>', $html );
+                } else {
+                    $html .= "\n" . $new_tag;
                 }
             }
 
@@ -1484,7 +1483,7 @@ class Uwb_Optimizer {
      */
     private static function is_webpack_bundle( $local_path, $url = '' ) {
         if ( ! empty( $url ) ) {
-            if ( stripos( $url, 'chunk.' ) !== false || stripos( $url, 'flatsome' ) !== false ) {
+            if ( stripos( $url, 'chunk.' ) !== false ) {
                 return true;
             }
         }
