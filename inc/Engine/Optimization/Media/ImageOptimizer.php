@@ -165,55 +165,42 @@ class ImageOptimizer {
         $filename_no_ext = pathinfo( $file, PATHINFO_FILENAME );
 
         if ( $target_mime && $target_ext && 'original' !== $format ) {
-            // Mode 1: Overwrite in-place (force genuine WebP/AVIF binary data into original file path)
-            if ( $do_overwrite ) {
-                $temp_file = $dir . '/temp_' . md5( $file ) . '.' . $target_ext;
-                $saved     = $editor->save( $temp_file, $target_mime );
-                if ( ! is_wp_error( $saved ) && file_exists( $temp_file ) ) {
-                    @copy( $temp_file, $file );
-                    @unlink( $temp_file );
-                } else {
-                    $editor->save( $file, $target_mime );
-                }
+            // 1. Generate converted WebP/AVIF file first (e.g. image.webp)
+            $target_converted_file = $dir . '/' . $filename_no_ext . '.' . $target_ext;
+            $saved_converted       = $editor->save( $target_converted_file, $target_mime );
+
+            // 2. Mode: Overwrite in-place (copy converted .webp / .avif binary over original file path)
+            if ( $do_overwrite && file_exists( $target_converted_file ) && filesize( $target_converted_file ) > 0 ) {
+                @copy( $target_converted_file, $file );
             }
 
-            // Mode 2: Create Sidecar Files (generate image.webp & image.jpg.webp)
+            // 3. Mode: Create Sidecar Files
             if ( $do_sidecar ) {
-                $sidecar1 = $dir . '/' . $filename_no_ext . '.' . $target_ext;
-                if ( $sidecar1 !== $file ) {
-                    $editor->save( $sidecar1, $target_mime );
-                }
                 $sidecar2 = $dir . '/' . $filename_no_ext . '.' . $original_ext . '.' . $target_ext;
-                if ( $sidecar2 !== $file && $sidecar2 !== $sidecar1 ) {
-                    $editor->save( $sidecar2, $target_mime );
+                if ( $sidecar2 !== $file && $sidecar2 !== $target_converted_file ) {
+                    @copy( $target_converted_file, $sidecar2 );
                 }
                 if ( ! $do_overwrite && $original_mime ) {
                     $editor->save( $file, $original_mime );
                 }
-            }
-
-            // Mode 3: Replace & Change File Extension (e.g. image.jpg -> image.webp)
-            if ( $do_replace_ext ) {
-                $dest_file = $dir . '/' . $filename_no_ext . '.' . $target_ext;
-                $saved     = $editor->save( $dest_file, $target_mime );
-                if ( ! is_wp_error( $saved ) && isset( $saved['path'] ) ) {
-                    if ( $dest_file !== $file && file_exists( $file ) && ! $do_overwrite && ! $do_sidecar ) {
-                        @unlink( $file );
-                    }
-                    $file = $saved['path'];
-                    update_attached_file( $attachment_id, $file );
-                }
-            }
-
-            if ( ! $do_sidecar ) {
-                $sidecar1 = $dir . '/' . $filename_no_ext . '.' . $target_ext;
-                if ( $sidecar1 !== $file && file_exists( $sidecar1 ) ) {
-                    @unlink( $sidecar1 );
+            } else {
+                // If Sidecar mode is disabled, delete the generated .webp / .avif file if it's not the attached file
+                if ( $target_converted_file !== $file && file_exists( $target_converted_file ) && ! $do_replace_ext ) {
+                    @unlink( $target_converted_file );
                 }
                 $sidecar2 = $dir . '/' . $filename_no_ext . '.' . $original_ext . '.' . $target_ext;
                 if ( $sidecar2 !== $file && file_exists( $sidecar2 ) ) {
                     @unlink( $sidecar2 );
                 }
+            }
+
+            // 4. Mode: Replace & Change File Extension
+            if ( $do_replace_ext && file_exists( $target_converted_file ) ) {
+                if ( $target_converted_file !== $file && file_exists( $file ) && ! $do_overwrite && ! $do_sidecar ) {
+                    @unlink( $file );
+                }
+                $file = $target_converted_file;
+                update_attached_file( $attachment_id, $file );
             }
         } else {
             // Keep original format (JPEG/PNG/GIF): strictly save with original mime
@@ -242,30 +229,21 @@ class ImageOptimizer {
                     if ( ! is_wp_error( $thumb_editor ) ) {
                         $thumb_editor->set_quality( $quality );
                         if ( $target_mime && $target_ext && 'original' !== $format ) {
-                            if ( $do_overwrite ) {
-                                $temp_thumb = $dir . '/temp_' . md5( $thumb_path ) . '.' . $target_ext;
-                                $saved_temp = $thumb_editor->save( $temp_thumb, $target_mime );
-                                if ( ! is_wp_error( $saved_temp ) && file_exists( $temp_thumb ) ) {
-                                    @copy( $temp_thumb, $thumb_path );
-                                    @unlink( $temp_thumb );
-                                } else {
-                                    $thumb_editor->save( $thumb_path, $target_mime );
-                                }
+                            $thumb_no_ext   = pathinfo( $thumb_path, PATHINFO_FILENAME );
+                            $thumb_orig_ext = pathinfo( $thumb_path, PATHINFO_EXTENSION );
+                            $thumb_target   = $dir . '/' . $thumb_no_ext . '.' . $target_ext;
+
+                            $thumb_editor->save( $thumb_target, $target_mime );
+
+                            if ( $do_overwrite && file_exists( $thumb_target ) && filesize( $thumb_target ) > 0 ) {
+                                @copy( $thumb_target, $thumb_path );
                             }
 
                             if ( $do_sidecar ) {
-                                $thumb_no_ext   = pathinfo( $thumb_path, PATHINFO_FILENAME );
-                                $thumb_orig_ext = pathinfo( $thumb_path, PATHINFO_EXTENSION );
-
-                                $thumb_side1 = $dir . '/' . $thumb_no_ext . '.' . $target_ext;
-                                if ( $thumb_side1 !== $thumb_path ) {
-                                    $thumb_editor->save( $thumb_side1, $target_mime );
-                                }
                                 $thumb_side2 = $dir . '/' . $thumb_no_ext . '.' . $thumb_orig_ext . '.' . $target_ext;
-                                if ( $thumb_side2 !== $thumb_path && $thumb_side2 !== $thumb_side1 ) {
-                                    $thumb_editor->save( $thumb_side2, $target_mime );
+                                if ( $thumb_side2 !== $thumb_path && $thumb_side2 !== $thumb_target ) {
+                                    @copy( $thumb_target, $thumb_side2 );
                                 }
-
                                 if ( ! $do_overwrite ) {
                                     $thumb_orig_mime = wp_check_filetype( $thumb_path )['type'];
                                     if ( $thumb_orig_mime ) {
@@ -273,29 +251,21 @@ class ImageOptimizer {
                                     }
                                 }
                             } else {
-                                $thumb_no_ext   = pathinfo( $thumb_path, PATHINFO_FILENAME );
-                                $thumb_orig_ext = pathinfo( $thumb_path, PATHINFO_EXTENSION );
-                                $thumb_side1    = $dir . '/' . $thumb_no_ext . '.' . $target_ext;
-                                if ( $thumb_side1 !== $thumb_path && file_exists( $thumb_side1 ) ) {
-                                    @unlink( $thumb_side1 );
+                                if ( $thumb_target !== $thumb_path && file_exists( $thumb_target ) && ! $do_replace_ext ) {
+                                    @unlink( $thumb_target );
                                 }
-                                $thumb_side2    = $dir . '/' . $thumb_no_ext . '.' . $thumb_orig_ext . '.' . $target_ext;
+                                $thumb_side2 = $dir . '/' . $thumb_no_ext . '.' . $thumb_orig_ext . '.' . $target_ext;
                                 if ( $thumb_side2 !== $thumb_path && file_exists( $thumb_side2 ) ) {
                                     @unlink( $thumb_side2 );
                                 }
                             }
 
-                            if ( $do_replace_ext ) {
-                                $thumb_no_ext = pathinfo( $thumb_path, PATHINFO_FILENAME );
-                                $dest_thumb   = $dir . '/' . $thumb_no_ext . '.' . $target_ext;
-                                $saved_thumb  = $thumb_editor->save( $dest_thumb, $target_mime );
-                                if ( ! is_wp_error( $saved_thumb ) && isset( $saved_thumb['file'] ) ) {
-                                    if ( $dest_thumb !== $thumb_path && file_exists( $thumb_path ) && ! $do_overwrite && ! $do_sidecar ) {
-                                        @unlink( $thumb_path );
-                                    }
-                                    $meta['sizes'][ $size_key ]['file']      = $saved_thumb['file'];
-                                    $meta['sizes'][ $size_key ]['mime-type'] = $target_mime;
+                            if ( $do_replace_ext && file_exists( $thumb_target ) ) {
+                                if ( $thumb_target !== $thumb_path && file_exists( $thumb_path ) && ! $do_overwrite && ! $do_sidecar ) {
+                                    @unlink( $thumb_path );
                                 }
+                                $meta['sizes'][ $size_key ]['file']      = pathinfo( $thumb_target, PATHINFO_BASENAME );
+                                $meta['sizes'][ $size_key ]['mime-type'] = $target_mime;
                             }
                         } else {
                             $thumb_orig_mime = wp_check_filetype( $thumb_path )['type'];
