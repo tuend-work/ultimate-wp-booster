@@ -2729,9 +2729,13 @@ class Admin {
                                     'Phân phối CSS qua S3 CDN?',
                                     'Tải các tập tin CSS đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để tối ưu hóa tốc độ tải trang.',
                                     array(
-                                        'uwb_cdn_auto_upload_combined_css' => 'Tự động kiểm tra và tải file CSS Combine lên S3 CDN khi được tạo / cập nhật',
-                                        'uwb_cdn_auto_upload_minified_css' => 'Tự động kiểm tra và tải file CSS Minify lên S3 CDN khi nén file',
-                                        'uwb_cdn_auto_purge_css_cdn'      => 'Tự động xoá file CSS cache trên S3 CDN khi thực hiện Purge Cache',
+                                        'Upload to S3 when:' => array(
+                                            'uwb_cdn_auto_upload_combined_css' => 'upload (gộp file CSS)',
+                                            'uwb_cdn_auto_upload_minified_css' => 'edit (nén file CSS)',
+                                        ),
+                                        'Delete From S3 when:' => array(
+                                            'uwb_cdn_auto_purge_css_cdn' => 'Delete file (xả cache CSS)',
+                                        ),
                                     )
                                 );
                                 ?>
@@ -2785,9 +2789,13 @@ js-(before|after)
                                     'Phân phối JS qua S3 CDN?',
                                     'Tải các tập tin JavaScript đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để phục vụ khách truy cập.',
                                     array(
-                                        'uwb_cdn_auto_upload_combined_js' => 'Tự động kiểm tra và tải file JS Combine lên S3 CDN khi được tạo / cập nhật',
-                                        'uwb_cdn_auto_upload_minified_js' => 'Tự động kiểm tra và tải file JS Minify lên S3 CDN khi nén file',
-                                        'uwb_cdn_auto_purge_js_cdn'      => 'Tự động xoá file JS cache trên S3 CDN khi thực hiện Purge Cache',
+                                        'Upload to S3 when:' => array(
+                                            'uwb_cdn_auto_upload_combined_js' => 'upload (gộp file JS)',
+                                            'uwb_cdn_auto_upload_minified_js' => 'edit (nén file JS)',
+                                        ),
+                                        'Delete From S3 when:' => array(
+                                            'uwb_cdn_auto_purge_js_cdn' => 'Delete file (xả cache JS)',
+                                        ),
                                     )
                                 );
                                 ?>
@@ -2808,8 +2816,12 @@ js-(before|after)
                                     'Phân phối tài nguyên tĩnh trong HTML qua S3 CDN?',
                                     'Tự động viết lại (rewrite) toàn bộ URL tài nguyên tĩnh trong mã nguồn HTML trang web để phân phối từ CDN Domain.',
                                     array(
-                                        'uwb_cdn_auto_rewrite_html_urls' => 'Tự động thay thế URL tĩnh (hình ảnh, CSS, JS, Fonts) sang CDN Domain trong mã nguồn HTML',
-                                        'uwb_cdn_auto_purge_html_cf'     => 'Đồng bộ tự động gửi API Purge Cloudflare Zone CDN Edge khi xoá HTML Page Cache',
+                                        'Upload to S3 when:' => array(
+                                            'uwb_cdn_auto_rewrite_html_urls' => 'get_url (viết lại URL tĩnh trong HTML)',
+                                        ),
+                                        'Delete From S3 when:' => array(
+                                            'uwb_cdn_auto_purge_html_cf' => 'Delete file (xả Cloudflare Zone CDN Edge)',
+                                        ),
                                     )
                                 );
                                 ?>
@@ -2831,11 +2843,19 @@ js-(before|after)
                                     'Phân phối Media Library & Tập tin qua S3 CDN?',
                                     'Đồng bộ và phân phối toàn bộ tập tin hình ảnh, tài liệu và thumbnails trong thư viện Media WordPress qua S3/R2 CDN.',
                                     array(
-                                        'uwb_cdn_auto_upload_attachment'     => 'Tự động kiểm tra và tải file Media mới lên S3 CDN khi xảy ra sự kiện upload (add_attachment / wp_generate_attachment_metadata)',
-                                        'uwb_cdn_auto_update_attachment'     => 'Tự động đồng bộ lại S3 CDN khi attachment được cập nhật / chỉnh sửa (edit_attachment)',
-                                        'uwb_cdn_auto_rewrite_attachment_url' => 'Tự động thay thế URL Media sang CDN Domain khi gọi hàm Get URL attachment (wp_get_attachment_url)',
-                                        'uwb_cdn_auto_delete_attachment'     => 'Tự động xoá file tương ứng trên S3 CDN khi xoá attachment trong Media Library (delete_attachment)',
-                                        'uwb_cdn_delete_local'               => 'Tự động xoá file trên máy chủ local sau khi đã upload lên S3 CDN (Chế độ Offload hoàn toàn)',
+                                        'Upload to S3 when:' => array(
+                                            'uwb_cdn_auto_upload_attachment'     => 'upload',
+                                            'uwb_cdn_auto_rewrite_attachment_url' => 'get_url',
+                                        ),
+                                        'Update file to S3 when:' => array(
+                                            'uwb_cdn_auto_update_attachment'     => 'edit',
+                                        ),
+                                        'Delete From S3 when:' => array(
+                                            'uwb_cdn_auto_delete_attachment'     => 'Delete file',
+                                        ),
+                                        'Delete From Local when:' => array(
+                                            'uwb_cdn_delete_local'               => 'Uploaded to S3',
+                                        ),
                                     )
                                 );
                                 ?>
@@ -2865,8 +2885,10 @@ js-(before|after)
                                     'Phân phối Web Fonts qua S3 CDN?',
                                     'Tải và phục vụ các font chữ tùy chỉnh (.woff2, .woff, .ttf) của theme từ S3/R2 CDN.',
                                     array(
-                                        'uwb_cdn_auto_upload_fonts'     => 'Tự động kiểm tra và tải file Font (.woff2, .woff, .ttf) lên S3 CDN',
-                                        'uwb_cdn_auto_rewrite_font_urls' => 'Tự động thay thế URL Font trong khai báo CSS @font-face sang CDN Domain',
+                                        'Upload to S3 when:' => array(
+                                            'uwb_cdn_auto_upload_fonts'     => 'upload',
+                                            'uwb_cdn_auto_rewrite_font_urls' => 'get_url',
+                                        ),
                                     )
                                 );
                                 ?>
@@ -5072,14 +5094,35 @@ js-(before|after)
                 <?php if ( ! empty( $events ) && is_array( $events ) ) : 
                     $is_active = (bool) get_option( $toggle_key, 1 );
                 ?>
-                    <div class="uwb-cdn-events-wrap" style="margin-top:16px; background:#fff; border:1px solid var(--uwb-border); border-radius:8px; padding:16px; <?php echo $is_active ? '' : 'display:none;'; ?>">
-                        <h5 style="margin:0 0 12px 0; font-size:12px; font-weight:700; color:var(--uwb-text); text-transform:uppercase; letter-spacing:0.5px;">Sự kiện tự động đồng bộ S3 CDN (Event Actions)</h5>
+                    <div class="uwb-cdn-events-wrap" style="margin-top:16px; background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; <?php echo $is_active ? '' : 'display:none;'; ?>">
+                        <h5 style="margin:0 0 14px 0; font-size:12px; font-weight:700; color:var(--uwb-text); text-transform:uppercase; letter-spacing:0.5px;">Sự kiện tự động đồng bộ S3 CDN (Event Actions)</h5>
                         <div style="display:flex; flex-direction:column; gap:10px;">
-                            <?php foreach ( $events as $event_key => $event_label ) : ?>
-                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
-                                    <input type="checkbox" name="<?php echo esc_attr( $event_key ); ?>" value="1" <?php checked( get_option( $event_key, 1 ), 1 ); ?> />
-                                    <?php echo esc_html( $event_label ); ?>
-                                </label>
+                            <?php foreach ( $events as $group_label => $group_data ) : ?>
+                                <?php if ( is_array( $group_data ) ) : ?>
+                                    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:10px 14px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:8px;">
+                                        <div style="min-width:180px; font-weight:700; font-size:13px; color:var(--uwb-text); flex-shrink:0;">
+                                            <?php echo esc_html( $group_label ); ?>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; flex:1;">
+                                            <?php foreach ( $group_data as $event_key => $event_label ) : 
+                                                $default_val = 1;
+                                                if ( strpos( $event_key, 'attachment' ) !== false || $event_key === 'uwb_cdn_delete_local' ) {
+                                                    $default_val = 0;
+                                                }
+                                            ?>
+                                                <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                                    <input type="checkbox" name="<?php echo esc_attr( $event_key ); ?>" value="1" <?php checked( get_option( $event_key, $default_val ), 1 ); ?> />
+                                                    <?php echo esc_html( $event_label ); ?>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php else : ?>
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                        <input type="checkbox" name="<?php echo esc_attr( $group_label ); ?>" value="1" <?php checked( get_option( $group_label, 1 ), 1 ); ?> />
+                                        <?php echo esc_html( $group_data ); ?>
+                                    </label>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         </div>
                     </div>
