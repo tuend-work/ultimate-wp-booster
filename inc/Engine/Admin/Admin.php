@@ -69,8 +69,6 @@ class Admin {
             'uwb_media_lazy_load_iframes',
             'uwb_media_image_placeholder',
             'uwb_media_add_missing_sizes',
-            'uwb_vpi_enabled',
-            'uwb_vpi_cron',
             'uwb_media_lazy_load_excludes',
             'uwb_media_lazy_load_class_excludes',
             'uwb_loc_gravatar_cache',
@@ -228,9 +226,6 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_iframes', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_image_placeholder', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_add_missing_sizes', 'intval' );
-
-        register_setting( 'uwb_settings_group', 'uwb_vpi_enabled', 'intval' );
-        register_setting( 'uwb_settings_group', 'uwb_vpi_cron', 'intval' );
 
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_class_excludes', 'sanitize_textarea_field' );
@@ -1832,11 +1827,11 @@ class Admin {
                                     <div>
                                         <h4 style="margin:0 0 6px 0; font-size:14.5px; font-weight:700; color:var(--uwb-text);">CDN Media &amp; Asset Offloading (R2 / S3)</h4>
                                         <p style="font-size:13px; color:var(--uwb-text-muted); margin:0;">
-                                            Cloudflare R2 and S3 storage connection credentials, file type rules, and auto-sync settings are located under <strong>Page Optimizes &rarr; [8] CDN Offload Media</strong>.
+                                            Cloudflare R2 and S3 storage connection credentials, file type rules, and auto-sync settings are located under <strong>Page Optimizes &rarr; [7] CDN Offload Media</strong>.
                                         </p>
                                     </div>
                                     <button type="button" class="button button-primary" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; white-space:nowrap;">
-                                        Go to Page Optimizes &rarr; [8] CDN Offload Media
+                                        Go to Page Optimizes &rarr; [7] CDN Offload Media
                                     </button>
                                 </div>
                             </div>
@@ -2679,9 +2674,8 @@ class Admin {
                                 <div class="uwb-sub-tab-item" data-subtab="opt_html">[3] HTML</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_media">[4] Media</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_font">[5] Font</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_vpi">[6] VPI</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_loc">[7] Localization</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">[8] CDN Offload Media</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_loc">[6] Localization</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">[7] CDN Offload Media</div>
                             </div>
 
                             <!-- SUB-TAB 1: CSS Settings & Excludes -->
@@ -2783,15 +2777,7 @@ js-(before|after)
                                 ?>
                             </div>
 
-                            <!-- SUB-TAB 6: VPI -->
-                            <div id="subtab-opt_vpi" class="uwb-subtab-content">
-                                <?php
-                                $this->render_toggle_switch( 'uwb_vpi_enabled', 'Viewport Images Generation', 'Automatically generate viewport critical images.', true );
-                                $this->render_toggle_switch( 'uwb_vpi_cron', 'VPI Cron', 'Run VPI generation in the background.', true );
-                                ?>
-                            </div>
-
-                            <!-- SUB-TAB 7: Localization -->
+                            <!-- SUB-TAB 6: Localization -->
                             <div id="subtab-opt_loc" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_loc_gravatar_cache', 'Gravatar Cache', 'Cache Gravatar images locally.', true );
@@ -2800,7 +2786,7 @@ js-(before|after)
                                 ?>
                             </div>
 
-                            <!-- SUB-TAB 8: CDN Offload Media -->
+                            <!-- SUB-TAB 7: CDN Offload Media -->
                             <div id="subtab-opt_cdn_media" class="uwb-subtab-content">
                                 <!-- Section 1: Provider Settings -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
