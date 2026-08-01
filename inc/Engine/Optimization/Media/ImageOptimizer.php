@@ -81,20 +81,47 @@ class ImageOptimizer {
         $target_mime = null;
         $target_ext  = null;
 
+        $original_ext  = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+        $original_mime = wp_check_filetype( $file )['type'];
+        if ( empty( $original_mime ) ) {
+            if ( in_array( $original_ext, array( 'jpg', 'jpeg' ), true ) ) {
+                $original_mime = 'image/jpeg';
+            } elseif ( 'png' === $original_ext ) {
+                $original_mime = 'image/png';
+            } elseif ( 'gif' === $original_ext ) {
+                $original_mime = 'image/gif';
+            }
+        }
+
         if ( 'webp' === $format && self::is_webp_supported() ) {
             $target_mime = 'image/webp';
             $target_ext  = 'webp';
         } elseif ( 'avif' === $format && self::is_avif_supported() ) {
             $target_mime = 'image/avif';
             $target_ext  = 'avif';
+        } elseif ( 'original' === $format ) {
+            $target_mime = $original_mime;
+            $target_ext  = $original_ext;
+
+            // Remove any legacy WebP/AVIF status flags and sidecar files
+            delete_post_meta( $attachment_id, '_uwb_img_convert_webp_status' );
+            delete_post_meta( $attachment_id, '_uwb_img_convert_avif_status' );
+            if ( file_exists( $file . '.webp' ) ) {
+                @unlink( $file . '.webp' );
+            }
+            if ( file_exists( $file . '.avif' ) ) {
+                @unlink( $file . '.avif' );
+            }
         }
 
-        // 1. Optional backup of original image file to .bak
-        if ( get_option( 'uwb_media_opt_backup_bak', 0 ) ) {
-            $bak_file = $file . '.bak';
-            if ( ! file_exists( $bak_file ) ) {
-                @copy( $file, $bak_file );
-            }
+        // 1. Optional backup of original image file to .bak or restore if switching back to original format
+        $bak_file = $file . '.bak';
+        if ( get_option( 'uwb_media_opt_backup_bak', 0 ) && ! file_exists( $bak_file ) ) {
+            @copy( $file, $bak_file );
+        }
+
+        if ( 'original' === $format && file_exists( $bak_file ) ) {
+            @copy( $bak_file, $file );
         }
 
         // 2. Optimize main image
@@ -106,13 +133,10 @@ class ImageOptimizer {
         $editor->set_quality( $quality );
         $dir = dirname( $file );
         $filename_no_ext = pathinfo( $file, PATHINFO_FILENAME );
-        $original_ext = pathinfo( $file, PATHINFO_EXTENSION );
 
-        $new_main_file = $file;
-
-        if ( $target_mime && $target_ext ) {
+        if ( $target_mime && $target_ext && 'original' !== $format ) {
             if ( 'overwrite' === $mode ) {
-                // In overwrite mode: save WebP/AVIF binary data DIRECTLY into original file path (keeping original extension e.g. .jpg, .png)
+                // In overwrite mode: save WebP/AVIF binary data DIRECTLY into original file path
                 $editor->save( $file, $target_mime );
             } else {
                 // New file mode (generate .webp / .avif next to original file, e.g. banner.jpg.webp)
@@ -120,8 +144,12 @@ class ImageOptimizer {
                 $editor->save( $dest_file, $target_mime );
             }
         } else {
-            // Keep original format, just re-compress quality
-            $editor->save( $file );
+            // Keep original format (JPEG/PNG/GIF): strictly save with original mime
+            if ( $original_mime ) {
+                $editor->save( $file, $original_mime );
+            } else {
+                $editor->save( $file );
+            }
         }
 
         // 3. Optimize thumbnails / intermediate sizes
@@ -132,13 +160,17 @@ class ImageOptimizer {
                     continue;
                 }
                 $thumb_path = $dir . '/' . $size_info['file'];
+
+                if ( 'original' === $format && file_exists( $thumb_path . '.bak' ) ) {
+                    @copy( $thumb_path . '.bak', $thumb_path );
+                }
+
                 if ( file_exists( $thumb_path ) ) {
                     $thumb_editor = wp_get_image_editor( $thumb_path );
                     if ( ! is_wp_error( $thumb_editor ) ) {
                         $thumb_editor->set_quality( $quality );
-                        if ( $target_mime && $target_ext ) {
+                        if ( $target_mime && $target_ext && 'original' !== $format ) {
                             if ( 'overwrite' === $mode ) {
-                                // Save WebP/AVIF binary data DIRECTLY into thumbnail file path
                                 $thumb_editor->save( $thumb_path, $target_mime );
                             } else {
                                 $thumb_no_ext   = pathinfo( $thumb_path, PATHINFO_FILENAME );
@@ -147,7 +179,19 @@ class ImageOptimizer {
                                 $thumb_editor->save( $dest_thumb, $target_mime );
                             }
                         } else {
-                            $thumb_editor->save( $thumb_path );
+                            $thumb_orig_ext  = strtolower( pathinfo( $thumb_path, PATHINFO_EXTENSION ) );
+                            $thumb_orig_mime = wp_check_filetype( $thumb_path )['type'];
+                            if ( $thumb_orig_mime ) {
+                                $thumb_editor->save( $thumb_path, $thumb_orig_mime );
+                            } else {
+                                $thumb_editor->save( $thumb_path );
+                            }
+                            if ( file_exists( $thumb_path . '.webp' ) ) {
+                                @unlink( $thumb_path . '.webp' );
+                            }
+                            if ( file_exists( $thumb_path . '.avif' ) ) {
+                                @unlink( $thumb_path . '.avif' );
+                            }
                         }
                     }
                 }
@@ -155,18 +199,20 @@ class ImageOptimizer {
             wp_update_attachment_metadata( $attachment_id, $meta );
         }
 
-        // 3. Record Meta Flags as requested
-        $effective_format = $target_ext ? $target_ext : 'original';
+        // 4. Record Meta Flags as requested
         update_post_meta( $attachment_id, '_uwb_img_compress_status', 'compressed' );
-        if ( 'webp' === $effective_format ) {
+        if ( 'webp' === $format ) {
             update_post_meta( $attachment_id, '_uwb_img_convert_webp_status', 'converted' );
-        } elseif ( 'avif' === $effective_format ) {
+        } elseif ( 'avif' === $format ) {
             update_post_meta( $attachment_id, '_uwb_img_convert_avif_status', 'converted' );
+        } else {
+            delete_post_meta( $attachment_id, '_uwb_img_convert_webp_status' );
+            delete_post_meta( $attachment_id, '_uwb_img_convert_avif_status' );
         }
 
         // Backwards compatibility meta flags
         update_post_meta( $attachment_id, '_uwb_img_optimize_status', 'optimized' );
-        update_post_meta( $attachment_id, '_uwb_img_convert_status', $effective_format );
+        update_post_meta( $attachment_id, '_uwb_img_convert_status', $format );
         update_post_meta( $attachment_id, '_uwb_img_optimize_timestamp', time() );
         update_post_meta( $attachment_id, '_uwb_img_opt_quality', $quality );
         update_post_meta( $attachment_id, '_uwb_img_opt_mode', $mode );
