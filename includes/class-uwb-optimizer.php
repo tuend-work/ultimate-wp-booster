@@ -260,7 +260,7 @@ class Uwb_Optimizer {
      * @return string Modified HTML.
      */
     public static function defer_js( $html, $excludes_str = '' ) {
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'wp-i18n', 'wp-hooks', 'wp-polyfill' );
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
