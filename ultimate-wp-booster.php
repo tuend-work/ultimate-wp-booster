@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.17.1
+ * Version:     1.17.2
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.17.1' );
+define( 'UWB_VERSION', '1.17.2' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -43,18 +43,6 @@ function uwb_check_upgrade() {
         }
         update_option( 'uwb_version', UWB_VERSION );
     }
-}
-
-// 1.9. Debug: Inject cache bypass reason as HTML comment into <head> (WP_DEBUG only)
-// For early bypasses (cookie, query string, URL) – wp_head fires normally since WordPress still loads.
-// For shutdown-time bypasses – reason is embedded in the <!-- Dynamic Page | Bypass: ... --> comment.
-add_action( 'wp_head', 'uwb_debug_inject_bypass_reason', 1 );
-function uwb_debug_inject_bypass_reason() {
-    if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) return;
-    $reason = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
-    if ( empty( $reason ) ) return;
-    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-    echo "\n<!-- 🚫 UWB Cache Bypass Reason: " . esc_html( $reason ) . " -->\n";
 }
 
 // 2. Register activation & deactivation hooks
@@ -452,113 +440,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
         }
     }
     WP_CLI::add_command( 'uwb-preload', 'Uwb_CLI_Preload' );
-}
-
-add_action( 'init', 'uwb_handle_external_cron_trigger' );
-function uwb_handle_external_cron_trigger() {
-    if ( isset( $_GET['uwb_preload_key'] ) ) {
-        $saved_key = get_option( 'uwb_preload_secret_key' );
-        if ( empty( $saved_key ) ) {
-            wp_die( 'Secret key is empty.' );
-        }
-        if ( hash_equals( $saved_key, $_GET['uwb_preload_key'] ) ) {
-            $GLOBALS['uwb_do_not_cache'] = true;
-            if ( class_exists( 'Uwb_Preloader' ) ) {
-                global $wpdb;
-                $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
-
-                $is_browser = ( isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'text/html' ) !== false );
-
-                // Check for action=crawl request to start crawling sitemaps in background
-                $action = isset( $_GET['action'] ) ? sanitize_key( $_GET['action'] ) : '';
-                if ( $action === 'crawl' ) {
-                    if ( ! get_transient( 'uwb_populating_queue' ) ) {
-                        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
-                        wp_schedule_single_event( time(), 'uwb_start_preload_async' );
-                        update_option( 'uwb_preload_running', 1 );
-                        if ( function_exists( 'spawn_cron' ) ) {
-                            spawn_cron();
-                        }
-                        if ( $is_browser ) {
-                            echo "<pre style='white-space: pre-wrap; font-family: monospace;'>OK: Sitemap crawl scheduled in background.</pre>";
-                        } else {
-                            header( 'Content-Type: text/plain; charset=UTF-8' );
-                            echo "OK: Sitemap crawl scheduled in background.";
-                        }
-                        exit;
-                    } else {
-                        if ( $is_browser ) {
-                            echo "<pre style='white-space: pre-wrap; font-family: monospace;'>ERROR: Sitemap crawler is already running.</pre>";
-                        } else {
-                            header( 'Content-Type: text/plain; charset=UTF-8' );
-                            echo "ERROR: Sitemap crawler is already running.";
-                        }
-                        exit;
-                    }
-                }
-
-                // If total queue size is 0, auto schedule a crawl so it starts populating
-                $total_count = intval( $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" ) );
-                if ( $total_count === 0 ) {
-                    if ( ! get_transient( 'uwb_populating_queue' ) ) {
-                        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
-                        wp_schedule_single_event( time(), 'uwb_start_preload_async' );
-                        update_option( 'uwb_preload_running', 1 );
-                        if ( function_exists( 'spawn_cron' ) ) {
-                            spawn_cron();
-                        }
-                    }
-                }
-
-                // Check if there are any pending or retriable failed URLs
-                $pending_count = intval( $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name} WHERE status = 'pending' OR (status = 'failed' AND attempts < 3)" ) );
-
-                if ( $is_browser ) {
-                    echo "<pre style='white-space: pre-wrap; font-family: monospace; word-wrap: break-word;'>";
-                } else {
-                    header( 'Content-Type: text/plain; charset=UTF-8' );
-                }
-
-                if ( $pending_count === 0 ) {
-                    // Queue is completed! Show all completed preload URLs
-                    $completed_urls = $wpdb->get_col( "SELECT url FROM {$table_name} WHERE status = 'completed' ORDER BY priority ASC, id ASC" );
-                    if ( empty( $completed_urls ) ) {
-                        echo "OK: Preload queue is empty or sitemap is still being scanned. Crawl task was triggered.";
-                    } else {
-                        echo "OK: Queue completed. Listing completed URLs:\n";
-                        foreach ( $completed_urls as $url ) {
-                            echo esc_url( $url ) . "\n";
-                        }
-                    }
-                } else {
-                    $preloader = new Uwb_Preloader();
-                    $result = $preloader->run_preload_batch();
-                    $processed = is_array( $result ) ? $result['count'] : 0;
-                    $urls = is_array( $result ) ? $result['urls'] : array();
-
-                    echo "OK: Preloaded {$processed} URLs.\n";
-                    if ( ! empty( $urls ) ) {
-                        foreach ( $urls as $url ) {
-                            echo esc_url( $url ) . "\n";
-                        }
-                    }
-                }
-
-                if ( $is_browser ) {
-                    echo "</pre>";
-                }
-            } else {
-                if ( $is_browser ) {
-                    echo "<pre style='white-space: pre-wrap; font-family: monospace;'>ERROR: Preloader class not found.</pre>";
-                } else {
-                    echo "ERROR: Preloader class not found.";
-                }
-            }
-            exit;
-        } else {
-            wp_die( 'Invalid secret key.' );
-        }
-    }
 }
 
 // Handler for Flushing OPcache from Admin Bar
