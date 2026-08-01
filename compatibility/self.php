@@ -32,8 +32,6 @@ function uwb_self_get_excluded_urls() {
  */
 add_action( 'wp_head', 'uwb_debug_inject_bypass_reason', 1 );
 function uwb_debug_inject_bypass_reason() {
-    $debug_enabled = ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || (int) get_option( 'uwb_debug_mode', 0 ) === 1;
-    if ( ! $debug_enabled ) return;
     $reason = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
     if ( empty( $reason ) ) return;
     // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
