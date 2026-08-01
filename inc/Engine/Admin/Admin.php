@@ -1790,6 +1790,12 @@ class Admin {
                                             <option value="cloudflare_r2" <?php selected( get_option( 'uwb_cdn_provider', 'cloudflare_r2' ), 'cloudflare_r2' ); ?>>Cloudflare R2 Storage (Recommended)</option>
                                             <option value="other_s3" <?php selected( get_option( 'uwb_cdn_provider', 'cloudflare_r2' ), 'other_s3' ); ?>>Other S3 Compatible Storage (AWS S3, Wasabi, DigitalOcean Spaces, MinIO, Bunny S3)</option>
                                         </select>
+                                        <p class="description uwb-cdn-cf-guide" style="margin-top:8px; font-size:12.5px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'cloudflare_r2' ? '' : 'display:none;'; ?>">
+                                            📖 <strong>Hướng dẫn lấy thông số Cloudflare R2:</strong>
+                                            <a href="https://developers.cloudflare.com/r2/api/s3/tokens/" target="_blank" rel="noopener noreferrer" style="color:var(--uwb-primary); font-weight:600; text-decoration:underline;">
+                                                Xem hướng dẫn tạo R2 API Tokens (Access Key &amp; Secret Key) &amp; Account ID trên Cloudflare Docs &rarr;
+                                            </a>
+                                        </p>
                                     </div>
 
                                     <!-- Cloudflare Account ID (CF R2 only) -->
@@ -3373,10 +3379,10 @@ js-(before|after)
             $('#uwb_cdn_provider').on('change', function() {
                 var val = $(this).val();
                 if (val === 'cloudflare_r2') {
-                    $('.uwb-cdn-cf-field').slideDown();
+                    $('.uwb-cdn-cf-field, .uwb-cdn-cf-guide').slideDown();
                     $('.uwb-cdn-s3-field').slideUp();
                 } else {
-                    $('.uwb-cdn-cf-field').slideUp();
+                    $('.uwb-cdn-cf-field, .uwb-cdn-cf-guide').slideUp();
                     $('.uwb-cdn-s3-field').slideDown();
                 }
             });
