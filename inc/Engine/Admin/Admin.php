@@ -255,6 +255,7 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_cdn_file_types_media', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload_combined', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_purge_minified', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_auto_delete', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_delete_local', 'intval' );
 
@@ -1909,6 +1910,10 @@ class Admin {
                                         <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
                                             <input type="checkbox" name="uwb_cdn_auto_upload_combined" value="1" <?php checked( get_option( 'uwb_cdn_auto_upload_combined', 1 ), 1 ); ?> />
                                             Auto upload to CDN after minify or combine (automatically sync minified/combined CSS &amp; JS files to CDN)
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_auto_purge_minified" value="1" <?php checked( get_option( 'uwb_cdn_auto_purge_minified', 1 ), 1 ); ?> />
+                                            Auto-purge combined &amp; minified cache files from CDN when clearing cache (keep CDN cache synchronized)
                                         </label>
                                         <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
                                             <input type="checkbox" name="uwb_cdn_auto_delete" value="1" <?php checked( get_option( 'uwb_cdn_auto_delete', 1 ), 1 ); ?> />

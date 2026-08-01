@@ -116,4 +116,36 @@ class CDNManager {
 
         return false;
     }
+
+    public static function purge_cache_files_from_cdn() {
+        $s3_client = self::get_s3_client();
+        if ( ! $s3_client->is_configured() ) {
+            return false;
+        }
+
+        $content_dir = str_replace( '\\', '/', WP_CONTENT_DIR );
+
+        $dirs = array(
+            WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify',
+            WP_CONTENT_DIR . '/cache/ultimate-wp-booster/combine',
+        );
+
+        foreach ( $dirs as $dir ) {
+            if ( is_dir( $dir ) ) {
+                $files = glob( rtrim( $dir, '/' ) . '/*.*' );
+                if ( is_array( $files ) ) {
+                    foreach ( $files as $file ) {
+                        $file_norm = str_replace( '\\', '/', $file );
+                        if ( strpos( $file_norm, $content_dir ) === 0 ) {
+                            $rel = ltrim( substr( $file_norm, strlen( $content_dir ) ), '/' );
+                            $s3_key = 'wp-content/' . $rel;
+                            $s3_client->delete_object( $s3_key );
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
 }

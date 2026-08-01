@@ -17,6 +17,10 @@ class CacheManager {
             @mkdir( $cache_dir, 0755, true );
         }
 
+        if ( get_option( 'uwb_cdn_enabled', 0 ) && get_option( 'uwb_cdn_auto_purge_minified', 1 ) ) {
+            \Ultimate_WP_Booster\Engine\CDN\CDNManager::purge_cache_files_from_cdn();
+        }
+
         $minify_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
         if ( file_exists( $minify_dir ) ) {
             $this->recursive_delete( $minify_dir, true );
