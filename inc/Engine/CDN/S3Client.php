@@ -67,6 +67,11 @@ class S3Client {
         }
 
         $key = ltrim( $key, '/' );
+        $ext = strtolower( pathinfo( $key, PATHINFO_EXTENSION ) );
+        if ( empty( $content_type ) || in_array( $ext, array( 'css', 'js', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'woff', 'woff2', 'ttf', 'otf' ) ) ) {
+            $content_type = $this->get_mime_type( $key );
+        }
+
         $headers = array(
             'content-type' => $content_type,
         );
@@ -228,12 +233,10 @@ class S3Client {
     }
 
     private function get_mime_type( $file ) {
-        if ( function_exists( 'mime_content_type' ) ) {
-            $mime = @mime_content_type( $file );
-            if ( $mime ) return $mime;
-        }
         $ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
         $mimes = array(
+            'css'   => 'text/css; charset=utf-8',
+            'js'    => 'application/javascript; charset=utf-8',
             'jpg'   => 'image/jpeg',
             'jpeg'  => 'image/jpeg',
             'png'   => 'image/png',
@@ -241,8 +244,6 @@ class S3Client {
             'webp'  => 'image/webp',
             'svg'   => 'image/svg+xml',
             'ico'   => 'image/x-icon',
-            'css'   => 'text/css',
-            'js'    => 'application/javascript',
             'woff'  => 'font/woff',
             'woff2' => 'font/woff2',
             'ttf'   => 'font/ttf',
@@ -254,6 +255,16 @@ class S3Client {
             'webm'  => 'video/webm',
             'mp3'   => 'audio/mpeg',
         );
-        return isset( $mimes[ $ext ] ) ? $mimes[ $ext ] : 'application/octet-stream';
+
+        if ( isset( $mimes[ $ext ] ) ) {
+            return $mimes[ $ext ];
+        }
+
+        if ( function_exists( 'mime_content_type' ) ) {
+            $mime = @mime_content_type( $file );
+            if ( $mime ) return $mime;
+        }
+
+        return 'application/octet-stream';
     }
 }
