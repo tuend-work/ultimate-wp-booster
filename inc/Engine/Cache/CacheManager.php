@@ -335,6 +335,8 @@ class CacheManager {
             'cdn_file_types_js'           => intval( get_option( 'uwb_cdn_file_types_js', 1 ) ),
             'cdn_file_types_fonts'        => intval( get_option( 'uwb_cdn_file_types_fonts', 1 ) ),
             'cdn_file_types_media'        => intval( get_option( 'uwb_cdn_file_types_media', 0 ) ),
+            'cdn_distribute_css'          => intval( get_option( 'uwb_cdn_distribute_css', 0 ) ),
+            'cdn_distribute_js'           => intval( get_option( 'uwb_cdn_distribute_js', 0 ) ),
         );
 
         $config_content = "<?php\n" .

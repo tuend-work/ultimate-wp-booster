@@ -33,10 +33,10 @@ class CDNManager {
         if ( ! empty( $config['cdn_file_types_images'] ) ) {
             $allowed_exts = array_merge( $allowed_exts, array( 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico' ) );
         }
-        if ( ! empty( $config['cdn_file_types_css'] ) ) {
+        if ( ! empty( $config['cdn_file_types_css'] ) || ! empty( $config['cdn_distribute_css'] ) ) {
             $allowed_exts[] = 'css';
         }
-        if ( ! empty( $config['cdn_file_types_js'] ) ) {
+        if ( ! empty( $config['cdn_file_types_js'] ) || ! empty( $config['cdn_distribute_js'] ) ) {
             $allowed_exts[] = 'js';
         }
         if ( ! empty( $config['cdn_file_types_fonts'] ) ) {
@@ -143,7 +143,16 @@ class CDNManager {
     }
 
     public static function upload_asset_to_cdn( $file_path ) {
-        if ( ! get_option( 'uwb_cdn_enabled', 0 ) || ! get_option( 'uwb_cdn_auto_upload_combined', 1 ) ) {
+        $ext = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
+        $can_upload = get_option( 'uwb_cdn_auto_upload_combined', 1 );
+        if ( 'css' === $ext && get_option( 'uwb_cdn_distribute_css', 0 ) ) {
+            $can_upload = true;
+        }
+        if ( 'js' === $ext && get_option( 'uwb_cdn_distribute_js', 0 ) ) {
+            $can_upload = true;
+        }
+
+        if ( ! get_option( 'uwb_cdn_enabled', 0 ) || ! $can_upload ) {
             return false;
         }
 
