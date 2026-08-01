@@ -84,6 +84,15 @@ class CDNSubscriber implements Subscriber_Interface {
         // Optional: Delete local file after successful offload
         if ( $res && get_option( 'uwb_cdn_delete_local', 0 ) ) {
             @unlink( $file );
+            if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
+                $dir = dirname( $file );
+                foreach ( $meta['sizes'] as $info ) {
+                    if ( ! empty( $info['file'] ) ) {
+                        @unlink( $dir . '/' . $info['file'] );
+                    }
+                }
+            }
+            CDNManager::mark_local_deleted( $attachment_id, true );
         }
 
         return (bool) $res;
@@ -283,10 +292,22 @@ class CDNSubscriber implements Subscriber_Interface {
             return;
         }
         if ( CDNManager::is_attachment_offloaded( $post_id ) ) {
-            $s3_key    = get_post_meta( $post_id, '_uwb_s3_key', true );
-            $timestamp = get_post_meta( $post_id, '_uwb_s3_uploaded', true );
-            $date      = $timestamp ? date_i18n( 'd/m/Y H:i', $timestamp ) : '';
-            echo '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="' . esc_attr( $s3_key ) . '&#10;Uploaded: ' . esc_attr( $date ) . '">☁️ S3 CDN</span>';
+            $s3_key        = get_post_meta( $post_id, '_uwb_s3_key', true );
+            $timestamp     = get_post_meta( $post_id, '_uwb_s3_uploaded', true );
+            $date          = $timestamp ? date_i18n( 'd/m/Y H:i', $timestamp ) : '';
+            $local_deleted = CDNManager::is_local_deleted( $post_id );
+
+            $output = '<div style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">';
+            $output .= '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="' . esc_attr( $s3_key ) . '&#10;Uploaded: ' . esc_attr( $date ) . '">☁️ S3 CDN</span>';
+            
+            if ( $local_deleted ) {
+                $output .= '<span style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="Local file removed from server disk">🗑️ Local Removed</span>';
+            } else {
+                $output .= '<span style="background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="Local file exists on server disk">📁 Local Kept</span>';
+            }
+            $output .= '</div>';
+
+            echo $output;
         } else {
             echo '<span style="color:#94a3b8; font-size:12px;">—</span>';
         }
