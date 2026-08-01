@@ -299,6 +299,18 @@ class ImageOptimizer {
         }
 
         // Backwards compatibility meta flags
+        $mode_labels = array();
+        if ( $do_sidecar ) {
+            $mode_labels[] = 'sidecar';
+        }
+        if ( $do_overwrite ) {
+            $mode_labels[] = 'overwrite';
+        }
+        if ( $do_replace_ext ) {
+            $mode_labels[] = 'change_extension';
+        }
+        $mode = implode( ',', $mode_labels );
+
         update_post_meta( $attachment_id, '_uwb_img_optimize_status', 'optimized' );
         update_post_meta( $attachment_id, '_uwb_img_convert_status', $format );
         update_post_meta( $attachment_id, '_uwb_img_optimize_timestamp', time() );
