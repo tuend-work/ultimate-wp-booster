@@ -328,15 +328,34 @@ function uwb_advanced_cache_run() {
     // 10. Serve cached file if valid
     $served = false;
     $cache_file_404 = $cache_dir . '/' . ( $is_https ? "404-https.html" : "404.html" );
-    
+
+    // Detect preload request: the preloader must bypass cache serving so it can regenerate & overwrite stale cache
+    $is_preload_request = isset( $_GET['uwb_preload_key'] ) && $_GET['uwb_preload_key'] !== '';
+    if ( $is_preload_request && $debug ) {
+        error_log( "UWB: Preload request detected (uwb_preload_key). Bypassing cache serve to force regeneration." );
+    }
+
     // Check normal cache first, then 404 cache
     $target_cache_file = '';
     $is_serving_404 = false;
-    if ( file_exists( $cache_file ) ) {
-        $target_cache_file = $cache_file;
-    } elseif ( file_exists( $cache_file_404 ) ) {
-        $target_cache_file = $cache_file_404;
-        $is_serving_404 = true;
+    if ( ! $is_preload_request ) {
+        if ( file_exists( $cache_file ) ) {
+            $target_cache_file = $cache_file;
+        } elseif ( file_exists( $cache_file_404 ) ) {
+            $target_cache_file = $cache_file_404;
+            $is_serving_404 = true;
+        }
+    } else {
+        // Preload request: delete existing (potentially stale) cache file so shutdown can write fresh content
+        if ( file_exists( $cache_file ) ) {
+            @unlink( $cache_file );
+            if ( file_exists( $cache_file . '_gzip' ) ) {
+                @unlink( $cache_file . '_gzip' );
+            }
+            if ( $debug ) {
+                error_log( "UWB: Preload: deleted stale cache file for regeneration: {$cache_file}" );
+            }
+        }
     }
 
     if ( $target_cache_file !== '' ) {
