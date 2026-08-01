@@ -481,13 +481,43 @@ class CDNSubscriber implements Subscriber_Interface {
     }
 
     public function filter_media_query_by_status( $query ) {
-        if ( ! is_admin() || ! $query->is_main_query() ) {
+        if ( ! is_admin() ) {
             return;
         }
 
-        $filter = isset( $_GET['uwb_media_status_filter'] ) ? sanitize_text_field( $_GET['uwb_media_status_filter'] ) : '';
+        $filter = '';
+        if ( isset( $_GET['uwb_media_status_filter'] ) ) {
+            $filter = sanitize_text_field( $_GET['uwb_media_status_filter'] );
+        } elseif ( isset( $_REQUEST['query']['uwb_media_status_filter'] ) ) {
+            $filter = sanitize_text_field( $_REQUEST['query']['uwb_media_status_filter'] );
+        } elseif ( isset( $_REQUEST['uwb_media_status_filter'] ) ) {
+            $filter = sanitize_text_field( $_REQUEST['uwb_media_status_filter'] );
+        }
+
         if ( empty( $filter ) ) {
             return;
+        }
+
+        // Auto-heal meta for offloaded attachments missing _uwb_s3_local_status flag
+        if ( 'local_removed' === $filter || 's3_synced' === $filter ) {
+            global $wpdb;
+            $missing_ids = $wpdb->get_col( "
+                SELECT p.ID FROM {$wpdb->posts} p
+                INNER JOIN {$wpdb->postmeta} pm ON (p.ID = pm.post_id AND pm.meta_key = '_uwb_s3_uploaded')
+                LEFT JOIN {$wpdb->postmeta} pm2 ON (p.ID = pm2.post_id AND pm2.meta_key = '_uwb_s3_local_status')
+                WHERE p.post_type = 'attachment' AND pm2.meta_id IS NULL
+                LIMIT 100
+            " );
+            if ( ! empty( $missing_ids ) ) {
+                foreach ( $missing_ids as $att_id ) {
+                    $file = get_attached_file( $att_id );
+                    if ( $file && ! file_exists( $file ) ) {
+                        CDNManager::mark_local_deleted( $att_id, true );
+                    } else {
+                        CDNManager::mark_local_deleted( $att_id, false );
+                    }
+                }
+            }
         }
 
         $meta_query = $query->get( 'meta_query' );
@@ -497,9 +527,22 @@ class CDNSubscriber implements Subscriber_Interface {
 
         if ( 'optimized' === $filter ) {
             $meta_query[] = array(
-                'key'     => '_uwb_img_compress_status',
-                'value'   => 'compressed',
-                'compare' => '=',
+                'relation' => 'OR',
+                array(
+                    'key'     => '_uwb_img_compress_status',
+                    'value'   => 'compressed',
+                    'compare' => '=',
+                ),
+                array(
+                    'key'     => '_uwb_img_convert_webp_status',
+                    'value'   => 'converted',
+                    'compare' => '=',
+                ),
+                array(
+                    'key'     => '_uwb_img_convert_avif_status',
+                    'value'   => 'converted',
+                    'compare' => '=',
+                ),
             );
         } elseif ( 'unoptimized' === $filter ) {
             $meta_query[] = array(
@@ -508,14 +551,30 @@ class CDNSubscriber implements Subscriber_Interface {
             );
         } elseif ( 's3_synced' === $filter ) {
             $meta_query[] = array(
-                'key'     => '_uwb_s3_uploaded',
-                'compare' => 'EXISTS',
+                'relation' => 'OR',
+                array(
+                    'key'     => '_uwb_s3_cloud_status',
+                    'value'   => 'synced',
+                    'compare' => '=',
+                ),
+                array(
+                    'key'     => '_uwb_s3_uploaded',
+                    'compare' => 'EXISTS',
+                ),
             );
         } elseif ( 'local_removed' === $filter ) {
             $meta_query[] = array(
-                'key'     => '_uwb_s3_local_status',
-                'value'   => 'removed',
-                'compare' => '=',
+                'relation' => 'OR',
+                array(
+                    'key'     => '_uwb_s3_local_status',
+                    'value'   => array( 'removed', 'deleted' ),
+                    'compare' => 'IN',
+                ),
+                array(
+                    'key'     => '_uwb_s3_local_deleted',
+                    'value'   => array( '1', 1, 'true', true ),
+                    'compare' => 'IN',
+                ),
             );
         }
 
