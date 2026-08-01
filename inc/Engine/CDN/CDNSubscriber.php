@@ -9,10 +9,12 @@ class CDNSubscriber implements Subscriber_Interface {
 
     public static function get_subscribed_events() {
         return array(
-            'add_attachment'        => 'on_add_attachment',
-            'edit_attachment'       => 'on_edit_attachment',
-            'delete_attachment'     => 'on_delete_attachment',
-            'wp_get_attachment_url' => array( 'filter_attachment_url', 10, 2 ),
+            'add_attachment'             => 'on_add_attachment',
+            'edit_attachment'            => 'on_edit_attachment',
+            'delete_attachment'          => 'on_delete_attachment',
+            'wp_get_attachment_url'      => array( 'filter_attachment_url', 10, 2 ),
+            'manage_media_columns'       => 'add_media_columns',
+            'manage_media_custom_column' => array( 'render_media_column', 10, 2 ),
         );
     }
 
@@ -43,7 +45,11 @@ class CDNSubscriber implements Subscriber_Interface {
             $s3_key = 'wp-content/uploads/' . $relative_path;
 
             $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
-            $s3_client->put_object( $file, $s3_key, '', $cache_control );
+            $res = $s3_client->put_object( $file, $s3_key, '', $cache_control );
+
+            if ( $res ) {
+                CDNManager::mark_attachment_offloaded( $attachment_id, $s3_key );
+            }
 
             // Also upload metadata thumbnails
             $meta = wp_get_attachment_metadata( $attachment_id );
@@ -89,6 +95,8 @@ class CDNSubscriber implements Subscriber_Interface {
         if ( ! $s3_client->is_configured() ) {
             return;
         }
+
+        CDNManager::remove_attachment_offload_flag( $attachment_id );
 
         $file = get_attached_file( $attachment_id );
         if ( ! $file ) {
@@ -145,5 +153,20 @@ class CDNSubscriber implements Subscriber_Interface {
         }
 
         return $url;
+    }
+
+    public function add_media_columns( $columns ) {
+        $columns['uwb_cdn'] = 'CDN Offload';
+        return $columns;
+    }
+
+    public function render_media_column( $column_name, $post_id ) {
+        if ( $column_name === 'uwb_cdn' ) {
+            if ( CDNManager::is_attachment_offloaded( $post_id ) ) {
+                echo '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">☁️ S3 CDN</span>';
+            } else {
+                echo '<span style="color:#94a3b8; font-size:12px;">—</span>';
+            }
+        }
     }
 }

@@ -158,4 +158,20 @@ class CDNManager {
 
         return true;
     }
+
+    public static function is_attachment_offloaded( $attachment_id ) {
+        return (bool) get_post_meta( $attachment_id, '_uwb_s3_uploaded', true );
+    }
+
+    public static function mark_attachment_offloaded( $attachment_id, $s3_key = '' ) {
+        update_post_meta( $attachment_id, '_uwb_s3_uploaded', time() );
+        if ( ! empty( $s3_key ) ) {
+            update_post_meta( $attachment_id, '_uwb_s3_key', sanitize_text_field( $s3_key ) );
+        }
+    }
+
+    public static function remove_attachment_offload_flag( $attachment_id ) {
+        delete_post_meta( $attachment_id, '_uwb_s3_uploaded' );
+        delete_post_meta( $attachment_id, '_uwb_s3_key' );
+    }
 }

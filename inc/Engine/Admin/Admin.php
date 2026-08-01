@@ -5010,7 +5010,10 @@ js-(before|after)
                 if ( strpos( $file_norm, $base_dir ) === 0 ) {
                     $rel = ltrim( substr( $file_norm, strlen( $base_dir ) ), '/' );
                     $s3_key = 'wp-content/uploads/' . $rel;
-                    $s3_client->put_object( $file, $s3_key, '', $cache_control );
+                    $res = $s3_client->put_object( $file, $s3_key, '', $cache_control );
+                    if ( $res ) {
+                        \Ultimate_WP_Booster\Engine\CDN\CDNManager::mark_attachment_offloaded( $id, $s3_key );
+                    }
                     $count++;
 
                     $meta = wp_get_attachment_metadata( $id );
