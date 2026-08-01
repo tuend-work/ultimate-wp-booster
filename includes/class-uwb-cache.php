@@ -158,6 +158,22 @@ class Uwb_Cache {
         $exclusions_raw = get_option( 'uwb_excluded_urls', '' );
         $exclusions = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclusions_raw ) ) ) );
 
+        // Dynamically collect default excluded URLs from compatibility layers
+        $defined_funcs = get_defined_functions();
+        if ( isset( $defined_funcs['user'] ) ) {
+            foreach ( $defined_funcs['user'] as $func ) {
+                if ( strpos( $func, 'uwb_' ) === 0 && substr( $func, -18 ) === '_get_excluded_urls' ) {
+                    if ( function_exists( $func ) ) {
+                        $res = call_user_func( $func );
+                        if ( is_array( $res ) ) {
+                            $exclusions = array_merge( $exclusions, $res );
+                        }
+                    }
+                }
+            }
+        }
+        $exclusions = array_values( array_unique( array_filter( $exclusions ) ) );
+
         $timezone = get_option( 'timezone_string' );
         if ( empty( $timezone ) ) {
             $timezone = get_option( 'gmt_offset', 0 );
@@ -184,6 +200,22 @@ class Uwb_Cache {
         $cache_qs_raw = get_option( 'uwb_cache_query_strings', '' );
         $cache_qs = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $cache_qs_raw ) ) ) );
 
+        // Dynamically collect query bypass parameters from compatibility layers
+        $bypass_queries = array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'change_payment_method', 'logout', 'wc-api', 'magic_login' );
+        if ( isset( $defined_funcs['user'] ) ) {
+            foreach ( $defined_funcs['user'] as $func ) {
+                if ( strpos( $func, 'uwb_' ) === 0 && substr( $func, -24 ) === '_get_bypass_query_params' ) {
+                    if ( function_exists( $func ) ) {
+                        $res = call_user_func( $func );
+                        if ( is_array( $res ) ) {
+                            $bypass_queries = array_merge( $bypass_queries, $res );
+                        }
+                    }
+                }
+            }
+        }
+        $bypass_queries = array_values( array_unique( array_filter( $bypass_queries ) ) );
+
         $xml_lifespan_minutes = intval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) );
         $xml_lifespan_seconds = $xml_lifespan_minutes * 60;
 
@@ -204,6 +236,7 @@ class Uwb_Cache {
             'exclude_user_agents'      => array_values( $exclude_uas ),
             'always_purge_urls'        => array_values( $always_purges ),
             'cache_query_strings'      => array_values( $cache_qs ),
+            'bypass_query_params'      => array_values( $bypass_queries ),
             'cache_xml_sitemaps'       => intval( get_option( 'uwb_cache_xml_sitemaps', 0 ) ),
             'cache_xml_sitemaps_lifespan' => $xml_lifespan_seconds,
             'cache_php'                => intval( get_option( 'uwb_cache_php', 0 ) ),

@@ -85,12 +85,17 @@ function uwb_advanced_cache_run() {
     if ( ! empty( $_SERVER['QUERY_STRING'] ) ) {
         parse_str( $_SERVER['QUERY_STRING'], $query_params );
         
-        // WooCommerce, YITH WCAN, magic_login, orderby query bypass (never cache WooCommerce, YITH WCAN, magic_login, or orderby queries)
-        if ( isset( $query_params['wc-ajax'] ) || isset( $query_params['add-to-cart'] ) || isset( $query_params['pay_for_order'] ) || isset( $query_params['magic_login'] ) || isset( $query_params['orderby'] ) || isset( $query_params['order'] ) || isset( $query_params['yith_wcan'] ) || isset( $query_params['yith-wcan-ajax'] ) || isset( $query_params['preset'] ) ) {
+        // Dynamically check query bypass parameters from config (falls back to defaults if not set)
+        $bypass_queries = isset( $config['bypass_query_params'] ) 
+            ? $config['bypass_query_params'] 
+            : array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset' );
+
+        $intersect = array_intersect( array_keys( $query_params ), $bypass_queries );
+        if ( ! empty( $intersect ) ) {
+            $matched_qs = implode( ', ', $intersect );
             if ( $debug ) {
-                error_log( "UWB: Run bypassed: WooCommerce, YITH WCAN, magic_login, orderby or preloader query parameter detected." );
+                error_log( "UWB: Run bypassed: Query bypass parameters detected: {$matched_qs}." );
             }
-            $matched_qs = implode( ', ', array_intersect( array_keys( $query_params ), array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset' ) ) );
             $GLOBALS['uwb_bypass_reason'] = 'Query string bypass: ' . $matched_qs;
             return;
         }
