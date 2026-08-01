@@ -619,6 +619,12 @@ class Uwb_Optimizer {
                 return $matches[0];
             }
             
+            // Skip inline scripts that are empty or too large (e.g. > 10KB) to prevent CPU spikes / Memory limits
+            $js_len = strlen( trim( $js ) );
+            if ( $js_len === 0 || $js_len > 10000 ) {
+                return $matches[0];
+            }
+            
             $minified = self::minify_js_safe( $js );
             return '<script' . $attrs . '>' . $minified . '</script>';
         }, $html);
@@ -1571,9 +1577,9 @@ class Uwb_Optimizer {
                 if ( $minified !== false && $minified !== '' ) {
                     return $minified;
                 }
-            } catch ( \Exception $e ) {
+            } catch ( \Throwable $e ) {
                 if ( ! empty( $GLOBALS['uwb_debug_log'] ) ) {
-                    $GLOBALS['uwb_debug_log'][] = "Minify JS Exception: " . $e->getMessage();
+                    $GLOBALS['uwb_debug_log'][] = "Minify JS Error/Exception: " . $e->getMessage();
                 }
             }
         }
