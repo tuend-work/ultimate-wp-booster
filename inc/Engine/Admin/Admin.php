@@ -121,6 +121,8 @@ class Admin {
         add_action( 'wp_ajax_uwb_flush_redis_cache', array( $this, 'ajax_flush_redis_cache' ) );
         add_action( 'wp_ajax_uwb_clear_preload_log', array( $this, 'ajax_clear_preload_log' ) );
         add_action( 'wp_ajax_uwb_batch_optimize_images', array( $this, 'ajax_batch_optimize_images' ) );
+        add_action( 'wp_ajax_uwb_optimize_single_attachment', array( $this, 'ajax_optimize_single_attachment' ) );
+        add_action( 'wp_ajax_uwb_restore_single_attachment', array( $this, 'ajax_restore_single_attachment' ) );
         add_action( 'admin_init', array( $this, 'handle_import_export' ) );
     }
 
@@ -5224,6 +5226,53 @@ js-(before|after)
             'is_done'   => $is_done,
             'message'   => $is_done ? 'All Media Library images successfully optimized!' : "Optimized batch {$paged}/{$total_pages} ({$count} images)...",
         ) );
+    }
+
+    public function ajax_optimize_single_attachment() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        $attachment_id = isset( $_POST['attachment_id'] ) ? intval( $_POST['attachment_id'] ) : 0;
+        if ( ! $attachment_id ) {
+            wp_send_json_error( array( 'message' => 'Invalid attachment ID.' ) );
+        }
+
+        $res = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $attachment_id, array(), true );
+
+        if ( get_option( 'uwb_cdn_distribute_media', 0 ) ) {
+            $subscriber = new \Ultimate_WP_Booster\Engine\CDN\CDNSubscriber();
+            $reflector = new \ReflectionMethod( $subscriber, 'upload_attachment_to_s3' );
+            $reflector->setAccessible( true );
+            $reflector->invoke( $subscriber, $attachment_id, true );
+        }
+
+        if ( $res ) {
+            wp_send_json_success( array( 'message' => 'Attachment optimized successfully.' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'Optimization failed or file type not supported.' ) );
+        }
+    }
+
+    public function ajax_restore_single_attachment() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        $attachment_id = isset( $_POST['attachment_id'] ) ? intval( $_POST['attachment_id'] ) : 0;
+        if ( ! $attachment_id ) {
+            wp_send_json_error( array( 'message' => 'Invalid attachment ID.' ) );
+        }
+
+        $res = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::restore_attachment( $attachment_id );
+
+        if ( $res ) {
+            wp_send_json_success( array( 'message' => 'Attachment restored from .bak successfully.' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'No .bak backup file found to restore.' ) );
+        }
     }
 
     private function render_cdn_distribution_card( $title, $toggle_key, $toggle_label, $toggle_desc, $events = array() ) {

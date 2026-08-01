@@ -173,4 +173,70 @@ class ImageOptimizer {
 
         return true;
     }
+
+    /**
+     * Restore original image from .bak backup file if available.
+     *
+     * @param int $attachment_id Attachment Post ID.
+     * @return bool True on success, false on failure.
+     */
+    public static function restore_attachment( $attachment_id ) {
+        $file = get_attached_file( $attachment_id );
+        if ( ! $file ) {
+            return false;
+        }
+
+        $bak_file = $file . '.bak';
+        if ( ! file_exists( $bak_file ) ) {
+            return false;
+        }
+
+        // Restore main image file
+        @copy( $bak_file, $file );
+
+        // Clear optimization status flags
+        delete_post_meta( $attachment_id, '_uwb_img_compress_status' );
+        delete_post_meta( $attachment_id, '_uwb_img_convert_webp_status' );
+        delete_post_meta( $attachment_id, '_uwb_img_convert_avif_status' );
+        delete_post_meta( $attachment_id, '_uwb_img_optimize_status' );
+        delete_post_meta( $attachment_id, '_uwb_img_convert_status' );
+        delete_post_meta( $attachment_id, '_uwb_img_optimize_timestamp' );
+        delete_post_meta( $attachment_id, '_uwb_img_opt_quality' );
+
+        // Restore intermediate thumbnail sizes if .bak exists
+        $meta = wp_get_attachment_metadata( $attachment_id );
+        if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
+            $dir = dirname( $file );
+            foreach ( $meta['sizes'] as $size_info ) {
+                if ( ! empty( $size_info['file'] ) ) {
+                    $thumb_file = $dir . '/' . $size_info['file'];
+                    $thumb_bak  = $thumb_file . '.bak';
+                    if ( file_exists( $thumb_bak ) ) {
+                        @copy( $thumb_bak, $thumb_file );
+                    }
+                }
+            }
+        }
+
+        // If CDN offloading is active, re-upload restored original to S3
+        if ( get_option( 'uwb_cdn_distribute_media', 0 ) ) {
+            $s3_client = CDNManager::get_s3_client();
+            if ( $s3_client->is_configured() ) {
+                $uploads     = wp_upload_dir();
+                $base_dir    = rtrim( str_replace( '\\', '/', $uploads['basedir'] ), '/' );
+                $file_norm   = str_replace( '\\', '/', $file );
+                if ( strpos( $file_norm, $base_dir ) === 0 ) {
+                    $rel = ltrim( substr( $file_norm, strlen( $base_dir ) ), '/' );
+                    $s3_key = 'wp-content/uploads/' . $rel;
+                    $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
+                    $res = $s3_client->put_object( $file, $s3_key, '', $cache_control );
+                    if ( $res ) {
+                        CDNManager::mark_attachment_offloaded( $attachment_id, $s3_key );
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
 }

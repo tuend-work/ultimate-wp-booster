@@ -16,6 +16,8 @@ class CDNSubscriber implements Subscriber_Interface {
             'wp_get_attachment_url'           => array( 'filter_attachment_url', 10, 2 ),
             'wp_calculate_image_srcset'       => array( 'filter_attachment_srcset', 10, 5 ),
             'wp_get_attachment_image_src'     => array( 'filter_attachment_image_src', 10, 4 ),
+            'attachment_fields_to_edit'       => array( 'filter_attachment_fields_to_edit', 10, 2 ),
+            'admin_footer'                    => 'print_attachment_modal_script',
             'manage_media_columns'            => 'add_media_columns',
             'manage_media_custom_column'      => array( 'render_media_column', 10, 2 ),
         );
@@ -368,5 +370,140 @@ class CDNSubscriber implements Subscriber_Interface {
         } else {
             echo '<span style="color:#94a3b8; font-size:12px;">—</span>';
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Attachment Details Modal & Edit Screen: Status Labels + Action Buttons
+    // -------------------------------------------------------------------------
+    public function filter_attachment_fields_to_edit( $form_fields, $post ) {
+        if ( ! is_object( $post ) || ! wp_attachment_is_image( $post->ID ) ) {
+            return $form_fields;
+        }
+
+        $post_id       = $post->ID;
+        $comp_status   = get_post_meta( $post_id, '_uwb_img_compress_status', true );
+        $webp_status   = get_post_meta( $post_id, '_uwb_img_convert_webp_status', true );
+        $avif_status   = get_post_meta( $post_id, '_uwb_img_convert_avif_status', true );
+        $local_deleted = CDNManager::is_local_deleted( $post_id );
+        $offloaded     = CDNManager::is_attachment_offloaded( $post_id );
+
+        $file    = get_attached_file( $post_id );
+        $has_bak = $file && file_exists( $file . '.bak' );
+
+        $html = '<div class="uwb-attachment-modal-status-box" data-id="' . esc_attr( $post_id ) . '" style="padding:10px 12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:8px;">';
+        $html .= '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">';
+
+        if ( 'converted' === $webp_status ) {
+            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ WEBP</span>';
+        } elseif ( 'converted' === $avif_status ) {
+            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ AVIF</span>';
+        } elseif ( 'compressed' === $comp_status ) {
+            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ COMPRESSED</span>';
+        } else {
+            $html .= '<span style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">Unoptimized</span>';
+        }
+
+        if ( $offloaded ) {
+            $html .= '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">☁️ S3 CDN</span>';
+        }
+
+        if ( $local_deleted ) {
+            $html .= '<span style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">🗑️ Local Removed</span>';
+        } else {
+            $html .= '<span style="background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">📁 Local Kept</span>';
+        }
+
+        $html .= '</div>';
+
+        // Action Buttons
+        $html .= '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">';
+        $html .= '<button type="button" class="button button-secondary button-small btn-uwb-opt-single" data-id="' . esc_attr( $post_id ) . '" style="font-weight:600; border-color:#0284c7; color:#0284c7;">⚡ Optimize Now</button>';
+
+        if ( $has_bak ) {
+            $html .= '<button type="button" class="button button-secondary button-small btn-uwb-restore-single" data-id="' . esc_attr( $post_id ) . '" style="font-weight:600; border-color:#ea580c; color:#ea580c;">↺ Restore Now (.bak)</button>';
+        }
+
+        $html .= '</div>';
+        $html .= '<div class="uwb-modal-opt-msg" style="font-size:11px; margin-top:6px; font-weight:600; color:#475569; display:none;"></div>';
+        $html .= '</div>';
+
+        $form_fields['uwb_booster_status'] = array(
+            'label' => 'WP Booster',
+            'input' => 'html',
+            'html'  => $html,
+        );
+
+        return $form_fields;
+    }
+
+    public function print_attachment_modal_script() {
+        if ( ! is_admin() ) {
+            return;
+        }
+        ?>
+        <script id="uwb-attachment-modal-js">
+        jQuery(document).ready(function($) {
+            $(document).on('click', '.btn-uwb-opt-single', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var id = $btn.data('id');
+                var $box = $btn.closest('.uwb-attachment-modal-status-box');
+                var $msg = $box.find('.uwb-modal-opt-msg');
+
+                $btn.prop('disabled', true).text('Optimizing...');
+                $msg.show().css('color', '#0284c7').text('Processing optimization...');
+
+                $.post(ajaxurl, {
+                    action: 'uwb_optimize_single_attachment',
+                    attachment_id: id,
+                    nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
+                }, function(res) {
+                    if (res.success) {
+                        $msg.css('color', '#16a34a').text('Successfully optimized! Reloading details...');
+                        setTimeout(function() { location.reload(); }, 600);
+                    } else {
+                        $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Failed'));
+                        $btn.prop('disabled', false).text('⚡ Optimize Now');
+                    }
+                }).fail(function() {
+                    $msg.css('color', '#dc2626').text('AJAX error occurred.');
+                    $btn.prop('disabled', false).text('⚡ Optimize Now');
+                });
+            });
+
+            $(document).on('click', '.btn-uwb-restore-single', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var id = $btn.data('id');
+                var $box = $btn.closest('.uwb-attachment-modal-status-box');
+                var $msg = $box.find('.uwb-modal-opt-msg');
+
+                if (!confirm('Are you sure you want to restore original image from .bak backup?')) {
+                    return;
+                }
+
+                $btn.prop('disabled', true).text('Restoring...');
+                $msg.show().css('color', '#ea580c').text('Restoring original file...');
+
+                $.post(ajaxurl, {
+                    action: 'uwb_restore_single_attachment',
+                    attachment_id: id,
+                    nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
+                }, function(res) {
+                    if (res.success) {
+                        $msg.css('color', '#16a34a').text('Successfully restored from .bak! Reloading details...');
+                        setTimeout(function() { location.reload(); }, 600);
+                    } else {
+                        $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Restore failed'));
+                        $btn.prop('disabled', false).text('↺ Restore Now (.bak)');
+                    }
+                }).fail(function() {
+                    $msg.css('color', '#dc2626').text('AJAX error occurred.');
+                    $btn.prop('disabled', false).text('↺ Restore Now (.bak)');
+                });
+            });
+        });
+        </script>
+        <?php
     }
 }
