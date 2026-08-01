@@ -22,11 +22,15 @@ function uwb_advanced_cache_run() {
         error_log( "UWB: Advanced cache run initialized. URI: " . (isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '') . " Method: " . (isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '') );
     }
 
+    // Initialize bypass reason tracker (used by wp_head hook to inject debug comment into HTML)
+    $GLOBALS['uwb_bypass_reason'] = '';
+
     // 1. Only cache GET requests
     if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || $_SERVER['REQUEST_METHOD'] !== 'GET' ) {
         if ( $debug ) {
             error_log( "UWB: Run bypassed: Request method is not GET." );
         }
+        $GLOBALS['uwb_bypass_reason'] = 'Not a GET request (' . ( isset( $_SERVER['REQUEST_METHOD'] ) ? $_SERVER['REQUEST_METHOD'] : 'unknown' ) . ')';
         return;
     }
 
@@ -35,6 +39,7 @@ function uwb_advanced_cache_run() {
         if ( $debug ) {
             error_log( "UWB: Run bypassed: php_sapi_name() is cli." );
         }
+        $GLOBALS['uwb_bypass_reason'] = 'WP-CLI / command line request';
         return;
     }
 
@@ -59,6 +64,7 @@ function uwb_advanced_cache_run() {
         if ( $debug ) {
             error_log( "UWB: Run bypassed: Page caching is disabled in settings." );
         }
+        $GLOBALS['uwb_bypass_reason'] = 'Page caching disabled in plugin settings';
         return;
     }
 
@@ -74,6 +80,8 @@ function uwb_advanced_cache_run() {
             if ( $debug ) {
                 error_log( "UWB: Run bypassed: WooCommerce, YITH WCAN, magic_login, orderby or preloader query parameter detected." );
             }
+            $matched_qs = implode( ', ', array_intersect( array_keys( $query_params ), array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset' ) ) );
+            $GLOBALS['uwb_bypass_reason'] = 'Query string bypass: ' . $matched_qs;
             return;
         }
 
@@ -83,6 +91,7 @@ function uwb_advanced_cache_run() {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: YITH WCAN filter query parameter detected '{$q_key}'." );
                 }
+                $GLOBALS['uwb_bypass_reason'] = 'YITH WCAN filter parameter: ' . $q_key;
                 return;
             }
         }
@@ -145,6 +154,7 @@ function uwb_advanced_cache_run() {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Core WordPress routing parameter detected '{$param}'." );
                 }
+                $GLOBALS['uwb_bypass_reason'] = 'Core WP routing query param: ?' . $param . '=' . $val;
                 return; // Bypass cache and let PHP generate the correct inner page
             }
             
@@ -155,6 +165,7 @@ function uwb_advanced_cache_run() {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Query string contains non-allowed parameter '{$param}'." );
                 }
+                $GLOBALS['uwb_bypass_reason'] = 'Unknown query parameter (Serve Cache for Strange Query Strings is OFF): ?' . $param . '=' . $val;
                 return;
             }
         }
@@ -171,6 +182,7 @@ function uwb_advanced_cache_run() {
                     if ( $debug ) {
                         error_log( "UWB: Run bypassed: Excluded cookie matched: {$key}." );
                     }
+                    $GLOBALS['uwb_bypass_reason'] = 'Excluded cookie matched: ' . $key;
                     return;
                 }
             }
@@ -187,6 +199,7 @@ function uwb_advanced_cache_run() {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Excluded User Agent matched: {$ua_pattern}." );
                 }
+                $GLOBALS['uwb_bypass_reason'] = 'Excluded User Agent matched: ' . $ua_pattern;
                 return;
             }
         }
@@ -204,6 +217,7 @@ function uwb_advanced_cache_run() {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Auth/session cookie matched: {$key}." );
                 }
+                $GLOBALS['uwb_bypass_reason'] = 'Auth/session cookie: ' . $key;
                 return;
             }
 
@@ -212,6 +226,7 @@ function uwb_advanced_cache_run() {
                     if ( $debug ) {
                         error_log( "UWB: Run bypassed: User is logged in but cache_logged_in is false." );
                     }
+                    $GLOBALS['uwb_bypass_reason'] = 'Logged-in user (cache for logged-in users is disabled)';
                     return;
                 }
                 $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
@@ -224,6 +239,7 @@ function uwb_advanced_cache_run() {
         if ( $debug ) {
             error_log( "UWB: Run bypassed: Host header is empty." );
         }
+        $GLOBALS['uwb_bypass_reason'] = 'HTTP_HOST header is empty';
         return;
     }
     $host = explode( ':', $host )[0];
@@ -241,6 +257,7 @@ function uwb_advanced_cache_run() {
         if ( $debug ) {
             error_log( "UWB: Run bypassed: WooCommerce cart/checkout/my-account page detected." );
         }
+        $GLOBALS['uwb_bypass_reason'] = 'WooCommerce protected page (cart/checkout/my-account): ' . $uri_path;
         return;
     }
 
@@ -250,6 +267,7 @@ function uwb_advanced_cache_run() {
         if ( $debug ) {
             error_log( "UWB: Run bypassed: Sitemap caching disabled for XML: {$normalized_uri}." );
         }
+        $GLOBALS['uwb_bypass_reason'] = 'XML sitemap caching is disabled: ' . $normalized_uri;
         return;
     }
 
@@ -259,6 +277,7 @@ function uwb_advanced_cache_run() {
         if ( $debug ) {
             error_log( "UWB: Run bypassed: PHP caching disabled for PHP: {$normalized_uri}." );
         }
+        $GLOBALS['uwb_bypass_reason'] = 'PHP file caching is disabled: ' . $normalized_uri;
         return;
     }
 
@@ -277,6 +296,7 @@ function uwb_advanced_cache_run() {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Excluded URL pattern matched: {$pattern}." );
                 }
+                $GLOBALS['uwb_bypass_reason'] = 'URL in exclusion list (pattern: ' . $pattern . ')';
                 return;
             }
         }
@@ -487,15 +507,18 @@ function uwb_advanced_cache_shutdown() {
 
     // Determine if we should cache
     $should_cache = true;
+    $shutdown_bypass_reason = ''; // Track reason for 'Dynamic Page' comment
     $response_code = http_response_code();
     if ( $response_code !== 200 && ! ( $cache_404 && $response_code === 404 ) ) {
         $should_cache = false;
+        $shutdown_bypass_reason = 'HTTP response code: ' . $response_code . ( $cache_404 ? '' : ' (cache_404 disabled)' );
         if ( $debug ) {
             error_log( "UWB: Caching bypassed: Response code is {$response_code} (cache_404 is " . ($cache_404 ? 'on' : 'off') . ")." );
         }
     }
     if ( strlen( $html ) < 200 ) {
         $should_cache = false;
+        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'HTML too short (' . strlen( $html ) . ' chars < 200)';
         if ( $debug ) {
             error_log( "UWB: Caching bypassed: HTML length (" . strlen( $html ) . ") is less than 200 characters." );
         }
@@ -504,6 +527,16 @@ function uwb_advanced_cache_shutdown() {
     $is_special_page = is_admin() || is_search() || is_feed() || is_trackback() || is_robots();
     if ( $is_special_page || ( is_404() && ! $cache_404 ) ) {
         $should_cache = false;
+        if ( empty( $shutdown_bypass_reason ) ) {
+            $special = array();
+            if ( is_admin() ) $special[] = 'is_admin';
+            if ( is_search() ) $special[] = 'is_search';
+            if ( is_feed() ) $special[] = 'is_feed';
+            if ( is_trackback() ) $special[] = 'is_trackback';
+            if ( is_robots() ) $special[] = 'is_robots';
+            if ( is_404() ) $special[] = 'is_404';
+            $shutdown_bypass_reason = 'Special page: ' . implode( ', ', $special );
+        }
         if ( $debug ) {
             error_log( "UWB: Caching bypassed: Special page matched: is_admin=" . (is_admin()?'yes':'no') . ", is_search=" . (is_search()?'yes':'no') . ", is_feed=" . (is_feed()?'yes':'no') . ", is_trackback=" . (is_trackback()?'yes':'no') . ", is_robots=" . (is_robots()?'yes':'no') . ", is_404=" . (is_404()?'yes':'no') );
         }
@@ -535,12 +568,14 @@ function uwb_advanced_cache_shutdown() {
 
     if ( ! $cache_logged_in && $logged_in_segment !== '' ) {
         $should_cache = false;
+        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (cache for logged-in disabled)';
         if ( $debug ) {
             error_log( "UWB: Caching bypassed: User is logged in but cache_logged_in is disabled." );
         }
     }
     if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
         $should_cache = false;
+        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (is_user_logged_in() = true)';
         if ( $debug ) {
             error_log( "UWB: Caching bypassed: is_user_logged_in() is true but cache_logged_in is disabled." );
         }
@@ -557,6 +592,7 @@ function uwb_advanced_cache_shutdown() {
 
     if ( ! $cache_file || ! $cache_dir ) {
         $should_cache = false;
+        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Cache file/dir path is not set (advanced-cache.php may not have run correctly)';
         if ( $debug ) {
             error_log( "UWB: Caching bypassed: cache_file or cache_dir is not set." );
         }
@@ -682,7 +718,11 @@ function uwb_advanced_cache_shutdown() {
             }
             $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} -->\n";
         } else {
-            $comment_to_append = "<!-- Dynamic Page{$oc_comment}{$box_comment} -->\n";
+            // Collect bypass reason from early bypass or shutdown bypass
+            $early_reason    = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
+            $combined_reason = ! empty( $shutdown_bypass_reason ) ? $shutdown_bypass_reason : $early_reason;
+            $bypass_str      = ! empty( $combined_reason ) ? " | Bypass: {$combined_reason}" : '';
+            $comment_to_append = "<!-- Dynamic Page{$bypass_str}{$oc_comment}{$box_comment} -->\n";
         }
 
         $html = $comment_to_append . $html;

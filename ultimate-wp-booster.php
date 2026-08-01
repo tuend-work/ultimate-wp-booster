@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.16.7
+ * Version:     1.16.8
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.16.7' );
+define( 'UWB_VERSION', '1.16.8' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -43,6 +43,18 @@ function uwb_check_upgrade() {
         }
         update_option( 'uwb_version', UWB_VERSION );
     }
+}
+
+// 1.9. Debug: Inject cache bypass reason as HTML comment into <head> (WP_DEBUG only)
+// For early bypasses (cookie, query string, URL) – wp_head fires normally since WordPress still loads.
+// For shutdown-time bypasses – reason is embedded in the <!-- Dynamic Page | Bypass: ... --> comment.
+add_action( 'wp_head', 'uwb_debug_inject_bypass_reason', 1 );
+function uwb_debug_inject_bypass_reason() {
+    if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) return;
+    $reason = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
+    if ( empty( $reason ) ) return;
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+    echo "\n<!-- 🚫 UWB Cache Bypass Reason: " . esc_html( $reason ) . " -->\n";
 }
 
 // 2. Register activation & deactivation hooks
