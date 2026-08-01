@@ -7,6 +7,25 @@
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 /**
+ * Ultimate WP Booster Self Query Bypass Parameters
+ * Returns array of query parameters that should force cache bypass.
+ */
+function uwb_self_get_bypass_query_params() {
+    return array(
+        'uwb_preload_key',
+    );
+}
+
+/**
+ * Ultimate WP Booster Self Default Excluded URLs
+ * Returns standard URL paths to exclude from static caching.
+ */
+function uwb_self_get_excluded_urls() {
+    return array();
+}
+
+
+/**
  * Debug: Inject cache bypass reason as HTML comment into <head> (WP_DEBUG only)
  * For early bypasses (cookie, query string, URL) – wp_head fires normally since WordPress still loads.
  * For shutdown-time bypasses – reason is embedded in the <!-- Dynamic Page | Bypass: ... --> comment.
