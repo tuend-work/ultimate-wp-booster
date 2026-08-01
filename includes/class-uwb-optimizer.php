@@ -260,9 +260,7 @@ class Uwb_Optimizer {
      * @return string Modified HTML.
      */
     public static function defer_js( $html, $excludes_str = '' ) {
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'wp-i18n', 'wp-hooks', 'wp-polyfill' );
-        $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
-        $excludes = array_merge( $default_excludes, $user_excludes );
+        $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
 
         return preg_replace_callback(
             '#<script\b([^>]*?)src=([\'"])(.*?)\2([^>]*?)>\s*</script>#is',
@@ -389,19 +387,7 @@ class Uwb_Optimizer {
      * @return string Modified HTML.
      */
     public static function delay_js_execution( $html, $excludes_str = '' ) {
-        // Default exclusions — always exclude these critical scripts
-        $default_excludes = array(
-            'jquery.js',
-            'jquery.min.js',
-            'jquery-migrate',
-            'wp-i18n',
-            'wp-hooks',
-            'wp-polyfill',
-            'noscript',
-            'uwb-lazy',
-        );
-        $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
-        $excludes = array_merge( $default_excludes, $user_excludes );
+        $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
 
         $processed = preg_replace_callback(
             '#<script\b([^>]*?)>(.*?)</script>#ims',
@@ -1067,10 +1053,7 @@ class Uwb_Optimizer {
 
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
-        $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
-        
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'wp-i18n', 'wp-hooks', 'wp-polyfill' );
-        $excludes = array_merge( $default_excludes, $user_excludes );
+        $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
 
         $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
         if ( $debug_mode ) {

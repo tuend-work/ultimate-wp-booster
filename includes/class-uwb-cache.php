@@ -277,8 +277,8 @@ class Uwb_Cache {
             'loc_gravatar_cache'          => intval( get_option( 'uwb_loc_gravatar_cache', 0 ) ),
             'tuning_critical_css'         => get_option( 'uwb_tuning_critical_css', '' ),
             'tuning_css_excludes'         => get_option( 'uwb_tuning_css_excludes', '' ),
-            'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', '' ),
-            'tuning_js_defer_excludes'    => get_option( 'uwb_tuning_js_defer_excludes', '' ),
+            'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', "jquery.js\njquery.min.js\njquery-migrate\nwp-i18n\nwp-hooks\nwp-polyfill" ),
+            'tuning_js_defer_excludes'    => get_option( 'uwb_tuning_js_defer_excludes', "jquery.js\njquery.min.js\njquery-migrate\nwp-i18n\nwp-hooks\nwp-polyfill" ),
             'ignore_all_query_strings'    => intval( get_option( 'uwb_ignore_all_query_strings', 1 ) ),
             'auto_collect_params'         => intval( get_option( 'uwb_auto_collect_params', 0 ) ),
             'collected_params'            => get_option( 'uwb_collected_params', '' ),
@@ -286,7 +286,7 @@ class Uwb_Cache {
             'preconnect_domains'          => get_option( 'uwb_preconnect_domains', '' ),
             'preload_fonts'               => get_option( 'uwb_preload_fonts', '' ),
             'delay_js'                    => intval( get_option( 'uwb_delay_js', 0 ) ),
-            'delay_js_exclusions'         => get_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js" ),
+            'delay_js_exclusions'         => get_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate\nwp-i18n\nwp-hooks\nwp-polyfill\nnoscript\nuwb-lazy" ),
             'preload_secret_key'          => get_option( 'uwb_preload_secret_key', '' ),
         );
 

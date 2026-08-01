@@ -90,7 +90,15 @@ class Uwb_Activator {
         }
 
         if ( get_option( 'uwb_delay_js_exclusions' ) === false ) {
-            update_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js" );
+            update_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate\nwp-i18n\nwp-hooks\nwp-polyfill\nnoscript\nuwb-lazy" );
+        }
+
+        if ( get_option( 'uwb_tuning_js_excludes' ) === false ) {
+            update_option( 'uwb_tuning_js_excludes', "jquery.js\njquery.min.js\njquery-migrate\nwp-i18n\nwp-hooks\nwp-polyfill" );
+        }
+
+        if ( get_option( 'uwb_tuning_js_defer_excludes' ) === false ) {
+            update_option( 'uwb_tuning_js_defer_excludes', "jquery.js\njquery.min.js\njquery-migrate\nwp-i18n\nwp-hooks\nwp-polyfill" );
         }
 
         // 3. Copy advanced-cache.php drop-in
