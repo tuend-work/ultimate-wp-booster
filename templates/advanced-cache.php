@@ -744,7 +744,7 @@ function uwb_advanced_cache_shutdown() {
                     $html = Uwb_Optimizer::process( $html, $config );
                 }
             }
-            $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} -->\n";
+            $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} | Status: Cache Valid / Serviced -->\n";
             $html = $comment_to_append . $html;
         } else {
             // Bypass case: HTML was already flushed to browser via ob_end_flush() above.
@@ -752,8 +752,8 @@ function uwb_advanced_cache_shutdown() {
             // This is visible in view-source after </html> (debug only).
             $early_reason    = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
             $combined_reason = ! empty( $shutdown_bypass_reason ) ? $shutdown_bypass_reason : $early_reason;
-            $bypass_str      = ! empty( $combined_reason ) ? " | Bypass: {$combined_reason}" : ' | Bypass: Unknown';
-            echo "\n<!-- UWB Dynamic Page{$bypass_str}{$oc_comment} -->\n";
+            $bypass_str      = ! empty( $combined_reason ) ? " | Bypass Reason: {$combined_reason}" : ' | Bypass Reason: Unknown';
+            echo "\n<!-- Cached by WP Booster | Status: Bypassed{$bypass_str}{$oc_comment} -->\n";
         }
     }
 

@@ -24,6 +24,34 @@ function uwb_self_get_excluded_urls() {
     return array();
 }
 
+/**
+ * Helper to fetch the current caching status and bypass reason.
+ * Use this in themes or plugins to check if the page is cached or bypassed.
+ *
+ * @return array Status array containing 'status', 'reason', and 'message'.
+ */
+function uwb_get_cache_status_info() {
+    $reason = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
+    if ( ! empty( $reason ) ) {
+        return array(
+            'status'  => 'bypassed',
+            'reason'  => $reason,
+            'message' => "Bypass Reason: {$reason}"
+        );
+    }
+    if ( defined( 'UWB_BUFFER_STARTED' ) ) {
+        return array(
+            'status'  => 'caching',
+            'reason'  => '',
+            'message' => 'Status: Cache Valid / Serviced'
+        );
+    }
+    return array(
+        'status'  => 'unknown',
+        'reason'  => '',
+        'message' => 'Status: Unknown'
+    );
+}
 
 /**
  * Debug: Inject cache bypass reason as HTML comment into <head> (WP_DEBUG only)
