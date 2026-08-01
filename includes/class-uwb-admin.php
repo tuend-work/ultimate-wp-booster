@@ -1678,10 +1678,10 @@ class Uwb_Admin {
                                         <div class="uwb-form-group" style="margin-top: 16px;">
                                             <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
                                                 <input type="checkbox" name="uwb_auto_collect_params" id="uwb_auto_collect_params" value="1" <?php checked( get_option( 'uwb_auto_collect_params', 0 ), 1 ); ?> />
-                                                Tự động thu thập URL Parameters (Auto Collect GET Parameters)
+                                                Auto Collect GET Parameters.
                                             </label>
                                             <p class="description" style="margin-top: 4px;">
-                                                Tự động thu thập các GET parameter truyền trên URL khi trang được tải thành công (HTTP Status 200).
+                                                Auto Collect GET Parameters when the page is loaded successfully (HTTP Status 200).
                                             </p>
                                         </div>
 
