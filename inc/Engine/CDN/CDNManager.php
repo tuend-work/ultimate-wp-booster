@@ -88,4 +88,32 @@ class CDNManager {
 
         return new S3Client( $config );
     }
+
+    public static function upload_asset_to_cdn( $file_path ) {
+        if ( ! get_option( 'uwb_cdn_enabled', 0 ) || ! get_option( 'uwb_cdn_auto_upload_combined', 1 ) ) {
+            return false;
+        }
+
+        if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
+            return false;
+        }
+
+        $s3_client = self::get_s3_client();
+        if ( ! $s3_client->is_configured() ) {
+            return false;
+        }
+
+        $file_norm = str_replace( '\\', '/', $file_path );
+        $content_dir = str_replace( '\\', '/', WP_CONTENT_DIR );
+
+        if ( strpos( $file_norm, $content_dir ) === 0 ) {
+            $rel = ltrim( substr( $file_norm, strlen( $content_dir ) ), '/' );
+            $s3_key = 'wp-content/' . $rel;
+
+            $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
+            return $s3_client->put_object( $file_path, $s3_key, '', $cache_control );
+        }
+
+        return false;
+    }
 }
