@@ -17,6 +17,7 @@ class CDNSubscriber implements Subscriber_Interface {
             'wp_calculate_image_srcset'       => array( 'filter_attachment_srcset', 10, 5 ),
             'wp_get_attachment_image_src'     => array( 'filter_attachment_image_src', 10, 4 ),
             'attachment_fields_to_edit'       => array( 'filter_attachment_fields_to_edit', 10, 2 ),
+            'media_row_actions'               => array( 'filter_media_row_actions', 10, 3 ),
             'restrict_manage_posts'           => 'add_media_filter_dropdown',
             'parse_query'                     => 'filter_media_query_by_status',
             'bulk_actions-upload'             => 'register_media_bulk_actions',
@@ -459,6 +460,44 @@ class CDNSubscriber implements Subscriber_Interface {
         return $form_fields;
     }
 
+    public function filter_media_row_actions( $actions, $post, $detached ) {
+        if ( ! is_object( $post ) || ! wp_attachment_is_image( $post->ID ) ) {
+            return $actions;
+        }
+
+        $post_id       = $post->ID;
+        $local_deleted = CDNManager::is_local_deleted( $post_id );
+        $offloaded     = CDNManager::is_attachment_offloaded( $post_id );
+        $file          = get_attached_file( $post_id );
+        $has_bak       = $file && file_exists( $file . '.bak' );
+
+        $actions['uwb_opt'] = sprintf(
+            '<a href="#" class="btn-uwb-opt-single" data-id="%d" style="color:#0284c7; font-weight:600;">⚡ Tối ưu hóa</a>',
+            $post_id
+        );
+
+        $actions['uwb_s3'] = sprintf(
+            '<a href="#" class="btn-uwb-upload-s3-single" data-id="%d" style="color:#16a34a; font-weight:600;">☁️ Đồng bộ S3</a>',
+            $post_id
+        );
+
+        if ( $local_deleted && $offloaded ) {
+            $actions['uwb_download'] = sprintf(
+                '<a href="#" class="btn-uwb-download-local-single" data-id="%d" style="color:#d97706; font-weight:600;">📥 Tải về Local</a>',
+                $post_id
+            );
+        }
+
+        if ( $has_bak ) {
+            $actions['uwb_restore'] = sprintf(
+                '<a href="#" class="btn-uwb-restore-single" data-id="%d" style="color:#dc2626; font-weight:600;">↺ Khôi phục gốc</a>',
+                $post_id
+            );
+        }
+
+        return $actions;
+    }
+
     // -------------------------------------------------------------------------
     // Media Library List Filters & Bulk Actions
     // -------------------------------------------------------------------------
@@ -661,16 +700,19 @@ class CDNSubscriber implements Subscriber_Interface {
         ?>
         <script id="uwb-attachment-modal-js">
         jQuery(document).ready(function($) {
-            // 1. Optimize Now Button Handler
+            // 1. Optimize Single Attachment
             $(document).on('click', '.btn-uwb-opt-single', function(e) {
                 e.preventDefault();
-                var $btn = $(this);
-                var id = $btn.data('id');
-                var $box = $btn.closest('.uwb-attachment-modal-status-box');
-                var $msg = $box.find('.uwb-modal-opt-msg');
+                var $btn    = $(this);
+                var id      = $btn.data('id');
+                var $box    = $btn.closest('.uwb-attachment-modal-status-box');
+                var $msg    = $box.length ? $box.find('.uwb-modal-opt-msg') : null;
+                var oldText = $btn.text();
 
-                $btn.prop('disabled', true).text('Optimizing...');
-                $msg.show().css('color', '#0284c7').text('Processing optimization...');
+                $btn.css('pointer-events', 'none').text('⚡ Đang nén...');
+                if ($msg && $msg.length) {
+                    $msg.show().css('color', '#0284c7').text('Processing optimization...');
+                }
 
                 $.post(ajaxurl, {
                     action: 'uwb_optimize_single_attachment',
@@ -678,28 +720,37 @@ class CDNSubscriber implements Subscriber_Interface {
                     nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
                 }, function(res) {
                     if (res.success) {
-                        $msg.css('color', '#16a34a').text('Successfully optimized! Reloading details...');
+                        if ($msg && $msg.length) {
+                            $msg.css('color', '#16a34a').text('Successfully optimized! Reloading...');
+                        }
+                        $btn.text('✔ Đã nén!');
                         setTimeout(function() { location.reload(); }, 600);
                     } else {
-                        $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Failed'));
-                        $btn.prop('disabled', false).text('⚡ Optimize Now');
+                        alert('Error: ' + (res.data ? res.data.message : 'Failed'));
+                        $btn.css('pointer-events', 'auto').text(oldText);
+                        if ($msg && $msg.length) {
+                            $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Failed'));
+                        }
                     }
                 }).fail(function() {
-                    $msg.css('color', '#dc2626').text('AJAX error occurred.');
-                    $btn.prop('disabled', false).text('⚡ Optimize Now');
+                    alert('AJAX error occurred.');
+                    $btn.css('pointer-events', 'auto').text(oldText);
                 });
             });
 
-            // 2. Upload to S3 Button Handler
+            // 2. Upload Single Attachment to S3
             $(document).on('click', '.btn-uwb-upload-s3-single', function(e) {
                 e.preventDefault();
-                var $btn = $(this);
-                var id = $btn.data('id');
-                var $box = $btn.closest('.uwb-attachment-modal-status-box');
-                var $msg = $box.find('.uwb-modal-opt-msg');
+                var $btn    = $(this);
+                var id      = $btn.data('id');
+                var $box    = $btn.closest('.uwb-attachment-modal-status-box');
+                var $msg    = $box.length ? $box.find('.uwb-modal-opt-msg') : null;
+                var oldText = $btn.text();
 
-                $btn.prop('disabled', true).text('Uploading...');
-                $msg.show().css('color', '#16a34a').text('Uploading file to S3 CDN...');
+                $btn.css('pointer-events', 'none').text('☁️ Đang đồng bộ...');
+                if ($msg && $msg.length) {
+                    $msg.show().css('color', '#16a34a').text('Uploading file to S3 CDN...');
+                }
 
                 $.post(ajaxurl, {
                     action: 'uwb_upload_single_attachment',
@@ -707,28 +758,37 @@ class CDNSubscriber implements Subscriber_Interface {
                     nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
                 }, function(res) {
                     if (res.success) {
-                        $msg.css('color', '#16a34a').text('Successfully uploaded to S3 CDN! Reloading details...');
+                        if ($msg && $msg.length) {
+                            $msg.css('color', '#16a34a').text('Successfully uploaded to S3 CDN!');
+                        }
+                        $btn.text('✔ Đã đồng bộ S3!');
                         setTimeout(function() { location.reload(); }, 600);
                     } else {
-                        $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Upload failed'));
-                        $btn.prop('disabled', false).text('☁️ Upload to S3');
+                        alert('Error: ' + (res.data ? res.data.message : 'Upload failed'));
+                        $btn.css('pointer-events', 'auto').text(oldText);
+                        if ($msg && $msg.length) {
+                            $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Upload failed'));
+                        }
                     }
                 }).fail(function() {
-                    $msg.css('color', '#dc2626').text('AJAX error occurred.');
-                    $btn.prop('disabled', false).text('☁️ Upload to S3');
+                    alert('AJAX error occurred.');
+                    $btn.css('pointer-events', 'auto').text(oldText);
                 });
             });
 
-            // 3. Download to Local Button Handler
+            // 3. Download Single Attachment to Local
             $(document).on('click', '.btn-uwb-download-local-single', function(e) {
                 e.preventDefault();
-                var $btn = $(this);
-                var id = $btn.data('id');
-                var $box = $btn.closest('.uwb-attachment-modal-status-box');
-                var $msg = $box.find('.uwb-modal-opt-msg');
+                var $btn    = $(this);
+                var id      = $btn.data('id');
+                var $box    = $btn.closest('.uwb-attachment-modal-status-box');
+                var $msg    = $box.length ? $box.find('.uwb-modal-opt-msg') : null;
+                var oldText = $btn.text();
 
-                $btn.prop('disabled', true).text('Downloading...');
-                $msg.show().css('color', '#d97706').text('Downloading file from S3 to local server...');
+                $btn.css('pointer-events', 'none').text('📥 Đang tải về...');
+                if ($msg && $msg.length) {
+                    $msg.show().css('color', '#d97706').text('Downloading file from S3...');
+                }
 
                 $.post(ajaxurl, {
                     action: 'uwb_download_single_attachment',
@@ -736,32 +796,41 @@ class CDNSubscriber implements Subscriber_Interface {
                     nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
                 }, function(res) {
                     if (res.success) {
-                        $msg.css('color', '#16a34a').text('Successfully downloaded to local server! Reloading details...');
+                        if ($msg && $msg.length) {
+                            $msg.css('color', '#16a34a').text('Successfully downloaded to local!');
+                        }
+                        $btn.text('✔ Đã tải về!');
                         setTimeout(function() { location.reload(); }, 600);
                     } else {
-                        $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Download failed'));
-                        $btn.prop('disabled', false).text('📥 Download to Local');
+                        alert('Error: ' + (res.data ? res.data.message : 'Download failed'));
+                        $btn.css('pointer-events', 'auto').text(oldText);
+                        if ($msg && $msg.length) {
+                            $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Download failed'));
+                        }
                     }
                 }).fail(function() {
-                    $msg.css('color', '#dc2626').text('AJAX error occurred.');
-                    $btn.prop('disabled', false).text('📥 Download to Local');
+                    alert('AJAX error occurred.');
+                    $btn.css('pointer-events', 'auto').text(oldText);
                 });
             });
 
-            // 4. Restore Now (.bak) Button Handler
+            // 4. Restore Single Attachment (.bak)
             $(document).on('click', '.btn-uwb-restore-single', function(e) {
                 e.preventDefault();
-                var $btn = $(this);
-                var id = $btn.data('id');
-                var $box = $btn.closest('.uwb-attachment-modal-status-box');
-                var $msg = $box.find('.uwb-modal-opt-msg');
+                var $btn    = $(this);
+                var id      = $btn.data('id');
+                var $box    = $btn.closest('.uwb-attachment-modal-status-box');
+                var $msg    = $box.length ? $box.find('.uwb-modal-opt-msg') : null;
+                var oldText = $btn.text();
 
-                if (!confirm('Are you sure you want to restore original image from .bak backup?')) {
+                if (!confirm('Bạn có chắc chắn muốn khôi phục ảnh gốc từ file backup .bak?')) {
                     return;
                 }
 
-                $btn.prop('disabled', true).text('Restoring...');
-                $msg.show().css('color', '#dc2626').text('Restoring original file...');
+                $btn.css('pointer-events', 'none').text('↺ Đang khôi phục...');
+                if ($msg && $msg.length) {
+                    $msg.show().css('color', '#dc2626').text('Restoring original file...');
+                }
 
                 $.post(ajaxurl, {
                     action: 'uwb_restore_single_attachment',
@@ -769,15 +838,21 @@ class CDNSubscriber implements Subscriber_Interface {
                     nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
                 }, function(res) {
                     if (res.success) {
-                        $msg.css('color', '#16a34a').text('Successfully restored from .bak! Reloading details...');
+                        if ($msg && $msg.length) {
+                            $msg.css('color', '#16a34a').text('Successfully restored from .bak!');
+                        }
+                        $btn.text('✔ Đã khôi phục!');
                         setTimeout(function() { location.reload(); }, 600);
                     } else {
-                        $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Restore failed'));
-                        $btn.prop('disabled', false).text('↺ Restore Original (.bak)');
+                        alert('Error: ' + (res.data ? res.data.message : 'Restore failed'));
+                        $btn.css('pointer-events', 'auto').text(oldText);
+                        if ($msg && $msg.length) {
+                            $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Restore failed'));
+                        }
                     }
                 }).fail(function() {
-                    $msg.css('color', '#dc2626').text('AJAX error occurred.');
-                    $btn.prop('disabled', false).text('↺ Restore Original (.bak)');
+                    alert('AJAX error occurred.');
+                    $btn.css('pointer-events', 'auto').text(oldText);
                 });
             });
         });
