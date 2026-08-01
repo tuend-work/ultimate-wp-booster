@@ -59,6 +59,16 @@ function uwb_advanced_cache_run() {
         }
     }
 
+    // 3.5. Bypass cache completely for preloader key (external cron / trigger)
+    $preload_secret_key = isset( $config['preload_secret_key'] ) ? $config['preload_secret_key'] : '';
+    if ( ! empty( $preload_secret_key ) && isset( $_GET['uwb_preload_key'] ) && hash_equals( $preload_secret_key, $_GET['uwb_preload_key'] ) ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: Preload trigger / external cron request detected." );
+        }
+        $GLOBALS['uwb_bypass_reason'] = 'Preload batch trigger / external cron';
+        return;
+    }
+
     $cache_page_enabled = isset( $config['cache_page_enabled'] ) ? (bool) $config['cache_page_enabled'] : true;
     if ( ! $cache_page_enabled ) {
         if ( $debug ) {
@@ -321,9 +331,9 @@ function uwb_advanced_cache_run() {
     $cache_file_404 = $cache_dir . '/' . ( $is_https ? "404-https.html" : "404.html" );
 
     // Detect preload request: the preloader must bypass cache serving so it can regenerate & overwrite stale cache
-    $is_preload_request = isset( $_GET['uwb_preload_key'] ) && $_GET['uwb_preload_key'] !== '';
+    $is_preload_request = ( isset( $_SERVER['HTTP_X_ULTIMATE_WP_BOOSTER_PRELOAD'] ) && $_SERVER['HTTP_X_ULTIMATE_WP_BOOSTER_PRELOAD'] === '1' ) || ( isset( $_GET['uwb_preload_key'] ) && $_GET['uwb_preload_key'] !== '' );
     if ( $is_preload_request && $debug ) {
-        error_log( "UWB: Preload request detected (uwb_preload_key). Bypassing cache serve to force regeneration." );
+        error_log( "UWB: Preload request detected (HTTP_X_ULTIMATE_WP_BOOSTER_PRELOAD or uwb_preload_key). Bypassing cache serve to force regeneration." );
     }
 
     // Check normal cache first, then 404 cache

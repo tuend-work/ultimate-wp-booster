@@ -254,6 +254,7 @@ class Uwb_Cache {
             'preload_fonts'               => get_option( 'uwb_preload_fonts', '' ),
             'delay_js'                    => intval( get_option( 'uwb_delay_js', 0 ) ),
             'delay_js_exclusions'         => get_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js" ),
+            'preload_secret_key'          => get_option( 'uwb_preload_secret_key', '' ),
         );
 
         $config_content = "<?php\n" .
