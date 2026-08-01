@@ -89,7 +89,15 @@ class ImageOptimizer {
             $target_ext  = 'avif';
         }
 
-        // 1. Optimize main image
+        // 1. Optional backup of original image file to .bak
+        if ( get_option( 'uwb_media_opt_backup_bak', 0 ) ) {
+            $bak_file = $file . '.bak';
+            if ( ! file_exists( $bak_file ) ) {
+                @copy( $file, $bak_file );
+            }
+        }
+
+        // 2. Optimize main image
         $editor = wp_get_image_editor( $file );
         if ( is_wp_error( $editor ) ) {
             return false;

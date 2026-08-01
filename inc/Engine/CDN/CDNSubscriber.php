@@ -32,7 +32,7 @@ class CDNSubscriber implements Subscriber_Interface {
         }
 
         // Auto optimize & convert image if enabled
-        if ( get_option( 'uwb_media_opt_enabled', 0 ) ) {
+        if ( get_option( 'uwb_media_opt_enabled', 0 ) && get_option( 'uwb_img_opt_event_upload', 1 ) ) {
             \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $attachment_id, array(), false );
         }
 
@@ -132,6 +132,10 @@ class CDNSubscriber implements Subscriber_Interface {
     // Behaviour: always re-upload (file may have changed)
     // -------------------------------------------------------------------------
     public function on_edit_attachment( $attachment_id ) {
+        if ( get_option( 'uwb_media_opt_enabled', 0 ) && get_option( 'uwb_img_opt_event_edit', 0 ) ) {
+            \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $attachment_id, array(), true );
+        }
+
         if ( ! get_option( 'uwb_cdn_auto_update_attachment', 0 ) ) {
             return;
         }
@@ -140,7 +144,7 @@ class CDNSubscriber implements Subscriber_Interface {
     }
 
     public function on_generate_attachment_metadata( $metadata, $attachment_id ) {
-        if ( get_option( 'uwb_media_opt_enabled', 0 ) ) {
+        if ( get_option( 'uwb_media_opt_enabled', 0 ) && get_option( 'uwb_img_opt_event_upload', 1 ) ) {
             \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $attachment_id, array(), false );
         }
         return $metadata;
@@ -153,6 +157,11 @@ class CDNSubscriber implements Subscriber_Interface {
     // Behaviour B: if NOT on S3 yet → upload first, then rewrite URL
     // -------------------------------------------------------------------------
     public function filter_attachment_url( $url, $post_id ) {
+        if ( get_option( 'uwb_media_opt_enabled', 0 ) && get_option( 'uwb_img_opt_event_get_url', 0 ) ) {
+            if ( ! get_post_meta( $post_id, '_uwb_img_compress_status', true ) ) {
+                \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $post_id, array(), false );
+            }
+        }
         if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
             return $url;
         }

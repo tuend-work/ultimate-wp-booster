@@ -248,9 +248,13 @@ class Admin {
 
         // Image Optimization Settings
         register_setting( 'uwb_settings_group', 'uwb_media_opt_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_opt_backup_bak', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_opt_quality', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_opt_format', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_media_opt_mode', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_img_opt_event_upload', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_img_opt_event_edit', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_img_opt_event_get_url', 'intval' );
 
         // CDN Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_cdn_enabled', 'intval' );
@@ -2853,7 +2857,38 @@ js-(before|after)
                                     </h3>
                                     <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Tự động nén dung lượng hình ảnh, chuyển đổi sang WebP/AVIF, quản lý cờ trạng thái <code>_uwb_img_compress_status</code>, <code>_uwb_img_convert_webp_status</code> &amp; <code>_uwb_img_convert_avif_status</code> và tự động đồng bộ S3 CDN.</p>
 
-                                    <?php $this->render_toggle_switch( 'uwb_media_opt_enabled', 'Enable Automatic Image Optimization & Conversion', 'Tự động nén chất lượng ảnh và convert định dạng khi upload ảnh mới vào Thư viện Media.' ); ?>
+                                    <?php
+                                    $this->render_toggle_switch( 'uwb_media_opt_enabled', 'Enable Automatic Image Optimization & Conversion', 'Tự động nén chất lượng ảnh và convert định dạng khi upload hoặc gọi ảnh trong Thư viện Media.' );
+                                    $this->render_toggle_switch( 'uwb_media_opt_backup_bak', 'Backup ảnh gốc thành đuôi .bak?', 'Tự động tạo bản sao lưu file ảnh gốc dạng filename.jpg.bak trước khi nén hoặc convert.' );
+                                    $is_opt_active = (bool) get_option( 'uwb_media_opt_enabled', 0 );
+                                    ?>
+
+                                    <!-- Event Actions for Image Optimization -->
+                                    <div class="uwb-img-opt-events-wrap" style="margin-top:16px; margin-bottom:20px; background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; <?php echo $is_opt_active ? '' : 'display:none;'; ?>">
+                                        <h5 style="margin:0 0 14px 0; font-size:12px; font-weight:700; color:var(--uwb-text); text-transform:uppercase; letter-spacing:0.5px;">Sự kiện tự động tối ưu ảnh (Event Actions)</h5>
+                                        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:10px 14px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:8px;">
+                                            <div style="min-width:180px; font-weight:700; font-size:13px; color:var(--uwb-text); flex-shrink:0;">
+                                                Tự động tối ưu ảnh khi:
+                                            </div>
+                                            <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; flex:1;">
+                                                <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                                    <input type="hidden" name="uwb_img_opt_event_upload" value="0" />
+                                                    <input type="checkbox" name="uwb_img_opt_event_upload" value="1" <?php checked( get_option( 'uwb_img_opt_event_upload', 1 ), 1 ); ?> />
+                                                    upload
+                                                </label>
+                                                <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                                    <input type="hidden" name="uwb_img_opt_event_edit" value="0" />
+                                                    <input type="checkbox" name="uwb_img_opt_event_edit" value="1" <?php checked( get_option( 'uwb_img_opt_event_edit', 0 ), 1 ); ?> />
+                                                    edit
+                                                </label>
+                                                <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                                    <input type="hidden" name="uwb_img_opt_event_get_url" value="0" />
+                                                    <input type="checkbox" name="uwb_img_opt_event_get_url" value="1" <?php checked( get_option( 'uwb_img_opt_event_get_url', 0 ), 1 ); ?> />
+                                                    get_url
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-top:16px; margin-bottom:20px; background:#fff; padding:20px; border:1px solid var(--uwb-border); border-radius:10px;">
                                         <!-- Field 1: Quality Percentage -->
@@ -4752,6 +4787,16 @@ js-(before|after)
             $(document).on('change', 'input[name="uwb_cdn_distribute_css"], input[name="uwb_cdn_distribute_js"], input[name="uwb_cdn_distribute_html"], input[name="uwb_cdn_distribute_media"], input[name="uwb_cdn_distribute_font"]', function() {
                 var $card = $(this).closest('div');
                 var $wrap = $card.find('.uwb-cdn-events-wrap');
+                if ($(this).is(':checked')) {
+                    $wrap.slideDown(200);
+                } else {
+                    $wrap.slideUp(200);
+                }
+            });
+
+            // Toggle image optimization event actions box
+            $(document).on('change', 'input[name="uwb_media_opt_enabled"]', function() {
+                var $wrap = $('.uwb-img-opt-events-wrap');
                 if ($(this).is(':checked')) {
                     $wrap.slideDown(200);
                 } else {
