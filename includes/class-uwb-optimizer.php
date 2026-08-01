@@ -419,6 +419,13 @@ class Uwb_Optimizer {
                     }
                 }
 
+                // Skip inline localization / WP core helper scripts (without src attribute)
+                if ( ! preg_match( '/\bsrc\s*=/i', $attrs ) ) {
+                    if ( stripos( $content, 'wp.' ) !== false || stripos( $content, 'wp-i18n' ) !== false || stripos( $content, 'wp-hooks' ) !== false || stripos( $content, 'translations' ) !== false || stripos( $attrs, 'wp-' ) !== false ) {
+                        return $matches[0];
+                    }
+                }
+
                 // Only delay scripts with JS type or no type
                 if ( preg_match( '/type\s*=\s*["\']([^"\']+)["\']/i', $attrs, $type_match ) ) {
                     $type = strtolower( trim( $type_match[1] ) );
@@ -608,10 +615,17 @@ class Uwb_Optimizer {
         $processed = preg_replace_callback('/<img\s+([^>]+)>/i', function( $matches ) use ( $excludes, $class_excludes ) {
             $attrs = $matches[1];
             
-            if ( ! preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
+            // Extract src or data-src
+            $src = '';
+            if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
+                $src = $src_match[2];
+            } elseif ( preg_match('/data-src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
+                $src = $src_match[2];
+            }
+
+            if ( empty( $src ) ) {
                 return $matches[0];
             }
-            $src = $src_match[2];
 
             // Exclude matching strings
             foreach ( $excludes as $ex ) {
@@ -629,50 +643,58 @@ class Uwb_Optimizer {
                 }
             }
 
-            if ( stripos( $attrs, 'data-src' ) !== false || stripos( $attrs, 'lazyload' ) !== false ) {
+            // Skip if explicitly marked no-lazy
+            if ( stripos( $attrs, 'no-lazy' ) !== false || stripos( $attrs, 'skip-lazy' ) !== false ) {
                 return $matches[0];
             }
 
-            // Safe Base64 SVG placeholder (1x1 transparent) to avoid HTML attribute quote breakage
-            $placeholder = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjwvc3ZnPg==';
+            $new_attrs = $attrs;
 
-            $new_attrs = preg_replace_callback('/src=([\'"])(.*?)\1/i', function( $m ) use ( $placeholder ) {
-                return 'src="' . $placeholder . '" data-src="' . $m[2] . '"';
-            }, $attrs);
-            
-            if ( preg_match('/srcset=/i', $new_attrs) ) {
-                $new_attrs = preg_replace_callback('/srcset=([\'"])(.*?)\1/i', function( $m ) {
-                    return 'data-srcset="' . $m[2] . '"';
-                }, $new_attrs);
-            }
-
+            // Ensure native loading="lazy" is present
             if ( stripos( $new_attrs, 'loading=' ) === false ) {
                 $new_attrs .= ' loading="lazy"';
+            }
+
+            // If tag has data-src but no valid src, assign src from data-src so fallback works natively
+            if ( stripos( $new_attrs, 'data-src=' ) !== false && ( stripos( $new_attrs, 'src=' ) === false || stripos( $new_attrs, 'src="data:' ) !== false || stripos( $new_attrs, "src='data:" ) !== false ) ) {
+                if ( preg_match('/data-src=([\'"])(.*?)\1/i', $new_attrs, $ds_match) ) {
+                    $real_url = $ds_match[2];
+                    if ( preg_match('/src=([\'"])(.*?)\1/i', $new_attrs) ) {
+                        $new_attrs = preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . $real_url . '"', $new_attrs);
+                    } else {
+                        $new_attrs .= ' src="' . $real_url . '"';
+                    }
+                }
             }
 
             return '<img ' . $new_attrs . '>';
         }, $html);
 
-        // Inject script to load images when visible
+        // Inject script helper to load any custom data-src images (Infinite Scroll / AJAX)
         if ( $processed !== $html ) {
             $lazy_js = "\n<script id=\"uwb-lazy-load-js\">
 (function() {
     var lazyObserver = null;
 
     function uwbObserveImg(img) {
-        if (!img || !img.getAttribute || !img.getAttribute('data-src')) return;
+        if (!img || !img.getAttribute) return;
+        var dataSrc = img.getAttribute('data-src');
+        if (!dataSrc) return;
+        
         if ('IntersectionObserver' in window) {
             if (!lazyObserver) {
-                lazyObserver = new IntersectionObserver(function(entries, observer) {
+                lazyObserver = new IntersectionObserver(function(entries) {
                     entries.forEach(function(entry) {
                         if (entry.isIntersecting || entry.intersectionRatio > 0) {
                             var el = entry.target;
-                            if (el.getAttribute('data-src')) {
-                                el.src = el.getAttribute('data-src');
+                            var ds = el.getAttribute('data-src');
+                            if (ds) {
+                                el.src = ds;
                                 el.removeAttribute('data-src');
                             }
-                            if (el.getAttribute('data-srcset')) {
-                                el.srcset = el.getAttribute('data-srcset');
+                            var dss = el.getAttribute('data-srcset');
+                            if (dss) {
+                                el.srcset = dss;
                                 el.removeAttribute('data-srcset');
                             }
                             lazyObserver.unobserve(el);
@@ -682,12 +704,11 @@ class Uwb_Optimizer {
             }
             lazyObserver.observe(img);
         } else {
-            if (img.getAttribute('data-src')) {
-                img.src = img.getAttribute('data-src');
-                img.removeAttribute('data-src');
-            }
-            if (img.getAttribute('data-srcset')) {
-                img.srcset = img.getAttribute('data-srcset');
+            img.src = dataSrc;
+            img.removeAttribute('data-src');
+            var dss = img.getAttribute('data-srcset');
+            if (dss) {
+                img.srcset = dss;
                 img.removeAttribute('data-srcset');
             }
         }
@@ -702,14 +723,14 @@ class Uwb_Optimizer {
 
     window.uwbInitLazyImages = uwbInitLazyImages;
 
-    // MutationObserver to auto-detect dynamically added images (Infinite Scroll / Scroll to load more)
+    // MutationObserver to auto-detect dynamically added images
     if ('MutationObserver' in window) {
         var mutationObs = new MutationObserver(function(mutations) {
             mutations.forEach(function(m) {
                 if (m.addedNodes && m.addedNodes.length) {
                     for (var i = 0; i < m.addedNodes.length; i++) {
                         var node = m.addedNodes[i];
-                        if (node.nodeType === 1) { // Element node
+                        if (node.nodeType === 1) {
                             if (node.tagName === 'IMG' && node.getAttribute('data-src')) {
                                 uwbObserveImg(node);
                             }
@@ -733,7 +754,6 @@ class Uwb_Optimizer {
         if (document.body) { startObs(); } else { document.addEventListener('DOMContentLoaded', startObs); }
     }
 
-    // Event Listeners for Page Load, Scroll, Infinite Scroll & AJAX
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', uwbInitLazyImages);
     } else {
@@ -742,7 +762,6 @@ class Uwb_Optimizer {
 
     document.addEventListener('post-load', uwbInitLazyImages);
     window.addEventListener('load', uwbInitLazyImages);
-    window.addEventListener('scroll', uwbInitLazyImages, { passive: true });
 
     if (window.jQuery) {
         window.jQuery(document).ajaxComplete(function() {
