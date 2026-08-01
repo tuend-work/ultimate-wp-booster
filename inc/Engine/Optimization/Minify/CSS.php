@@ -123,6 +123,8 @@ class CSS {
 
             @file_put_contents( $cache_file, trim( $combined_content ) );
             \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $cache_file );
+        } else {
+            \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $cache_file );
         }
 
         $first = true;

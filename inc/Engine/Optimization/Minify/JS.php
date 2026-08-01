@@ -155,6 +155,7 @@ class JS {
         }
 
         if ( file_exists( $cache_file ) ) {
+            \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $cache_file );
             foreach ( $to_combine as $item ) {
                 $html = str_replace( $item['tag'], '', $html );
             }

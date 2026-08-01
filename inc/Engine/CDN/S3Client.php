@@ -200,7 +200,14 @@ class S3Client {
 
         $wp_headers = array();
         foreach ( $headers as $hk => $hv ) {
-            $wp_headers[ $hk ] = $hv;
+            $hk_lower = strtolower( $hk );
+            if ( $hk_lower === 'content-type' ) {
+                $wp_headers['Content-Type'] = $hv;
+            } elseif ( $hk_lower === 'cache-control' ) {
+                $wp_headers['Cache-Control'] = $hv;
+            } else {
+                $wp_headers[ $hk ] = $hv;
+            }
         }
 
         $args = array(
