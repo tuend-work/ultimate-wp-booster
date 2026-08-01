@@ -55,18 +55,16 @@ class JS {
                 }
             }
 
-            // Automatic Hardcoded Safety Exclusions for Theme & WooCommerce Critical Variables
+            // Automatic Hardcoded Safety Exclusions for Specific Critical Inline Variables (flatsomeVars, WooCommerce params)
             if ( ! $is_excluded ) {
                 if ( stripos( $tag, 'flatsomeVars' ) !== false ||
                      stripos( $inline_content, 'flatsomeVars' ) !== false ||
-                     stripos( $tag, 'flatsome' ) !== false ||
-                     stripos( $inline_content, 'flatsome' ) !== false ||
                      stripos( $inline_content, 'wc_add_to_cart_params' ) !== false ||
                      stripos( $inline_content, 'woocommerce_params' ) !== false ) {
                     $is_excluded = true;
                     if ( is_array( $logs ) ) {
                         $label = preg_match( '/src=([\'"])(.*?)\1/i', $attrs, $src_m ) ? $src_m[2] : 'Inline Script';
-                        $logs[] = "JS Combine: Excluded {$label} (Automatic safety rule: Theme / WooCommerce core variables like flatsomeVars)";
+                        $logs[] = "JS Combine: Excluded {$label} (Automatic safety rule: Contains flatsomeVars or WooCommerce inline variables)";
                     }
                 }
             }
@@ -219,7 +217,7 @@ class JS {
             $file_mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : '';
             $hash = md5( $url_clean . '_' . $file_mtime );
             $cache_file = $cache_dir . '/' . $hash . '.js';
-            $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.js' );
+            $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.css' );
 
             if ( ! file_exists( $cache_file ) ) {
                 $content = '';
@@ -300,9 +298,7 @@ class JS {
                 if ( $chunk !== false ) {
                     if ( strpos( $chunk, 'webpackChunk' ) !== false ||
                          strpos( $chunk, '__webpack_require__' ) !== false ||
-                         strpos( $chunk, 'document.currentScript.src' ) !== false ||
-                         strpos( $chunk, 'flatsomeVars' ) !== false ||
-                         strpos( $chunk, 'flatsome' ) !== false ) {
+                         strpos( $chunk, 'document.currentScript.src' ) !== false ) {
                         return true;
                     }
                 }
