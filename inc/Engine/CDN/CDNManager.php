@@ -56,7 +56,9 @@ class CDNManager {
         // Match URLs starting with site host or relative wp-content / wp-includes
         $pattern = '/(href|src|data-src|data-srcset)=([\'"])((?:https?:\/\/' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?)\2/i';
 
-        return preg_replace_callback( $pattern, function( $matches ) use ( $home_host, $cdn_domain ) {
+        $version = defined( 'UWB_VERSION' ) ? UWB_VERSION : time();
+
+        return preg_replace_callback( $pattern, function( $matches ) use ( $home_host, $cdn_domain, $version ) {
             $attr    = $matches[1];
             $quote   = $matches[2];
             $url     = $matches[3];
@@ -66,6 +68,14 @@ class CDNManager {
             $path_part = parse_url( $url, PHP_URL_PATH );
             if ( empty( $path_part ) ) {
                 return $matches[0];
+            }
+
+            if ( empty( $query ) ) {
+                $query = '?ver=' . $version;
+            } else {
+                if ( strpos( $query, 'ver=' ) === false && strpos( $query, 'v=' ) === false ) {
+                    $query .= '&ver=' . $version;
+                }
             }
 
             $cdn_url = $cdn_domain . $path_part . $query;
