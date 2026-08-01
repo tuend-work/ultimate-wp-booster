@@ -57,10 +57,31 @@ class ImageOptimizer {
 
         $format = isset( $override_config['format'] ) ? $override_config['format'] : get_option( 'uwb_media_opt_format', 'original' ); // original, webp, avif
 
-        // Conversion mode checkboxes
-        $do_sidecar     = isset( $override_config['mode_sidecar'] ) ? (bool) $override_config['mode_sidecar'] : (bool) get_option( 'uwb_media_opt_mode_sidecar', 1 );
-        $do_overwrite   = isset( $override_config['mode_overwrite'] ) ? (bool) $override_config['mode_overwrite'] : (bool) get_option( 'uwb_media_opt_mode_overwrite', 0 );
-        $do_replace_ext = isset( $override_config['mode_replace_ext'] ) ? (bool) $override_config['mode_replace_ext'] : (bool) get_option( 'uwb_media_opt_mode_replace_ext', 0 );
+        // Conversion mode checkboxes & migration fallback
+        $db_sidecar     = get_option( 'uwb_media_opt_mode_sidecar', null );
+        $db_overwrite   = get_option( 'uwb_media_opt_mode_overwrite', null );
+        $db_replace_ext = get_option( 'uwb_media_opt_mode_replace_ext', null );
+
+        if ( null === $db_sidecar && null === $db_overwrite && null === $db_replace_ext ) {
+            $old_mode       = get_option( 'uwb_media_opt_mode', 'new_file' );
+            $do_sidecar     = ( 'new_file' === $old_mode );
+            $do_overwrite   = ( 'overwrite' === $old_mode );
+            $do_replace_ext = ( 'change_extension' === $old_mode );
+        } else {
+            $do_sidecar     = ! empty( $db_sidecar );
+            $do_overwrite   = ! empty( $db_overwrite );
+            $do_replace_ext = ! empty( $db_replace_ext );
+        }
+
+        if ( isset( $override_config['mode_sidecar'] ) ) {
+            $do_sidecar = (bool) $override_config['mode_sidecar'];
+        }
+        if ( isset( $override_config['mode_overwrite'] ) ) {
+            $do_overwrite = (bool) $override_config['mode_overwrite'];
+        }
+        if ( isset( $override_config['mode_replace_ext'] ) ) {
+            $do_replace_ext = (bool) $override_config['mode_replace_ext'];
+        }
 
         // Fallback: If no checkbox selected, default to sidecar
         if ( ! $do_sidecar && ! $do_overwrite && ! $do_replace_ext ) {
@@ -176,6 +197,17 @@ class ImageOptimizer {
                     update_attached_file( $attachment_id, $file );
                 }
             }
+
+            if ( ! $do_sidecar ) {
+                $sidecar1 = $dir . '/' . $filename_no_ext . '.' . $target_ext;
+                if ( $sidecar1 !== $file && file_exists( $sidecar1 ) ) {
+                    @unlink( $sidecar1 );
+                }
+                $sidecar2 = $dir . '/' . $filename_no_ext . '.' . $original_ext . '.' . $target_ext;
+                if ( $sidecar2 !== $file && file_exists( $sidecar2 ) ) {
+                    @unlink( $sidecar2 );
+                }
+            }
         } else {
             // Keep original format (JPEG/PNG/GIF): strictly save with original mime
             if ( $original_mime ) {
@@ -225,6 +257,17 @@ class ImageOptimizer {
                                     if ( $thumb_orig_mime ) {
                                         $thumb_editor->save( $thumb_path, $thumb_orig_mime );
                                     }
+                                }
+                            } else {
+                                $thumb_no_ext   = pathinfo( $thumb_path, PATHINFO_FILENAME );
+                                $thumb_orig_ext = pathinfo( $thumb_path, PATHINFO_EXTENSION );
+                                $thumb_side1    = $dir . '/' . $thumb_no_ext . '.' . $target_ext;
+                                if ( $thumb_side1 !== $thumb_path && file_exists( $thumb_side1 ) ) {
+                                    @unlink( $thumb_side1 );
+                                }
+                                $thumb_side2    = $dir . '/' . $thumb_no_ext . '.' . $thumb_orig_ext . '.' . $target_ext;
+                                if ( $thumb_side2 !== $thumb_path && file_exists( $thumb_side2 ) ) {
+                                    @unlink( $thumb_side2 );
                                 }
                             }
 
