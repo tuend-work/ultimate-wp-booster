@@ -1141,28 +1141,10 @@ class Uwb_Optimizer {
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
         $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
-        // Automatically allow jQuery and jQuery Migrate to be combined since we now have jQuery stub protection
-        $excludes = array_filter( $excludes, function( $ex ) {
-            return ( stripos( $ex, 'jquery.js' ) === false && stripos( $ex, 'jquery.min.js' ) === false && stripos( $ex, 'jquery-migrate' ) === false );
-        } );
 
         $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
         if ( $debug_mode ) {
             $GLOBALS['uwb_debug_log'][] = "[combine_js] Excludes list: [" . implode( ', ', $excludes ) . "]";
-        }
-
-        // Gather localized scripts to exclude them from inline combine
-        static $localized_scripts = null;
-        if ( $localized_scripts === null ) {
-            $localized_scripts = array();
-            if ( function_exists( 'wp_scripts' ) ) {
-                foreach ( array_unique( wp_scripts()->queue ) as $item ) {
-                    $data = wp_scripts()->print_extra_script( $item, false );
-                    if ( ! empty( $data ) ) {
-                        $localized_scripts[] = $data;
-                    }
-                }
-            }
         }
 
         preg_match_all('#<script\b([^>]*?)>(.*?)</script>#is', $html, $matches, PREG_SET_ORDER);
@@ -1173,43 +1155,21 @@ class Uwb_Optimizer {
 
         $current_chunk = array();
 
-        $flush_chunk = function() use ( &$html, &$current_chunk, $cache_dir, $include_ext ) {
-            if ( count( $current_chunk ) < 2 ) {
+        $flush_chunk = function() use ( &$html, &$current_chunk, $cache_dir, $include_ext, $debug_mode ) {
+            if ( count( $current_chunk ) < 1 ) {
+                return;
+            }
+
+            // If only 1 item in the chunk, do not combine
+            if ( count( $current_chunk ) === 1 ) {
                 $current_chunk = array();
                 return;
             }
 
-            // Sort current chunk so that jQuery and jQuery Migrate are always ordered first
-            usort( $current_chunk, function( $a, $b ) {
-                $a_score = 0;
-                $b_score = 0;
-                
-                if ( empty( $a['is_inline'] ) ) {
-                    if ( stripos( $a['url_clean'], 'jquery.js' ) !== false || stripos( $a['url_clean'], 'jquery.min.js' ) !== false ) {
-                        $a_score = 10;
-                    } elseif ( stripos( $a['url_clean'], 'jquery-migrate' ) !== false ) {
-                        $a_score = 9;
-                    }
-                }
-                
-                if ( empty( $b['is_inline'] ) ) {
-                    if ( stripos( $b['url_clean'], 'jquery.js' ) !== false || stripos( $b['url_clean'], 'jquery.min.js' ) !== false ) {
-                        $b_score = 10;
-                    } elseif ( stripos( $b['url_clean'], 'jquery-migrate' ) !== false ) {
-                        $b_score = 9;
-                    }
-                }
-                
-                if ( $a_score !== $b_score ) {
-                    return $b_score - $a_score;
-                }
-                return 0;
-            } );
-
             $urls_hashes = array();
             foreach ( $current_chunk as $item ) {
                 if ( ! empty( $item['is_inline'] ) ) {
-                    $urls_hashes[] = $item['url_clean'];
+                    $urls_hashes[] = 'inline_' . md5( $item['content'] );
                 } else {
                     $mtime = ( $item['local_path'] && file_exists( $item['local_path'] ) ) ? filemtime( $item['local_path'] ) : 0;
                     $urls_hashes[] = $item['url_clean'] . '_' . $mtime;
@@ -1233,12 +1193,7 @@ class Uwb_Optimizer {
                     }
 
                     if ( ! empty( $content ) ) {
-                        if ( empty( $item['is_inline'] ) && stripos( $item['url_clean'], '.min.js' ) === false ) {
-                            $content = self::minify_js_safe( $content );
-                        }
-                        if ( ! empty( $item['is_inline'] ) ) {
-                            $content = self::minify_js_safe( $content );
-                        }
+                        $content = self::minify_js_safe( $content );
                         $name_label = ! empty( $item['is_inline'] ) ? 'Inline Script' : $item['url_clean'];
                         $combined_content .= "\n;/* Combined: " . self::safe_esc_html( $name_label ) . " */\n" . trim( $content ) . ";";
                     }
@@ -1250,14 +1205,18 @@ class Uwb_Optimizer {
             }
 
             if ( file_exists( $cache_file ) ) {
+                $first = true;
                 foreach ( $current_chunk as $item ) {
-                    $html = str_replace( $item['tag'], '', $html );
+                    if ( $first ) {
+                        $new_tag = '<script src="' . self::safe_esc_url( $cache_url ) . '"></script>';
+                        $html = str_replace( $item['tag'], $new_tag, $html );
+                        $first = false;
+                    } else {
+                        $html = str_replace( $item['tag'], '', $html );
+                    }
                 }
-                $new_tag = '<script src="' . self::safe_esc_url( $cache_url ) . '"></script>';
-                if ( stripos( $html, '</body>' ) !== false ) {
-                    $html = str_ireplace( '</body>', $new_tag . "\n" . '</body>', $html );
-                } else {
-                    $html .= "\n" . $new_tag;
+                if ( $debug_mode ) {
+                    $GLOBALS['uwb_debug_log'][] = "[combine_js] Flushed bundle for " . count($current_chunk) . " scripts into: " . $cache_url;
                 }
             }
 
@@ -1269,85 +1228,44 @@ class Uwb_Optimizer {
             $attrs = $m[1];
             $inline_content = $m[2];
 
+            // 1. Check exclusions
+            $is_excluded = false;
+            foreach ( $excludes as $ex ) {
+                if ( ! empty( $ex ) && ( stripos( $tag, $ex ) !== false || stripos( $inline_content, $ex ) !== false ) ) {
+                    $is_excluded = true;
+                    break;
+                }
+            }
+
+            // 2. Check special/async attributes
+            $is_special = stripos( $attrs, 'async' ) !== false
+                       || stripos( $attrs, 'text/uwb-lazyload' ) !== false
+                       || stripos( $attrs, 'type="module"' ) !== false;
+
             if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
-                // Script with src attribute
+                // External script
                 $url = $src_match[2];
                 $url_clean = strtok( $url, '?' );
-
                 $is_js_file = strtolower( substr( $url_clean, -3 ) ) === '.js';
-                $is_special = stripos( $attrs, 'async' ) !== false
-                           || stripos( $attrs, 'text/uwb-lazyload' ) !== false
-                           || stripos( $attrs, 'type="module"' ) !== false;
-
-                $is_excluded = false;
-                $matched_ex  = '';
-                foreach ( $excludes as $ex ) {
-                    if ( ! empty( $ex ) && ( stripos( $url, $ex ) !== false || stripos( $tag, $ex ) !== false ) ) {
-                        $is_excluded = true;
-                        $matched_ex  = $ex;
-                        break;
-                    }
-                }
-
+                
                 $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
-
-                // Auto-detect webpack bundles
                 $is_webpack = self::is_webpack_bundle( $local_path, $url_clean );
 
-                if ( $debug_mode ) {
-                    $skip_reason = '';
-                    if ( ! $is_js_file )         { $skip_reason = 'not a .js file'; }
-                    elseif ( $is_special )        { $skip_reason = 'async/module/lazyload'; }
-                    elseif ( $is_excluded )       { $skip_reason = 'excluded by: "' . $matched_ex . '"'; }
-                    elseif ( $is_webpack )        { $skip_reason = 'auto-excluded (webpack bundle)'; }
-                    elseif ( ! $local_path && ! $include_ext ) { $skip_reason = 'external & include_ext=false'; }
-                    else                         { $skip_reason = 'ADDED to chunk'; }
-                    $GLOBALS['uwb_debug_log'][] = "[combine_js] " . $url_clean . " → " . $skip_reason;
-                }
-
                 if ( $is_js_file && ! $is_special && ! $is_excluded && ! $is_webpack && ( $local_path || $include_ext ) ) {
-                    // Combineable script — add to current chunk
                     $current_chunk[] = array(
                         'tag'        => $tag,
+                        'is_inline'  => false,
                         'url'        => $url,
                         'url_clean'  => $url_clean,
                         'local_path' => $local_path,
                     );
+                } else {
+                    // Excluded or special script -> flush current chunk to preserve execution order
+                    $flush_chunk();
                 }
             } else {
-                // Inline scripts (no src) — check if we can combine like WP Rocket
-                $is_dynamic = false;
-                $matched_sig = '';
-                
-                // Exclude localized scripts
-                foreach ( $localized_scripts as $loc_script ) {
-                    if ( strpos( $inline_content, $loc_script ) !== false ) {
-                        $is_dynamic = true;
-                        $matched_sig = 'localized_script';
-                        break;
-                    }
-                }
-                
-                // Exclude GTM / Analytics / tracking / non-JS JSON blocks or custom configs
-                if ( ! $is_dynamic ) {
-                    $dynamic_signatures = array(
-                        'dataLayer', 'gtm', 'fbq', 'analytics', 'google_analytics',
-                        '_wpemojiSettings', 'wc_single_product_params', 'wc_cart_fragments_params',
-                        'wp.i18n', 'wp.hooks', 'wp.polyfill', 'translations',
-                        'var gsb_settings', 'window._wca', 'window._nslDOMReady'
-                    );
-                    
-                    foreach ( $dynamic_signatures as $sig ) {
-                        if ( stripos( $inline_content, $sig ) !== false ) {
-                            $is_dynamic = true;
-                            $matched_sig = $sig;
-                            break;
-                        }
-                    }
-                }
-                
-                if ( ! $is_dynamic ) {
-                    // Combineable inline script! Add to current chunk
+                // Inline script
+                if ( ! $is_special && ! $is_excluded ) {
                     $current_chunk[] = array(
                         'tag'        => $tag,
                         'is_inline'  => true,
@@ -1355,21 +1273,14 @@ class Uwb_Optimizer {
                         'url_clean'  => 'inline_script_' . md5( $inline_content ),
                         'local_path' => '',
                     );
-                    if ( $debug_mode ) {
-                        $GLOBALS['uwb_debug_log'][] = "[combine_js] Inline script added to chunk (hash: " . md5($inline_content) . ")";
-                    }
                 } else {
-                    if ( $debug_mode ) {
-                        $GLOBALS['uwb_debug_log'][] = "[combine_js] Inline script SKIPPED (contains dynamic signature: {$matched_sig})";
-                    }
+                    // Excluded or special inline script -> flush current chunk to preserve execution order
+                    $flush_chunk();
                 }
             }
         }
 
         $flush_chunk();
-
-        // Post-process: ensure jQuery & jQuery Migrate load before the combined file.
-        $html = self::ensure_jquery_before_combined( $html );
 
         return $html;
     }
