@@ -3408,19 +3408,24 @@ js-(before|after)
                         secret_key: $('#uwb_cdn_secret_key').val(),
                         bucket: $('#uwb_cdn_bucket').val(),
                         endpoint: $('#uwb_cdn_endpoint').val(),
-                        region: $('#uwb_cdn_region').val()
+                        region: $('#uwb_cdn_region').val(),
+                        custom_domain: $('#uwb_cdn_custom_domain').val()
                     },
                     success: function(resp) {
                         $btn.prop('disabled', false).html('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg> Test CDN Connection');
                         if (resp.success) {
-                            $res.css({'padding':'10px 14px', 'background':'#d1fae5', 'color':'#065f46', 'border':'1px solid #6ee7b7', 'border-radius':'6px', 'font-size':'13px', 'font-weight':'600'}).html('✅ ' + resp.data).slideDown();
+                            var html = '<div>✅ ' + resp.data.message + '</div>';
+                            if (resp.data.file_url) {
+                                html += '<div style="margin-top:8px; font-weight:normal; word-break:break-all;">🔗 Direct File URL: <a href="' + resp.data.file_url + '" target="_blank" rel="noopener noreferrer" style="color:#047857; text-decoration:underline; font-weight:700;">' + resp.data.file_url + ' &rarr;</a></div>';
+                            }
+                            $res.css({'padding':'12px 16px', 'background':'#d1fae5', 'color':'#065f46', 'border':'1px solid #6ee7b7', 'border-radius':'8px', 'font-size':'13px', 'font-weight':'600'}).html(html).slideDown();
                         } else {
-                            $res.css({'padding':'10px 14px', 'background':'#fee2e2', 'color':'#991b1b', 'border':'1px solid #fca5a5', 'border-radius':'6px', 'font-size':'13px', 'font-weight':'600'}).html('❌ Error: ' + resp.data).slideDown();
+                            $res.css({'padding':'12px 16px', 'background':'#fee2e2', 'color':'#991b1b', 'border':'1px solid #fca5a5', 'border-radius':'8px', 'font-size':'13px', 'font-weight':'600'}).html('❌ Error: ' + resp.data).slideDown();
                         }
                     },
                     error: function() {
                         $btn.prop('disabled', false).text('Test CDN Connection');
-                        $res.css({'padding':'10px 14px', 'background':'#fee2e2', 'color':'#991b1b', 'border':'1px solid #fca5a5', 'border-radius':'6px', 'font-size':'13px', 'font-weight':'600'}).html('❌ Server request failed.').slideDown();
+                        $res.css({'padding':'12px 16px', 'background':'#fee2e2', 'color':'#991b1b', 'border':'1px solid #fca5a5', 'border-radius':'8px', 'font-size':'13px', 'font-weight':'600'}).html('❌ Server request failed.').slideDown();
                     }
                 });
             });
@@ -4617,14 +4622,21 @@ js-(before|after)
             'region'     => isset( $_POST['region'] ) ? sanitize_text_field( $_POST['region'] ) : 'auto',
         );
 
+        $custom_domain = isset( $_POST['custom_domain'] ) ? esc_url_raw( $_POST['custom_domain'] ) : '';
+
         $client = new \Ultimate_WP_Booster\Engine\CDN\S3Client( $config );
-        $res = $client->test_connection();
+        $res = $client->test_connection( $custom_domain );
 
         if ( is_wp_error( $res ) ) {
             wp_send_json_error( $res->get_error_message() );
         }
 
-        wp_send_json_success( 'Successfully connected to S3/R2 storage bucket!' );
+        $file_url = ! empty( $res['file_url'] ) ? $res['file_url'] : '';
+
+        wp_send_json_success( array(
+            'message'  => 'Successfully uploaded test file (uwb-test-connection.txt) to S3/R2 storage!',
+            'file_url' => $file_url,
+        ) );
     }
 
     public function ajax_sync_media_to_cdn() {

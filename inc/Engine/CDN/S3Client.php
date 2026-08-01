@@ -96,21 +96,32 @@ class S3Client {
         return $this->request( 'HEAD', "/{$this->bucket}/{$key}" );
     }
 
-    public function test_connection() {
+    public function test_connection( $custom_domain = '' ) {
         if ( ! $this->is_configured() ) {
             return new \WP_Error( 'cdn_not_configured', 'Missing S3/R2 access key, secret key, or bucket name.' );
         }
 
-        $test_key = 'uwb-test-connection-' . time() . '.txt';
-        $put_res = $this->put_object( 'Ultimate WP Booster CDN Test OK', $test_key, 'text/plain', 'no-cache' );
+        $test_key = 'uwb-test-connection.txt';
+        $content  = 'Ultimate WP Booster CDN Test File - Created at ' . gmdate( 'Y-m-d H:i:s UTC' );
+        $put_res  = $this->put_object( $content, $test_key, 'text/plain; charset=utf-8', 'public, max-age=86400' );
 
         if ( is_wp_error( $put_res ) ) {
             return $put_res;
         }
 
-        // Clean up test file
-        $this->delete_object( $test_key );
-        return true;
+        $file_url = '';
+        if ( ! empty( $custom_domain ) ) {
+            $custom_domain = rtrim( $custom_domain, '/' );
+            if ( strpos( $custom_domain, 'http://' ) !== 0 && strpos( $custom_domain, 'https://' ) !== 0 ) {
+                $custom_domain = 'https://' . $custom_domain;
+            }
+            $file_url = $custom_domain . '/' . $test_key;
+        }
+
+        return array(
+            'test_key' => $test_key,
+            'file_url' => $file_url,
+        );
     }
 
     private function request( $method, $path, $query = array(), $headers = array(), $body = '' ) {
