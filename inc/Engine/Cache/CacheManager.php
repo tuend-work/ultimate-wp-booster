@@ -21,6 +21,10 @@ class CacheManager {
             \Ultimate_WP_Booster\Engine\CDN\CDNManager::purge_cache_files_from_cdn();
         }
 
+        if ( get_option( 'uwb_cf_enabled', 0 ) && get_option( 'uwb_cf_auto_purge_on_clear', 1 ) && \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::is_configured() ) {
+            \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::purge_everything();
+        }
+
         $minify_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
         if ( file_exists( $minify_dir ) ) {
             $this->recursive_delete( $minify_dir, true );
@@ -33,6 +37,10 @@ class CacheManager {
     }
 
     public function purge_url( $url ) {
+        if ( get_option( 'uwb_cf_enabled', 0 ) && \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::is_configured() ) {
+            \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::purge_urls( array( $url ) );
+        }
+
         $host = wp_parse_url( $url, PHP_URL_HOST );
         $path = wp_parse_url( $url, PHP_URL_PATH );
         

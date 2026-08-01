@@ -18,6 +18,8 @@ class Admin {
         add_action( 'admin_init', array( $this, 'register_settings' ) );
         add_action( 'admin_init', array( $this, 'admin_init_sync' ) );
         add_action( 'wp_ajax_uwb_test_cdn_connection', array( $this, 'ajax_test_cdn_connection' ) );
+        add_action( 'wp_ajax_uwb_test_cf_connection', array( $this, 'ajax_test_cf_connection' ) );
+        add_action( 'wp_ajax_uwb_purge_cf_cache', array( $this, 'ajax_purge_cf_cache' ) );
         add_action( 'wp_ajax_uwb_sync_media_to_cdn', array( $this, 'ajax_sync_media_to_cdn' ) );
 
         $options_to_sync = array(
@@ -258,6 +260,12 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_cdn_auto_purge_minified', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_auto_delete', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_delete_local', 'intval' );
+
+        // Cloudflare Zone Cache Purge Settings
+        register_setting( 'uwb_settings_group', 'uwb_cf_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cf_zone_id', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cf_api_token', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cf_auto_purge_on_clear', 'intval' );
 
         register_setting( 'uwb_settings_group', 'uwb_tuning_css_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_tuning_js_excludes', 'sanitize_textarea_field' );
@@ -1778,15 +1786,56 @@ class Admin {
 
                             <!-- SUB-TAB 2: CDN Cache -->
                             <div id="subtab-cdn_cache" class="uwb-subtab-content">
-                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:28px; text-align:center; max-width:650px; margin:20px auto;">
-                                    <div style="width:56px; height:56px; background:#eff6ff; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; color:var(--uwb-primary);">
-                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                                <!-- Section 1: Cloudflare Zone CDN Cache Integration -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                                        Cloudflare Zone CDN Cache Integration
+                                    </h3>
+                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Synchronize plugin cache clearing with Cloudflare Edge CDN cache for your domain.</p>
+
+                                    <?php $this->render_toggle_switch( 'uwb_cf_enabled', 'Enable Cloudflare Zone CDN Cache Purge', 'Automatically send Cache Purge API requests to Cloudflare CDN Edge when clearing plugin cache or single page cache.' ); ?>
+
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; margin-top:20px;">
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_cf_zone_id">Cloudflare Zone ID</label>
+                                            <input type="text" name="uwb_cf_zone_id" id="uwb_cf_zone_id" value="<?php echo esc_attr( get_option( 'uwb_cf_zone_id', '' ) ); ?>" placeholder="e.g. c2547eb745079dac9320b638f5e225cf" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                            <p class="description">Found on your Cloudflare Dashboard &rarr; Domain Overview page (right sidebar).</p>
+                                        </div>
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_cf_api_token">Cloudflare API Token</label>
+                                            <input type="password" name="uwb_cf_api_token" id="uwb_cf_api_token" value="<?php echo esc_attr( get_option( 'uwb_cf_api_token', '' ) ); ?>" placeholder="API Token with Cache Purge permission" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" autocomplete="new-password" />
+                                            <p class="description">Create token at Cloudflare Profile &rarr; API Tokens with <code>Zone - Cache Purge - Purge</code> permission.</p>
+                                        </div>
                                     </div>
-                                    <h3 style="margin:0 0 10px 0; font-size:16px; font-weight:700; color:var(--uwb-text);">CDN Offload &amp; Storage Settings Moved</h3>
-                                    <p style="font-size:13.5px; color:var(--uwb-text-muted); margin:0 0 20px 0; line-height:1.5;">
-                                        Cloudflare R2 and S3-compatible asset offloading, file type rules, and event sync settings have been relocated to <strong>Page Optimizes &rarr; [8] CDN Offload Media</strong>.
-                                    </p>
-                                    <button type="button" class="button button-primary" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">
+
+                                    <div style="margin-bottom:20px; background:#fff; padding:16px; border:1px solid var(--uwb-border); border-radius:8px;">
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cf_auto_purge_on_clear" value="1" <?php checked( get_option( 'uwb_cf_auto_purge_on_clear', 1 ), 1 ); ?> />
+                                            Auto-purge Cloudflare CDN Edge Cache when clearing plugin cache
+                                        </label>
+                                    </div>
+
+                                    <div style="display:flex; gap:12px; align-items:center;">
+                                        <button type="button" id="btn-test-cf-connection" class="button button-secondary" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer;">
+                                            Test Cloudflare API Connection
+                                        </button>
+                                        <button type="button" id="btn-purge-cf-cache" class="button button-secondary" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer; color:#dc2626; border-color:#fca5a5;">
+                                            Purge Cloudflare Zone Cache Now
+                                        </button>
+                                    </div>
+                                    <div id="uwb-cf-test-result" style="margin-top:12px; display:none;"></div>
+                                </div>
+
+                                <!-- Section 2: CDN Offload Media Notice Card -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+                                    <div>
+                                        <h4 style="margin:0 0 6px 0; font-size:14.5px; font-weight:700; color:var(--uwb-text);">CDN Media &amp; Asset Offloading (R2 / S3)</h4>
+                                        <p style="font-size:13px; color:var(--uwb-text-muted); margin:0;">
+                                            Cloudflare R2 and S3 storage connection credentials, file type rules, and auto-sync settings are located under <strong>Page Optimizes &rarr; [8] CDN Offload Media</strong>.
+                                        </p>
+                                    </div>
+                                    <button type="button" class="button button-primary" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; white-space:nowrap;">
                                         Go to Page Optimizes &rarr; [8] CDN Offload Media
                                     </button>
                                 </div>
@@ -4099,6 +4148,131 @@ js-(before|after)
                 });
             });
 
+            // Test Cloudflare API Connection
+            $('#btn-test-cf-connection').on('click', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var $result = $('#uwb-cf-test-result');
+
+                var zoneId = $('#uwb_cf_zone_id').val();
+                var token = $('#uwb_cf_api_token').val();
+
+                $btn.prop('disabled', true).text('Testing API...');
+                $result.hide();
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'uwb_test_cf_connection',
+                        nonce: nonce,
+                        zone_id: zoneId,
+                        api_token: token
+                    },
+                    success: function(res) {
+                        $btn.prop('disabled', false).text('Test Cloudflare API Connection');
+                        $result.show();
+                        if (res.success) {
+                            $result.css({
+                                'background': '#d1fae5',
+                                'color': '#065f46',
+                                'border': '1px solid #6ee7b7',
+                                'padding': '12px',
+                                'border-radius': '8px',
+                                'font-size': '13px',
+                                'font-weight': '600'
+                            }).html('✓ ' + res.data.message);
+                        } else {
+                            $result.css({
+                                'background': '#fee2e2',
+                                'color': '#991b1b',
+                                'border': '1px solid #fca5a5',
+                                'padding': '12px',
+                                'border-radius': '8px',
+                                'font-size': '13px',
+                                'font-weight': '600'
+                            }).html('✕ Error: ' + (res.data.message || 'Connection failed'));
+                        }
+                    },
+                    error: function() {
+                        $btn.prop('disabled', false).text('Test Cloudflare API Connection');
+                        $result.show().css({
+                            'background': '#fee2e2',
+                            'color': '#991b1b',
+                            'border': '1px solid #fca5a5',
+                            'padding': '12px',
+                            'border-radius': '8px',
+                            'font-size': '13px',
+                            'font-weight': '600'
+                        }).html('✕ Server error testing Cloudflare connection.');
+                    }
+                });
+            });
+
+            // Purge Cloudflare Zone Cache Now
+            $('#btn-purge-cf-cache').on('click', function(e) {
+                e.preventDefault();
+                if (!confirm('Purge all Cloudflare CDN Edge Cache for this zone now?')) {
+                    return;
+                }
+                var $btn = $(this);
+                var $result = $('#uwb-cf-test-result');
+
+                var zoneId = $('#uwb_cf_zone_id').val();
+                var token = $('#uwb_cf_api_token').val();
+
+                $btn.prop('disabled', true).text('Purging CDN...');
+                $result.hide();
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'uwb_purge_cf_cache',
+                        nonce: nonce,
+                        zone_id: zoneId,
+                        api_token: token
+                    },
+                    success: function(res) {
+                        $btn.prop('disabled', false).text('Purge Cloudflare Zone Cache Now');
+                        $result.show();
+                        if (res.success) {
+                            $result.css({
+                                'background': '#d1fae5',
+                                'color': '#065f46',
+                                'border': '1px solid #6ee7b7',
+                                'padding': '12px',
+                                'border-radius': '8px',
+                                'font-size': '13px',
+                                'font-weight': '600'
+                            }).html('✓ ' + res.data.message);
+                        } else {
+                            $result.css({
+                                'background': '#fee2e2',
+                                'color': '#991b1b',
+                                'border': '1px solid #fca5a5',
+                                'padding': '12px',
+                                'border-radius': '8px',
+                                'font-size': '13px',
+                                'font-weight': '600'
+                            }).html('✕ Error: ' + (res.data.message || 'Purge failed'));
+                        }
+                    },
+                    error: function() {
+                        $btn.prop('disabled', false).text('Purge Cloudflare Zone Cache Now');
+                        $result.show().css({
+                            'background': '#fee2e2',
+                            'color': '#991b1b',
+                            'border': '1px solid #fca5a5',
+                            'padding': '12px',
+                            'border-radius': '8px',
+                            'font-size': '13px',
+                            'font-weight': '600'
+                        }).html('✕ Server error purging Cloudflare cache.');
+                    }
+                });
+            });
+
             // Flush Redis Cache
             $('#btn-flush-redis, #btn-flush-redis-tree').on('click', function(e) {
                 e.preventDefault();
@@ -4663,6 +4837,45 @@ js-(before|after)
         wp_send_json_success( array(
             'message'  => 'Successfully uploaded test file (uwb-test-connection.txt) to S3/R2 storage!',
             'file_url' => $file_url,
+        ) );
+    }
+
+    public function ajax_test_cf_connection() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Permission denied' );
+        }
+
+        $zone_id = isset( $_POST['zone_id'] ) ? sanitize_text_field( $_POST['zone_id'] ) : get_option( 'uwb_cf_zone_id', '' );
+        $token   = isset( $_POST['api_token'] ) ? sanitize_text_field( $_POST['api_token'] ) : get_option( 'uwb_cf_api_token', '' );
+
+        $res = \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::test_connection( $zone_id, $token );
+        if ( is_wp_error( $res ) ) {
+            wp_send_json_error( $res->get_error_message() );
+        }
+
+        $zone_name = ! empty( $res['name'] ) ? " (Zone: {$res['name']})" : '';
+        wp_send_json_success( array(
+            'message' => "Cloudflare API Connection Successful! {$zone_name}",
+        ) );
+    }
+
+    public function ajax_purge_cf_cache() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Permission denied' );
+        }
+
+        $zone_id = isset( $_POST['zone_id'] ) ? sanitize_text_field( $_POST['zone_id'] ) : get_option( 'uwb_cf_zone_id', '' );
+        $token   = isset( $_POST['api_token'] ) ? sanitize_text_field( $_POST['api_token'] ) : get_option( 'uwb_cf_api_token', '' );
+
+        $res = \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::purge_everything( $zone_id, $token );
+        if ( is_wp_error( $res ) ) {
+            wp_send_json_error( $res->get_error_message() );
+        }
+
+        wp_send_json_success( array(
+            'message' => 'Successfully sent Cache Purge request! All Cloudflare CDN Edge Cache has been purged.',
         ) );
     }
 
