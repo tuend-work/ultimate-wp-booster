@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.18.3
+ * Version:     1.18.4
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.18.3' );
+define( 'UWB_VERSION', '1.18.4' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -473,4 +473,36 @@ function uwb_handle_admin_bar_flush_opcache() {
     $referer = wp_get_referer() ? wp_get_referer() : admin_url( 'admin.php?page=ultimate-wp-booster' );
     wp_safe_redirect( add_query_arg( 'uwb_opcache_flushed', '1', $referer ) );
     exit;
+}
+
+// 8. Admin caching status warnings (Checks WP_CACHE and advanced-cache.php dropin)
+add_action( 'admin_notices', 'uwb_check_cache_status_notice' );
+function uwb_check_cache_status_notice() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
+    $errors = array();
+
+    if ( ! defined( 'WP_CACHE' ) || ! WP_CACHE ) {
+        $errors[] = 'Constant <code>WP_CACHE</code> is not defined or is set to <code>false</code> in your <code>wp-config.php</code> file. Static caching is currently disabled.';
+    }
+
+    $dropin = WP_CONTENT_DIR . '/advanced-cache.php';
+    if ( ! file_exists( $dropin ) ) {
+        $errors[] = 'The cache drop-in file <code>wp-content/advanced-cache.php</code> is missing or failed to copy. Page caching will not work.';
+    }
+
+    if ( ! empty( $errors ) ) {
+        ?>
+        <div class="notice notice-error is-dismissible" style="border-left-color: #d54e21; padding: 12px 20px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-top: 15px;">
+            <h3 style="margin: 0 0 8px 0; color: #d54e21; font-weight: 600;">Ultimate WP Booster Caching Warning</h3>
+            <ul style="margin: 0; padding-left: 20px; list-style-type: disc;">
+                <?php foreach ( $errors as $err ) : ?>
+                    <li style="font-size: 14px; line-height: 1.5; color: #32373c; margin-bottom: 5px;"><?php echo $err; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php
+    }
 }

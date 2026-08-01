@@ -128,6 +128,9 @@ class Uwb_Activator {
             // Check if we need to write/overwrite
             if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
                 @copy( $source, $destination );
+                if ( function_exists( 'opcache_invalidate' ) ) {
+                    @opcache_invalidate( $destination, true );
+                }
             }
         }
     }
@@ -173,6 +176,9 @@ class Uwb_Activator {
             if ( file_exists( $source ) ) {
                 if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
                     @copy( $source, $destination );
+                    if ( function_exists( 'opcache_invalidate' ) ) {
+                        @opcache_invalidate( $destination, true );
+                    }
                 }
             }
         } elseif ( $type === 2 ) {
@@ -180,6 +186,9 @@ class Uwb_Activator {
             if ( file_exists( $source ) ) {
                 if ( ! file_exists( $destination ) || md5_file( $source ) !== md5_file( $destination ) ) {
                     @copy( $source, $destination );
+                    if ( function_exists( 'opcache_invalidate' ) ) {
+                        @opcache_invalidate( $destination, true );
+                    }
                 }
             }
         } else {

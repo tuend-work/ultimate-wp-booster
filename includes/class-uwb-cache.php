@@ -295,6 +295,9 @@ class Uwb_Cache {
                            "return " . var_export( $config, true ) . ";\n";
 
         @file_put_contents( $config_path, $config_content );
+        if ( function_exists( 'opcache_invalidate' ) ) {
+            @opcache_invalidate( $config_path, true );
+        }
 
         // Auto-sync advanced-cache.php drop-in file to wp-content/
         require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
