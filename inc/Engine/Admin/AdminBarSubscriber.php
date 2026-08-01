@@ -9,48 +9,303 @@ class AdminBarSubscriber implements Subscriber_Interface {
 
     public static function get_subscribed_events() {
         return array(
-            'admin_bar_menu'                   => array( 'add_admin_bar_nodes', 999 ),
-            'admin_post_uwb_purge_url'         => 'handle_purge_url',
-            'admin_post_uwb_clear_cache_page'  => 'handle_clear_cache_page',
-            'admin_post_uwb_flush_all_preload' => 'handle_flush_all_preload',
+            'admin_bar_menu'                    => array( 'add_admin_bar_nodes', 999 ),
+            'admin_post_uwb_purge_url'          => 'handle_purge_url',
+            'admin_post_uwb_clear_cache_page'   => 'handle_clear_cache_page',
+            'admin_post_uwb_flush_all_preload'  => 'handle_flush_all_preload',
             'admin_post_uwb_flush_object_cache' => 'handle_flush_object_cache',
-            'admin_post_uwb_flush_opcache'      => 'handle_flush_opcache',
+            'admin_post_uwb_flush_opcache'       => 'handle_flush_opcache',
         );
     }
 
     public function add_admin_bar_nodes( $wp_admin_bar ) {
-        if ( function_exists( 'uwb_add_admin_bar_nodes' ) ) {
-            uwb_add_admin_bar_nodes( $wp_admin_bar );
+        $can_manage = current_user_can( 'manage_options' );
+        $can_edit_current_post = false;
+        $current_post_id = 0;
+
+        if ( ! is_admin() && is_singular() ) {
+            $current_post_id = get_the_ID();
+            if ( $current_post_id && current_user_can( 'edit_post', $current_post_id ) ) {
+                $can_edit_current_post = true;
+            }
         }
+
+        if ( ! $can_manage && ! $can_edit_current_post ) {
+            return;
+        }
+
+        // Add main node
+        $wp_admin_bar->add_node( array(
+            'id'    => 'uwb-admin-bar',
+            'title' => 'WP Booster',
+            'href'  => $can_manage ? admin_url( 'admin.php?page=ultimate-wp-booster' ) : null,
+        ) );
+
+        // Add sub-node: Purge This URL (only on frontend)
+        if ( ! is_admin() ) {
+            $current_url = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+            $clean_url = strtok( $current_url, '?' );
+            
+            $action_url = 'admin-post.php?action=uwb_purge_url&url=' . urlencode( $clean_url );
+            if ( $current_post_id > 0 ) {
+                $action_url .= '&post_id=' . $current_post_id;
+            }
+            $purge_url = wp_nonce_url( admin_url( $action_url ), 'uwb_purge_url_action' );
+            
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-purge-url',
+                'parent' => 'uwb-admin-bar',
+                'title'  => 'Purge This URL',
+                'href'   => $purge_url,
+            ) );
+        }
+
+        if ( ! $can_manage ) {
+            return;
+        }
+
+        // Add sub-node: Clear Cache Page (only clear, no preload)
+        $clear_cache_page_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cache_page' ), 'uwb_clear_cache_page_action' );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-clear-cache-page',
+            'parent' => 'uwb-admin-bar',
+            'title'  => 'Clear Cache Page',
+            'href'   => $clear_cache_page_url,
+        ) );
+
+        // Add sub-node: Flush OPCache
+        $flush_op_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_opcache' ), 'uwb_flush_opcache_action' );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-flush-opcache',
+            'parent' => 'uwb-admin-bar',
+            'title'  => 'Clear OPCache',
+            'href'   => $flush_op_url,
+        ) );
+
+        if ( wp_using_ext_object_cache() ) {
+            // Add sub-node: Flush Object Cache
+            $flush_oc_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_object_cache' ), 'uwb_flush_object_cache_action' );
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-flush-object-cache',
+                'parent' => 'uwb-admin-bar',
+                'title'  => 'Clear Object Cache',
+                'href'   => $flush_oc_url,
+            ) );
+
+            // Add Global Cache Statistics to Admin Bar
+            global $wp_object_cache;
+            $hits = 0; $misses = 0;
+            if ( isset( $wp_object_cache->cache_hits ) ) $hits = intval( $wp_object_cache->cache_hits );
+            if ( isset( $wp_object_cache->cache_misses ) ) $misses = intval( $wp_object_cache->cache_misses );
+            $total_req = $hits + $misses;
+            $hit_ratio = $total_req > 0 ? round( ( $hits / $total_req ) * 100, 1 ) : 0;
+
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-oc-stats',
+                'parent' => 'uwb-admin-bar',
+                'title'  => sprintf( 'Object Cache Stats (Hit Ratio: %s%%)', $hit_ratio ),
+                'href'   => admin_url( 'admin.php?page=ultimate-wp-booster' ),
+            ) );
+
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-oc-hits',
+                'parent' => 'uwb-oc-stats',
+                'title'  => sprintf( 'Hits: %s', number_format( $hits ) ),
+                'href'   => '#',
+            ) );
+
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-oc-misses',
+                'parent' => 'uwb-oc-stats',
+                'title'  => sprintf( 'Misses: %s', number_format( $misses ) ),
+                'href'   => '#',
+            ) );
+
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-oc-total',
+                'parent' => 'uwb-oc-stats',
+                'title'  => sprintf( 'Total Requests: %s', number_format( $total_req ) ),
+                'href'   => '#',
+            ) );
+        }
+
+        // Add sub-node: Flush All & Preload Cache
+        $flush_all_preload_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_all_preload' ), 'uwb_flush_all_preload_action' );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-flush-all-preload',
+            'parent' => 'uwb-admin-bar',
+            'title'  => 'Flush All & Preload Cache',
+            'href'   => $flush_all_preload_url,
+        ) );
+
+        // Add sub-node: Settings
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-settings',
+            'parent' => 'uwb-admin-bar',
+            'title'  => 'Settings',
+            'href'   => admin_url( 'admin.php?page=ultimate-wp-booster' ),
+        ) );
     }
 
     public function handle_purge_url() {
-        if ( function_exists( 'uwb_handle_admin_bar_purge_url' ) ) {
-            uwb_handle_admin_bar_purge_url();
+        $post_id = isset( $_GET['post_id'] ) ? intval( $_GET['post_id'] ) : 0;
+        
+        $can_purge = false;
+        if ( current_user_can( 'manage_options' ) ) {
+            $can_purge = true;
+        } elseif ( $post_id > 0 && current_user_can( 'edit_post', $post_id ) ) {
+            $can_purge = true;
         }
+
+        if ( ! $can_purge ) {
+            wp_die( 'Permission denied.' );
+        }
+
+        check_admin_referer( 'uwb_purge_url_action' );
+
+        $url = isset( $_GET['url'] ) ? esc_url_raw( urldecode( $_GET['url'] ) ) : '';
+        
+        if ( $post_id > 0 && function_exists( 'rocket_clean_post' ) ) {
+            rocket_clean_post( $post_id );
+        } elseif ( ! empty( $url ) && class_exists( 'Uwb_Cache' ) ) {
+            $uwb_cache = new \Uwb_Cache();
+            $uwb_cache->purge_url( $url );
+        }
+
+        wp_safe_redirect( wp_get_referer() ? wp_get_referer() : home_url( '/' ) );
+        exit;
     }
 
     public function handle_clear_cache_page() {
-        if ( function_exists( 'uwb_handle_admin_bar_clear_cache_page' ) ) {
-            uwb_handle_admin_bar_clear_cache_page();
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Permission denied.' );
         }
+
+        check_admin_referer( 'uwb_clear_cache_page_action' );
+
+        if ( class_exists( 'Uwb_Cache' ) ) {
+            $uwb_cache = new \Uwb_Cache();
+            $uwb_cache->purge_all();
+        }
+
+        $referer = wp_get_referer();
+        if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
+            wp_safe_redirect( add_query_arg( 'uwb_msg', 'cache_cleared', $referer ) );
+        } else {
+            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=cache_cleared' ) );
+        }
+        exit;
     }
 
     public function handle_flush_all_preload() {
-        if ( function_exists( 'uwb_handle_admin_bar_flush_all_preload' ) ) {
-            uwb_handle_admin_bar_flush_all_preload();
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Permission denied.' );
         }
+
+        check_admin_referer( 'uwb_flush_all_preload_action' );
+
+        if ( class_exists( 'Uwb_Cache' ) ) {
+            $uwb_cache = new \Uwb_Cache();
+            $uwb_cache->purge_all();
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
+        $wpdb->query( "TRUNCATE TABLE {$table_name}" );
+        update_option( 'uwb_preload_running', 1 );
+
+        if ( function_exists( 'opcache_reset' ) ) {
+            @opcache_reset();
+        }
+
+        $this->flush_object_cache_internal();
+
+        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
+        wp_schedule_single_event( time(), 'uwb_start_preload_async' );
+
+        $referer = wp_get_referer();
+        if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
+            wp_safe_redirect( add_query_arg( 'uwb_msg', 'preload_started', $referer ) );
+        } else {
+            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=preload_started' ) );
+        }
+        exit;
     }
 
     public function handle_flush_object_cache() {
-        if ( function_exists( 'uwb_handle_admin_bar_flush_object_cache' ) ) {
-            uwb_handle_admin_bar_flush_object_cache();
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Permission denied.' );
         }
+
+        check_admin_referer( 'uwb_flush_object_cache_action' );
+
+        $this->flush_object_cache_internal();
+
+        wp_safe_redirect( wp_get_referer() ? wp_get_referer() : home_url( '/' ) );
+        exit;
     }
 
     public function handle_flush_opcache() {
-        if ( function_exists( 'uwb_handle_admin_bar_flush_opcache' ) ) {
-            uwb_handle_admin_bar_flush_opcache();
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Permission denied.' );
         }
+
+        check_admin_referer( 'uwb_flush_opcache_action' );
+
+        if ( function_exists( 'opcache_reset' ) ) {
+            @opcache_reset();
+        }
+
+        $referer = wp_get_referer() ? wp_get_referer() : admin_url( 'admin.php?page=ultimate-wp-booster' );
+        wp_safe_redirect( add_query_arg( 'uwb_opcache_flushed', '1', $referer ) );
+        exit;
+    }
+
+    private function flush_object_cache_internal() {
+        $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
+        if ( $oc_type === 2 ) {
+            if ( class_exists( 'Memcached' ) ) {
+                $mc_host = get_option( 'uwb_redis_host', '127.0.0.1' );
+                $mc_port = intval( get_option( 'uwb_redis_port', 11211 ) );
+                if ( $mc_port === 6379 ) {
+                    $mc_port = 11211;
+                }
+                $m = new \Memcached();
+                $m->addServer( $mc_host, $mc_port );
+                @$m->flush();
+            }
+        } else {
+            if ( class_exists( 'Redis' ) ) {
+                $conn_type = get_option( 'uwb_redis_conn_type', 'tcp' );
+                $redis_host = get_option( 'uwb_redis_host', '127.0.0.1' );
+                $redis_port = get_option( 'uwb_redis_port', 6379 );
+                $redis_socket = get_option( 'uwb_redis_socket', '' );
+                $redis_password = get_option( 'uwb_redis_password', '' );
+                $redis_db = get_option( 'uwb_redis_db', 0 );
+
+                $redis = new \Redis();
+                try {
+                    if ( $conn_type === 'socket' && ! empty( $redis_socket ) ) {
+                        $connected = @$redis->connect( $redis_socket );
+                    } else {
+                        $connected = @$redis->connect( $redis_host, $redis_port, 1.0 );
+                    }
+
+                    if ( $connected ) {
+                        if ( ! empty( $redis_password ) ) {
+                            @$redis->auth( $redis_password );
+                        }
+                        if ( $redis_db > 0 ) {
+                            @$redis->select( $redis_db );
+                        }
+                        $redis->flushDB();
+                    }
+                } catch ( \Exception $e ) {
+                    // fall through
+                }
+            }
+        }
+
+        wp_cache_flush();
     }
 }

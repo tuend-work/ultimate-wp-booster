@@ -14,8 +14,31 @@ class HeartbeatSubscriber implements Subscriber_Interface {
     }
 
     public function heartbeat_control() {
-        if ( function_exists( 'uwb_heartbeat_control' ) ) {
-            uwb_heartbeat_control();
+        $mode = get_option( 'uwb_heartbeat_control', 'default' );
+        if ( $mode === 'default' ) {
+            return;
+        }
+
+        if ( $mode === 'disable_all' ) {
+            add_action( 'init', function() {
+                wp_deregister_script( 'heartbeat' );
+            }, 1 );
+            return;
+        }
+
+        if ( $mode === 'disable_frontend' && ! is_admin() ) {
+            add_action( 'wp_enqueue_scripts', function() {
+                wp_deregister_script( 'heartbeat' );
+            }, 1 );
+            return;
+        }
+
+        if ( $mode === 'reduce' ) {
+            $interval = max( 15, intval( get_option( 'uwb_heartbeat_interval', 60 ) ) );
+            add_filter( 'heartbeat_settings', function( $settings ) use ( $interval ) {
+                $settings['interval'] = $interval;
+                return $settings;
+            } );
         }
     }
 }

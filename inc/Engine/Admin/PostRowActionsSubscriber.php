@@ -15,8 +15,13 @@ class PostRowActionsSubscriber implements Subscriber_Interface {
     }
 
     public function add_post_row_actions( $actions, $post ) {
-        if ( function_exists( 'uwb_add_post_row_actions' ) ) {
-            return uwb_add_post_row_actions( $actions, $post );
+        if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_post', $post->ID ) ) {
+            $clean_url = get_permalink( $post->ID );
+            $purge_url = wp_nonce_url( 
+                admin_url( 'admin-post.php?action=uwb_purge_url&url=' . urlencode( $clean_url ) . '&post_id=' . $post->ID ), 
+                'uwb_purge_url_action' 
+            );
+            $actions['uwb_purge'] = '<a href="' . esc_url( $purge_url ) . '" title="' . esc_attr__( 'Purge cache for this post', 'ultimate-wp-booster' ) . '" style="color:#bc00dd;font-weight:600;">' . esc_html__( 'Xóa cache', 'ultimate-wp-booster' ) . '</a>';
         }
         return $actions;
     }

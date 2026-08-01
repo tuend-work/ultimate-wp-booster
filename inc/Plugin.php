@@ -67,7 +67,9 @@ class Plugin {
             new HeartbeatSubscriber(),
         );
 
-        if ( ! is_admin() ) {
+        if ( is_admin() ) {
+            $subscribers[] = new \Ultimate_WP_Booster\Engine\Admin\AdminNoticeSubscriber();
+        } else {
             $subscribers[] = new BufferSubscriber();
         }
 
