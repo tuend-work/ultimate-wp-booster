@@ -9,13 +9,18 @@ class CDNSubscriber implements Subscriber_Interface {
 
     public static function get_subscribed_events() {
         return array(
-            'add_attachment'    => 'on_add_attachment',
-            'delete_attachment' => 'on_delete_attachment',
+            'add_attachment'        => 'on_add_attachment',
+            'edit_attachment'       => 'on_edit_attachment',
+            'delete_attachment'     => 'on_delete_attachment',
+            'wp_get_attachment_url' => array( 'filter_attachment_url', 10, 2 ),
         );
     }
 
     public function on_add_attachment( $attachment_id ) {
-        if ( ! get_option( 'uwb_cdn_enabled', 0 ) || ! get_option( 'uwb_cdn_auto_upload', 1 ) ) {
+        if ( ! get_option( 'uwb_cdn_enabled', 1 ) && ! get_option( 'uwb_cdn_distribute_media', 1 ) ) {
+            return;
+        }
+        if ( ! get_option( 'uwb_cdn_auto_upload', 1 ) && ! get_option( 'uwb_cdn_auto_upload_attachment', 1 ) ) {
             return;
         }
 
@@ -65,8 +70,18 @@ class CDNSubscriber implements Subscriber_Interface {
         }
     }
 
+    public function on_edit_attachment( $attachment_id ) {
+        if ( ! get_option( 'uwb_cdn_distribute_media', 1 ) || ! get_option( 'uwb_cdn_auto_update_attachment', 1 ) ) {
+            return;
+        }
+        $this->on_add_attachment( $attachment_id );
+    }
+
     public function on_delete_attachment( $attachment_id ) {
-        if ( ! get_option( 'uwb_cdn_enabled', 0 ) || ! get_option( 'uwb_cdn_auto_delete', 1 ) ) {
+        if ( ! get_option( 'uwb_cdn_enabled', 1 ) && ! get_option( 'uwb_cdn_distribute_media', 1 ) ) {
+            return;
+        }
+        if ( ! get_option( 'uwb_cdn_auto_delete', 1 ) && ! get_option( 'uwb_cdn_auto_delete_attachment', 1 ) ) {
             return;
         }
 
@@ -104,5 +119,31 @@ class CDNSubscriber implements Subscriber_Interface {
                 }
             }
         }
+    }
+
+    public function filter_attachment_url( $url, $post_id ) {
+        if ( ! get_option( 'uwb_cdn_distribute_media', 1 ) || ! get_option( 'uwb_cdn_auto_rewrite_attachment_url', 1 ) ) {
+            return $url;
+        }
+
+        $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        if ( empty( $cdn_domain ) ) {
+            return $url;
+        }
+
+        $cdn_domain = rtrim( $cdn_domain, '/' );
+        if ( strpos( $cdn_domain, 'http://' ) !== 0 && strpos( $cdn_domain, 'https://' ) !== 0 ) {
+            $cdn_domain = 'https://' . $cdn_domain;
+        }
+
+        $uploads = wp_upload_dir();
+        $base_url = rtrim( $uploads['baseurl'], '/' );
+
+        if ( strpos( $url, $base_url ) === 0 ) {
+            $rel = ltrim( substr( $url, strlen( $base_url ) ), '/' );
+            return $cdn_domain . '/wp-content/uploads/' . $rel;
+        }
+
+        return $url;
     }
 }

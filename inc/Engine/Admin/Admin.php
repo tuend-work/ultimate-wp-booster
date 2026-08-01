@@ -82,10 +82,28 @@ class Admin {
             'uwb_heartbeat_control',
             'uwb_heartbeat_interval',
             'uwb_preconnect_domains',
-            'uwb_preload_fonts',
             'uwb_delay_js',
             'uwb_delay_js_exclusions',
-            'uwb_debug_mode'
+            'uwb_debug_mode',
+            'uwb_cdn_distribute_css',
+            'uwb_cdn_auto_upload_combined_css',
+            'uwb_cdn_auto_upload_minified_css',
+            'uwb_cdn_auto_purge_css_cdn',
+            'uwb_cdn_distribute_js',
+            'uwb_cdn_auto_upload_combined_js',
+            'uwb_cdn_auto_upload_minified_js',
+            'uwb_cdn_auto_purge_js_cdn',
+            'uwb_cdn_distribute_html',
+            'uwb_cdn_auto_rewrite_html_urls',
+            'uwb_cdn_auto_purge_html_cf',
+            'uwb_cdn_distribute_media',
+            'uwb_cdn_auto_upload_attachment',
+            'uwb_cdn_auto_update_attachment',
+            'uwb_cdn_auto_rewrite_attachment_url',
+            'uwb_cdn_auto_delete_attachment',
+            'uwb_cdn_distribute_font',
+            'uwb_cdn_auto_upload_fonts',
+            'uwb_cdn_auto_rewrite_font_urls'
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( CacheManager::class, 'write_config_file' ) );
@@ -254,6 +272,31 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_cf_zone_id', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_cf_api_token', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_cf_auto_purge_on_clear', 'intval' );
+
+        // CDN Distribution by Asset Type
+        register_setting( 'uwb_settings_group', 'uwb_cdn_distribute_css', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload_combined_css', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload_minified_css', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_purge_css_cdn', 'intval' );
+
+        register_setting( 'uwb_settings_group', 'uwb_cdn_distribute_js', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload_combined_js', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload_minified_js', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_purge_js_cdn', 'intval' );
+
+        register_setting( 'uwb_settings_group', 'uwb_cdn_distribute_html', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_rewrite_html_urls', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_purge_html_cf', 'intval' );
+
+        register_setting( 'uwb_settings_group', 'uwb_cdn_distribute_media', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload_attachment', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_update_attachment', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_rewrite_attachment_url', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_delete_attachment', 'intval' );
+
+        register_setting( 'uwb_settings_group', 'uwb_cdn_distribute_font', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload_fonts', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_rewrite_font_urls', 'intval' );
 
         register_setting( 'uwb_settings_group', 'uwb_tuning_css_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_tuning_js_excludes', 'sanitize_textarea_field' );
@@ -2679,6 +2722,18 @@ class Admin {
                                 $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
                                 $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Load CSS files asynchronously to eliminate render-blocking CSS and speed up page rendering.' );
                                 $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Critical CSS', '', 'Custom Critical CSS to inject into &lt;head&gt;.' );
+
+                                $this->render_cdn_distribution_card(
+                                    'Cloudflare R2 / S3 CDN Distribution for CSS',
+                                    'uwb_cdn_distribute_css',
+                                    'Phân phối CSS qua S3 CDN?',
+                                    'Tải các tập tin CSS đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để tối ưu hóa tốc độ tải trang.',
+                                    array(
+                                        'uwb_cdn_auto_upload_combined_css' => 'Tự động kiểm tra và tải file CSS Combine lên S3 CDN khi được tạo / cập nhật',
+                                        'uwb_cdn_auto_upload_minified_css' => 'Tự động kiểm tra và tải file CSS Minify lên S3 CDN khi nén file',
+                                        'uwb_cdn_auto_purge_css_cdn'      => 'Tự động xoá file CSS cache trên S3 CDN khi thực hiện Purge Cache',
+                                    )
+                                );
                                 ?>
                             </div>
 
@@ -2723,6 +2778,18 @@ js-(before|after)
                                     'One pattern per line. Scripts matching these patterns will NOT be delayed.',
                                     ! intval( get_option( 'uwb_delay_js', 0 ) )
                                 );
+
+                                $this->render_cdn_distribution_card(
+                                    'Cloudflare R2 / S3 CDN Distribution for JS',
+                                    'uwb_cdn_distribute_js',
+                                    'Phân phối JS qua S3 CDN?',
+                                    'Tải các tập tin JavaScript đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để phục vụ khách truy cập.',
+                                    array(
+                                        'uwb_cdn_auto_upload_combined_js' => 'Tự động kiểm tra và tải file JS Combine lên S3 CDN khi được tạo / cập nhật',
+                                        'uwb_cdn_auto_upload_minified_js' => 'Tự động kiểm tra và tải file JS Minify lên S3 CDN khi nén file',
+                                        'uwb_cdn_auto_purge_js_cdn'      => 'Tự động xoá file JS cache trên S3 CDN khi thực hiện Purge Cache',
+                                    )
+                                );
                                 ?>
                             </div>
 
@@ -2734,6 +2801,17 @@ js-(before|after)
                                 $this->render_toggle_switch( 'uwb_html_remove_gfonts', 'Remove Google Fonts', 'Remove Google Fonts from all pages.' );
                                 $this->render_toggle_switch( 'uwb_html_remove_emoji', 'Remove WordPress Emoji', 'Remove default WordPress Emoji CSS/JS.' );
                                 $this->render_toggle_switch( 'uwb_html_remove_noscript', 'Remove Noscript Tags', 'Remove all noscript tags from HTML.' );
+
+                                $this->render_cdn_distribution_card(
+                                    'Cloudflare R2 / S3 CDN Distribution in HTML Output',
+                                    'uwb_cdn_distribute_html',
+                                    'Phân phối tài nguyên tĩnh trong HTML qua S3 CDN?',
+                                    'Tự động viết lại (rewrite) toàn bộ URL tài nguyên tĩnh trong mã nguồn HTML trang web để phân phối từ CDN Domain.',
+                                    array(
+                                        'uwb_cdn_auto_rewrite_html_urls' => 'Tự động thay thế URL tĩnh (hình ảnh, CSS, JS, Fonts) sang CDN Domain trong mã nguồn HTML',
+                                        'uwb_cdn_auto_purge_html_cf'     => 'Đồng bộ tự động gửi API Purge Cloudflare Zone CDN Edge khi xoá HTML Page Cache',
+                                    )
+                                );
                                 ?>
                             </div>
 
@@ -2746,6 +2824,20 @@ js-(before|after)
                                 $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
                                 $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
                                 $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', 'skip-lazy', 'CSS class names of images or containers to exclude from lazy loading (one per line).' );
+
+                                $this->render_cdn_distribution_card(
+                                    'Cloudflare R2 / S3 CDN Distribution for Media Library & Files',
+                                    'uwb_cdn_distribute_media',
+                                    'Phân phối Media Library & Tập tin qua S3 CDN?',
+                                    'Đồng bộ và phân phối toàn bộ tập tin hình ảnh, tài liệu và thumbnails trong thư viện Media WordPress qua S3/R2 CDN.',
+                                    array(
+                                        'uwb_cdn_auto_upload_attachment'     => 'Tự động kiểm tra và tải file Media mới lên S3 CDN khi xảy ra sự kiện upload (add_attachment / wp_generate_attachment_metadata)',
+                                        'uwb_cdn_auto_update_attachment'     => 'Tự động đồng bộ lại S3 CDN khi attachment được cập nhật / chỉnh sửa (edit_attachment)',
+                                        'uwb_cdn_auto_rewrite_attachment_url' => 'Tự động thay thế URL Media sang CDN Domain khi gọi hàm Get URL attachment (wp_get_attachment_url)',
+                                        'uwb_cdn_auto_delete_attachment'     => 'Tự động xoá file tương ứng trên S3 CDN khi xoá attachment trong Media Library (delete_attachment)',
+                                        'uwb_cdn_delete_local'               => 'Tự động xoá file trên máy chủ local sau khi đã upload lên S3 CDN (Chế độ Offload hoàn toàn)',
+                                    )
+                                );
                                 ?>
                             </div>
 
@@ -2766,6 +2858,17 @@ js-(before|after)
                                     'Inject <code>&lt;link rel="preconnect"&gt;</code> tags into HTML <code>&lt;head&gt;</code> to preconnect external font domains (one per line).'
                                 );
                                 $this->render_toggle_switch( 'uwb_html_remove_gfonts', 'Remove Google Fonts', 'Completely remove Google Fonts requests to improve page load speed and privacy compliance.' );
+
+                                $this->render_cdn_distribution_card(
+                                    'Cloudflare R2 / S3 CDN Distribution for Web Fonts',
+                                    'uwb_cdn_distribute_font',
+                                    'Phân phối Web Fonts qua S3 CDN?',
+                                    'Tải và phục vụ các font chữ tùy chỉnh (.woff2, .woff, .ttf) của theme từ S3/R2 CDN.',
+                                    array(
+                                        'uwb_cdn_auto_upload_fonts'     => 'Tự động kiểm tra và tải file Font (.woff2, .woff, .ttf) lên S3 CDN',
+                                        'uwb_cdn_auto_rewrite_font_urls' => 'Tự động thay thế URL Font trong khai báo CSS @font-face sang CDN Domain',
+                                    )
+                                );
                                 ?>
                             </div>
 
@@ -4593,6 +4696,17 @@ js-(before|after)
                     $('#subtab-' + savedSubtab).addClass('active');
                 }
             }
+
+            // Toggle event action checkboxes on CDN distribution switch change
+            $(document).on('change', 'input[name="uwb_cdn_distribute_css"], input[name="uwb_cdn_distribute_js"], input[name="uwb_cdn_distribute_html"], input[name="uwb_cdn_distribute_media"], input[name="uwb_cdn_distribute_font"]', function() {
+                var $card = $(this).closest('div');
+                var $wrap = $card.find('.uwb-cdn-events-wrap');
+                if ($(this).is(':checked')) {
+                    $wrap.slideDown(200);
+                } else {
+                    $wrap.slideUp(200);
+                }
+            });
         });
         </script>
         <?php
@@ -4928,6 +5042,48 @@ js-(before|after)
             'total'     => $total_attachments,
             'message'   => $is_done ? 'All media library items successfully synced to CDN!' : "Synced batch {$paged} ({$count} files)...",
         ) );
+    }
+
+    private function render_cdn_distribution_card( $title, $toggle_key, $toggle_label, $toggle_desc, $events = array() ) {
+        $s3_configured = \Ultimate_WP_Booster\Engine\CDN\CDNManager::get_s3_client()->is_configured();
+        ?>
+        <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-top:24px;">
+            <h4 style="margin-top:0; margin-bottom:16px; font-size:14px; font-weight:700; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                <?php echo esc_html( $title ); ?>
+            </h4>
+
+            <?php if ( ! $s3_configured ) : ?>
+                <div style="background:#fffbeb; border:1px solid #fbbf24; border-radius:10px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:12px; color:#92400e; font-size:13px; font-weight:500;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span><strong>CDN Storage chưa được cấu hình:</strong> Vui lòng cấu hình tài khoản Cloudflare R2 / S3 Storage trước tại <strong>[6] CDN Offload Media</strong> để bật tính năng này.</span>
+                    </div>
+                    <button type="button" class="button button-secondary button-small" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" style="font-weight:600; border-radius:6px; cursor:pointer;">
+                        Cấu hình CDN Offload Media &rarr;
+                    </button>
+                </div>
+            <?php else : ?>
+                <?php $this->render_toggle_switch( $toggle_key, $toggle_label, $toggle_desc ); ?>
+
+                <?php if ( ! empty( $events ) && is_array( $events ) ) : 
+                    $is_active = (bool) get_option( $toggle_key, 1 );
+                ?>
+                    <div class="uwb-cdn-events-wrap" style="margin-top:16px; background:#fff; border:1px solid var(--uwb-border); border-radius:8px; padding:16px; <?php echo $is_active ? '' : 'display:none;'; ?>">
+                        <h5 style="margin:0 0 12px 0; font-size:12px; font-weight:700; color:var(--uwb-text); text-transform:uppercase; letter-spacing:0.5px;">Sự kiện tự động đồng bộ S3 CDN (Event Actions)</h5>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <?php foreach ( $events as $event_key => $event_label ) : ?>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                    <input type="checkbox" name="<?php echo esc_attr( $event_key ); ?>" value="1" <?php checked( get_option( $event_key, 1 ), 1 ); ?> />
+                                    <?php echo esc_html( $event_label ); ?>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+        <?php
     }
 }
 
