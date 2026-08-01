@@ -4594,6 +4594,114 @@ js-(before|after)
         }
         exit;
     }
+
+    public function ajax_test_cdn_connection() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Permission denied' );
+        }
+
+        $config = array(
+            'provider'   => isset( $_POST['provider'] ) ? sanitize_text_field( $_POST['provider'] ) : 'cloudflare_r2',
+            'access_key' => isset( $_POST['access_key'] ) ? sanitize_text_field( $_POST['access_key'] ) : '',
+            'secret_key' => isset( $_POST['secret_key'] ) ? sanitize_text_field( $_POST['secret_key'] ) : '',
+            'bucket'     => isset( $_POST['bucket'] ) ? sanitize_text_field( $_POST['bucket'] ) : '',
+            'account_id' => isset( $_POST['account_id'] ) ? sanitize_text_field( $_POST['account_id'] ) : '',
+            'endpoint'   => isset( $_POST['endpoint'] ) ? esc_url_raw( $_POST['endpoint'] ) : '',
+            'region'     => isset( $_POST['region'] ) ? sanitize_text_field( $_POST['region'] ) : 'auto',
+        );
+
+        $client = new \Ultimate_WP_Booster\Engine\CDN\S3Client( $config );
+        $res = $client->test_connection();
+
+        if ( is_wp_error( $res ) ) {
+            wp_send_json_error( $res->get_error_message() );
+        }
+
+        wp_send_json_success( 'Successfully connected to S3/R2 storage bucket!' );
+    }
+
+    public function ajax_sync_media_to_cdn() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Permission denied' );
+        }
+
+        $paged = isset( $_POST['paged'] ) ? max( 1, intval( $_POST['paged'] ) ) : 1;
+        $posts_per_page = 20;
+
+        $args = array(
+            'post_type'      => 'attachment',
+            'post_status'    => 'inherit',
+            'posts_per_page' => $posts_per_page,
+            'paged'          => $paged,
+            'fields'         => 'ids',
+        );
+
+        $query = new \WP_Query( $args );
+        $total_attachments = $query->found_posts;
+        $attachment_ids = $query->posts;
+
+        if ( empty( $attachment_ids ) ) {
+            wp_send_json_success( array(
+                'completed' => true,
+                'paged'     => $paged,
+                'processed' => 0,
+                'total'     => $total_attachments,
+                'message'   => 'Media sync complete!',
+            ) );
+        }
+
+        $s3_client = \Ultimate_WP_Booster\Engine\CDN\CDNManager::get_s3_client();
+        if ( ! $s3_client->is_configured() ) {
+            wp_send_json_error( 'CDN credentials are missing or incomplete. Save settings first.' );
+        }
+
+        $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
+        $uploads = wp_upload_dir();
+        $base_dir = rtrim( str_replace( '\\', '/', $uploads['basedir'] ), '/' );
+        $count = 0;
+
+        foreach ( $attachment_ids as $id ) {
+            $file = get_attached_file( $id );
+            if ( $file && file_exists( $file ) ) {
+                $file_norm = str_replace( '\\', '/', $file );
+                if ( strpos( $file_norm, $base_dir ) === 0 ) {
+                    $rel = ltrim( substr( $file_norm, strlen( $base_dir ) ), '/' );
+                    $s3_key = 'wp-content/uploads/' . $rel;
+                    $s3_client->put_object( $file, $s3_key, '', $cache_control );
+                    $count++;
+
+                    $meta = wp_get_attachment_metadata( $id );
+                    if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
+                        $dir = dirname( $file );
+                        $rel_dir = dirname( $rel );
+                        $rel_dir = ( $rel_dir === '.' ) ? '' : $rel_dir . '/';
+                        foreach ( $meta['sizes'] as $info ) {
+                            if ( ! empty( $info['file'] ) ) {
+                                $thumb_file = $dir . '/' . $info['file'];
+                                if ( file_exists( $thumb_file ) ) {
+                                    $thumb_key = 'wp-content/uploads/' . $rel_dir . $info['file'];
+                                    $s3_client->put_object( $thumb_file, $thumb_key, '', $cache_control );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $next_paged = $paged + 1;
+        $is_done = ( $paged * $posts_per_page ) >= $total_attachments;
+
+        wp_send_json_success( array(
+            'completed' => $is_done,
+            'paged'     => $next_paged,
+            'processed' => $count,
+            'total'     => $total_attachments,
+            'message'   => $is_done ? 'All media library items successfully synced to CDN!' : "Synced batch {$paged} ({$count} files)...",
+        ) );
+    }
 }
 
 /**
@@ -4945,113 +5053,5 @@ if ( ! function_exists( 'ultimate_wp_render_dashboard' ) ) {
             </div>
         </div>
         <?php
-    }
-
-    public function ajax_test_cdn_connection() {
-        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error( 'Permission denied' );
-        }
-
-        $config = array(
-            'provider'   => isset( $_POST['provider'] ) ? sanitize_text_field( $_POST['provider'] ) : 'cloudflare_r2',
-            'access_key' => isset( $_POST['access_key'] ) ? sanitize_text_field( $_POST['access_key'] ) : '',
-            'secret_key' => isset( $_POST['secret_key'] ) ? sanitize_text_field( $_POST['secret_key'] ) : '',
-            'bucket'     => isset( $_POST['bucket'] ) ? sanitize_text_field( $_POST['bucket'] ) : '',
-            'account_id' => isset( $_POST['account_id'] ) ? sanitize_text_field( $_POST['account_id'] ) : '',
-            'endpoint'   => isset( $_POST['endpoint'] ) ? esc_url_raw( $_POST['endpoint'] ) : '',
-            'region'     => isset( $_POST['region'] ) ? sanitize_text_field( $_POST['region'] ) : 'auto',
-        );
-
-        $client = new \Ultimate_WP_Booster\Engine\CDN\S3Client( $config );
-        $res = $client->test_connection();
-
-        if ( is_wp_error( $res ) ) {
-            wp_send_json_error( $res->get_error_message() );
-        }
-
-        wp_send_json_success( 'Successfully connected to S3/R2 storage bucket!' );
-    }
-
-    public function ajax_sync_media_to_cdn() {
-        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error( 'Permission denied' );
-        }
-
-        $paged = isset( $_POST['paged'] ) ? max( 1, intval( $_POST['paged'] ) ) : 1;
-        $posts_per_page = 20;
-
-        $args = array(
-            'post_type'      => 'attachment',
-            'post_status'    => 'inherit',
-            'posts_per_page' => $posts_per_page,
-            'paged'          => $paged,
-            'fields'         => 'ids',
-        );
-
-        $query = new \WP_Query( $args );
-        $total_attachments = $query->found_posts;
-        $attachment_ids = $query->posts;
-
-        if ( empty( $attachment_ids ) ) {
-            wp_send_json_success( array(
-                'completed' => true,
-                'paged'     => $paged,
-                'processed' => 0,
-                'total'     => $total_attachments,
-                'message'   => 'Media sync complete!',
-            ) );
-        }
-
-        $s3_client = \Ultimate_WP_Booster\Engine\CDN\CDNManager::get_s3_client();
-        if ( ! $s3_client->is_configured() ) {
-            wp_send_json_error( 'CDN credentials are missing or incomplete. Save settings first.' );
-        }
-
-        $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
-        $uploads = wp_upload_dir();
-        $base_dir = rtrim( str_replace( '\\', '/', $uploads['basedir'] ), '/' );
-        $count = 0;
-
-        foreach ( $attachment_ids as $id ) {
-            $file = get_attached_file( $id );
-            if ( $file && file_exists( $file ) ) {
-                $file_norm = str_replace( '\\', '/', $file );
-                if ( strpos( $file_norm, $base_dir ) === 0 ) {
-                    $rel = ltrim( substr( $file_norm, strlen( $base_dir ) ), '/' );
-                    $s3_key = 'wp-content/uploads/' . $rel;
-                    $s3_client->put_object( $file, $s3_key, '', $cache_control );
-                    $count++;
-
-                    $meta = wp_get_attachment_metadata( $id );
-                    if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
-                        $dir = dirname( $file );
-                        $rel_dir = dirname( $rel );
-                        $rel_dir = ( $rel_dir === '.' ) ? '' : $rel_dir . '/';
-                        foreach ( $meta['sizes'] as $info ) {
-                            if ( ! empty( $info['file'] ) ) {
-                                $thumb_file = $dir . '/' . $info['file'];
-                                if ( file_exists( $thumb_file ) ) {
-                                    $thumb_key = 'wp-content/uploads/' . $rel_dir . $info['file'];
-                                    $s3_client->put_object( $thumb_file, $thumb_key, '', $cache_control );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        $next_paged = $paged + 1;
-        $is_done = ( $paged * $posts_per_page ) >= $total_attachments;
-
-        wp_send_json_success( array(
-            'completed' => $is_done,
-            'paged'     => $next_paged,
-            'processed' => $count,
-            'total'     => $total_attachments,
-            'message'   => $is_done ? 'All media library items successfully synced to CDN!' : "Synced batch {$paged} ({$count} files)...",
-        ) );
     }
 }
