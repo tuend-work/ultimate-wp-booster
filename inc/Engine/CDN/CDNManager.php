@@ -203,10 +203,19 @@ class CDNManager {
     }
 
     public static function is_attachment_offloaded( $attachment_id ) {
+        $cloud_status = get_post_meta( $attachment_id, '_uwb_s3_cloud_status', true );
+        if ( ! empty( $cloud_status ) ) {
+            return ( $cloud_status === 'synced' || $cloud_status === 'uploaded' || $cloud_status === '1' );
+        }
         return (bool) get_post_meta( $attachment_id, '_uwb_s3_uploaded', true );
     }
 
     public static function is_local_deleted( $attachment_id ) {
+        $local_status = get_post_meta( $attachment_id, '_uwb_s3_local_status', true );
+        if ( ! empty( $local_status ) ) {
+            return ( $local_status === 'removed' || $local_status === 'deleted' );
+        }
+
         $flag = get_post_meta( $attachment_id, '_uwb_s3_local_deleted', true );
         if ( '' !== $flag ) {
             return (bool) $flag;
@@ -224,20 +233,26 @@ class CDNManager {
     }
 
     public static function mark_attachment_offloaded( $attachment_id, $s3_key = '', $local_deleted = false ) {
-        update_post_meta( $attachment_id, '_uwb_s3_uploaded', time() );
+        $now = time();
+        update_post_meta( $attachment_id, '_uwb_s3_cloud_status', 'synced' );
+        update_post_meta( $attachment_id, '_uwb_s3_uploaded', $now );
         if ( ! empty( $s3_key ) ) {
             update_post_meta( $attachment_id, '_uwb_s3_key', sanitize_text_field( $s3_key ) );
         }
-        if ( $local_deleted ) {
-            update_post_meta( $attachment_id, '_uwb_s3_local_deleted', 1 );
-        }
+        $local_status = $local_deleted ? 'removed' : 'kept';
+        update_post_meta( $attachment_id, '_uwb_s3_local_status', $local_status );
+        update_post_meta( $attachment_id, '_uwb_s3_local_deleted', $local_deleted ? 1 : 0 );
     }
 
     public static function mark_local_deleted( $attachment_id, $is_deleted = true ) {
+        $status = $is_deleted ? 'removed' : 'kept';
+        update_post_meta( $attachment_id, '_uwb_s3_local_status', $status );
         update_post_meta( $attachment_id, '_uwb_s3_local_deleted', $is_deleted ? 1 : 0 );
     }
 
     public static function remove_attachment_offload_flag( $attachment_id ) {
+        delete_post_meta( $attachment_id, '_uwb_s3_cloud_status' );
+        delete_post_meta( $attachment_id, '_uwb_s3_local_status' );
         delete_post_meta( $attachment_id, '_uwb_s3_uploaded' );
         delete_post_meta( $attachment_id, '_uwb_s3_key' );
         delete_post_meta( $attachment_id, '_uwb_s3_local_deleted' );

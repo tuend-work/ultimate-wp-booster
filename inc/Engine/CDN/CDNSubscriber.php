@@ -296,14 +296,19 @@ class CDNSubscriber implements Subscriber_Interface {
             $timestamp     = get_post_meta( $post_id, '_uwb_s3_uploaded', true );
             $date          = $timestamp ? date_i18n( 'd/m/Y H:i', $timestamp ) : '';
             $local_deleted = CDNManager::is_local_deleted( $post_id );
+            $cloud_status  = get_post_meta( $post_id, '_uwb_s3_cloud_status', true );
+            if ( empty( $cloud_status ) ) {
+                $cloud_status = 'synced';
+            }
+            $local_status  = $local_deleted ? 'removed' : 'kept';
 
             $output = '<div style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">';
-            $output .= '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="' . esc_attr( $s3_key ) . '&#10;Uploaded: ' . esc_attr( $date ) . '">☁️ S3 CDN</span>';
+            $output .= '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="' . esc_attr( $s3_key ) . '&#10;_uwb_s3_cloud_status: ' . esc_attr( $cloud_status ) . '&#10;Uploaded: ' . esc_attr( $date ) . '">☁️ S3 CDN</span>';
             
             if ( $local_deleted ) {
-                $output .= '<span style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="Local file removed from server disk">🗑️ Local Removed</span>';
+                $output .= '<span style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="_uwb_s3_local_status: ' . esc_attr( $local_status ) . '">🗑️ Local Removed</span>';
             } else {
-                $output .= '<span style="background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="Local file exists on server disk">📁 Local Kept</span>';
+                $output .= '<span style="background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="_uwb_s3_local_status: ' . esc_attr( $local_status ) . '">📁 Local Kept</span>';
             }
             $output .= '</div>';
 
