@@ -206,21 +206,12 @@ function uwb_advanced_cache_run() {
     }
 
     // 5. Detect logged-in state via cookies
+    // NOTE: Cookie-based bypass has been removed. Cache is served to ALL visitors regardless of session cookies.
+    // Only logged-in WordPress users are checked (controlled by the 'Cache logged-in users' setting).
+    // WooCommerce pages (cart/checkout/my-account) are bypassed by URL pattern, not cookies.
     $logged_in_cookie_hash = '';
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
-            // Bypass for auth/session cookies only — NOT cart cookies.
-            // WooCommerce cart state (woocommerce_items_in_cart, woocommerce_cart_hash)
-            // is handled dynamically via wc-cart-fragments AJAX — same as WP Rocket behavior.
-            // Only bypass for: password-protected posts, comment authors, no-cache flags, wishlist sessions, and active WC sessions.
-            if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products|wp_woocommerce_session_)/', $key ) ) {
-                if ( $debug ) {
-                    error_log( "UWB: Run bypassed: Auth/session cookie matched: {$key}." );
-                }
-                $GLOBALS['uwb_bypass_reason'] = 'Auth/session cookie: ' . $key;
-                return;
-            }
-
             if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
                 if ( ! $cache_logged_in ) {
                     if ( $debug ) {
@@ -736,15 +727,16 @@ function uwb_advanced_cache_shutdown() {
                 }
             }
             $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} -->\n";
+            $html = $comment_to_append . $html;
         } else {
-            // Collect bypass reason from early bypass or shutdown bypass
+            // Bypass case: HTML was already flushed to browser via ob_end_flush() above.
+            // We CANNOT prepend to it. Instead, echo the bypass reason comment at the END of the page.
+            // This is visible in view-source after </html> (debug only).
             $early_reason    = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
             $combined_reason = ! empty( $shutdown_bypass_reason ) ? $shutdown_bypass_reason : $early_reason;
-            $bypass_str      = ! empty( $combined_reason ) ? " | Bypass: {$combined_reason}" : '';
-            $comment_to_append = "<!-- Dynamic Page{$bypass_str}{$oc_comment}{$box_comment} -->\n";
+            $bypass_str      = ! empty( $combined_reason ) ? " | Bypass: {$combined_reason}" : ' | Bypass: Unknown';
+            echo "\n<!-- UWB Dynamic Page{$bypass_str}{$oc_comment} -->\n";
         }
-
-        $html = $comment_to_append . $html;
     }
 
     if ( ! $should_cache ) return;
