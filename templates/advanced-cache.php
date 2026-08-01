@@ -17,8 +17,8 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 uwb_advanced_cache_run();
 
 function uwb_advanced_cache_run() {
-    $debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
-    if ( $debug ) {
+    $early_debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
+    if ( $early_debug ) {
         error_log( "UWB: Advanced cache run initialized. URI: " . (isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '') . " Method: " . (isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '') );
     }
 
@@ -27,7 +27,7 @@ function uwb_advanced_cache_run() {
 
     // 1. Only cache GET requests
     if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || $_SERVER['REQUEST_METHOD'] !== 'GET' ) {
-        if ( $debug ) {
+        if ( $early_debug ) {
             error_log( "UWB: Run bypassed: Request method is not GET." );
         }
         $GLOBALS['uwb_bypass_reason'] = 'Not a GET request (' . ( isset( $_SERVER['REQUEST_METHOD'] ) ? $_SERVER['REQUEST_METHOD'] : 'unknown' ) . ')';
@@ -36,7 +36,7 @@ function uwb_advanced_cache_run() {
 
     // 2. Do not cache command line/WP-CLI requests
     if ( php_sapi_name() === 'cli' ) {
-        if ( $debug ) {
+        if ( $early_debug ) {
             error_log( "UWB: Run bypassed: php_sapi_name() is cli." );
         }
         $GLOBALS['uwb_bypass_reason'] = 'WP-CLI / command line request';
@@ -58,6 +58,9 @@ function uwb_advanced_cache_run() {
             $config = array_merge( $config, $parsed_config );
         }
     }
+
+    // Set final debug variable using both WP_DEBUG and config settings
+    $debug = $early_debug || ( isset( $config['debug_mode'] ) && $config['debug_mode'] == 1 );
 
     // 3.5. Bypass cache completely for preloader key (external cron / trigger)
     $preload_secret_key = isset( $config['preload_secret_key'] ) ? $config['preload_secret_key'] : '';
