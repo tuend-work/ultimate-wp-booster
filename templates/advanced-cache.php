@@ -734,14 +734,14 @@ function uwb_advanced_cache_shutdown() {
         if ( $should_cache ) {
             // Run Page Optimization Processor
             $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
-            if ( ! file_exists( $plugin_dir . 'includes/class-uwb-optimizer.php' ) ) {
+            if ( ! file_exists( $plugin_dir . 'inc/Engine/Optimization/Optimizer.php' ) ) {
                 $plugin_dir = isset( $config['plugin_dir'] ) ? $config['plugin_dir'] : '';
             }
-            $optimizer_path = $plugin_dir . 'includes/class-uwb-optimizer.php';
+            $optimizer_path = $plugin_dir . 'inc/Engine/Optimization/Optimizer.php';
             if ( file_exists( $optimizer_path ) ) {
                 require_once $optimizer_path;
-                if ( class_exists( 'Uwb_Optimizer' ) ) {
-                    $html = Uwb_Optimizer::process( $html, $config );
+                if ( class_exists( 'Ultimate_WP_Booster\Engine\Optimization\Optimizer' ) ) {
+                    $html = \Ultimate_WP_Booster\Engine\Optimization\Optimizer::process( $html, $config );
                 }
             }
             $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} | Status: Cache Valid / Serviced -->\n";

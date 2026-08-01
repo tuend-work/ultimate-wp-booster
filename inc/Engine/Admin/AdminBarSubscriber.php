@@ -167,8 +167,8 @@ class AdminBarSubscriber implements Subscriber_Interface {
         
         if ( $post_id > 0 && function_exists( 'rocket_clean_post' ) ) {
             rocket_clean_post( $post_id );
-        } elseif ( ! empty( $url ) && class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new \Uwb_Cache();
+        } elseif ( ! empty( $url ) ) {
+            $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
             $uwb_cache->purge_url( $url );
         }
 
@@ -183,10 +183,8 @@ class AdminBarSubscriber implements Subscriber_Interface {
 
         check_admin_referer( 'uwb_clear_cache_page_action' );
 
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new \Uwb_Cache();
-            $uwb_cache->purge_all();
-        }
+        $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
+        $uwb_cache->purge_all();
 
         $referer = wp_get_referer();
         if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
@@ -204,10 +202,8 @@ class AdminBarSubscriber implements Subscriber_Interface {
 
         check_admin_referer( 'uwb_flush_all_preload_action' );
 
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new \Uwb_Cache();
-            $uwb_cache->purge_all();
-        }
+        $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
+        $uwb_cache->purge_all();
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';

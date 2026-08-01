@@ -17,14 +17,10 @@ if ( ! function_exists( 'uwb_check_upgrade' ) ) {
         $db_version  = get_option( 'uwb_version' );
         $dropin_file = WP_CONTENT_DIR . '/advanced-cache.php';
         if ( $db_version !== UWB_VERSION || ! file_exists( $dropin_file ) ) {
-            if ( class_exists( 'Uwb_Activator' ) ) {
-                Uwb_Activator::copy_advanced_cache_dropin();
-                Uwb_Activator::copy_object_cache_dropin();
-                Uwb_Activator::toggle_wp_cache( true );
-            }
-            if ( class_exists( 'Uwb_Cache' ) ) {
-                Uwb_Cache::write_config_file();
-            }
+            Activation::copy_advanced_cache_dropin();
+            Activation::copy_object_cache_dropin();
+            Activation::toggle_wp_cache( true );
+            \Ultimate_WP_Booster\Engine\Cache\CacheManager::write_config_file();
             update_option( 'uwb_version', UWB_VERSION );
         }
     }

@@ -7,6 +7,10 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 namespace Ultimate_WP_Booster\Engine\Admin;
 
+use Ultimate_WP_Booster\Engine\Cache\CacheManager;
+use Ultimate_WP_Booster\Engine\Preload\Preloader;
+use Ultimate_WP_Booster\Engine\Activation\Activation;
+
 class Admin {
 
     public function __construct() {
@@ -85,15 +89,15 @@ class Admin {
             'uwb_debug_mode'
         );
         foreach ( $options_to_sync as $opt ) {
-            add_action( "update_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
-            add_action( "add_option_{$opt}", array( 'Uwb_Cache', 'write_config_file' ) );
+            add_action( "update_option_{$opt}", array( CacheManager::class, 'write_config_file' ) );
+            add_action( "add_option_{$opt}", array( CacheManager::class, 'write_config_file' ) );
         }
 
         // Also sync config when WordPress timezone settings change
-        add_action( 'update_option_timezone_string', array( 'Uwb_Cache', 'write_config_file' ) );
-        add_action( 'add_option_timezone_string', array( 'Uwb_Cache', 'write_config_file' ) );
-        add_action( 'update_option_gmt_offset', array( 'Uwb_Cache', 'write_config_file' ) );
-        add_action( 'add_option_gmt_offset', array( 'Uwb_Cache', 'write_config_file' ) );
+        add_action( 'update_option_timezone_string', array( CacheManager::class, 'write_config_file' ) );
+        add_action( 'add_option_timezone_string', array( CacheManager::class, 'write_config_file' ) );
+        add_action( 'update_option_gmt_offset', array( CacheManager::class, 'write_config_file' ) );
+        add_action( 'add_option_gmt_offset', array( CacheManager::class, 'write_config_file' ) );
 
         // Redis AJAX hooks
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
@@ -335,7 +339,7 @@ class Admin {
         $val = sanitize_textarea_field( $val );
         $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $val ) ) ) );
         
-        $preloader = new Uwb_Preloader();
+        $preloader = new Preloader();
         $normalized_uris = array();
         foreach ( $lines as $line ) {
             $uri = $this->uwb_clean_url_to_uri( $line );
@@ -506,12 +510,11 @@ class Admin {
             update_option( 'uwb_hours_to_minutes_migrated_v2', 1 );
         }
 
-        require_once dirname( __FILE__ ) . '/class-uwb-activator.php';
-        Uwb_Activator::copy_advanced_cache_dropin();
-        Uwb_Activator::copy_object_cache_dropin();
+        Activation::copy_advanced_cache_dropin();
+        Activation::copy_object_cache_dropin();
         $this->migrate_default_important_sitemap();
         // Sync config JSON file to keep core options (like timezone) up to date
-        Uwb_Cache::write_config_file();
+        CacheManager::write_config_file();
 
         if ( isset( $_GET['uwb_opcache_flushed'] ) ) {
             add_action( 'admin_notices', function() {
@@ -703,7 +706,7 @@ class Admin {
                     }
 
                     // Force sync config file
-                    Uwb_Cache::write_config_file();
+                    CacheManager::write_config_file();
 
                     add_action( 'admin_notices', function() {
                         echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Cấu hình đã được nhập thành công!</p></div>';

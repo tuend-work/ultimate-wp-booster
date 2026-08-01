@@ -92,9 +92,7 @@ class CacheManager {
         }
 
         $this->purge_url( home_url( '/' ) );
-        if ( class_exists( 'Uwb_Preloader' ) ) {
-            \Uwb_Preloader::invalidate_homepage_links_cache();
-        }
+        \Ultimate_WP_Booster\Engine\Preload\Preloader::invalidate_homepage_links_cache();
 
         if ( $post->post_parent ) {
             $parent_permalink = get_permalink( $post->post_parent );
@@ -328,13 +326,11 @@ class CacheManager {
             @opcache_invalidate( $config_path, true );
         }
 
-        if ( class_exists( 'Uwb_Activator' ) ) {
-            \Uwb_Activator::copy_advanced_cache_dropin();
-            if ( ! empty( $config['redis_enabled'] ) ) {
-                \Uwb_Activator::copy_object_cache_dropin();
-            } else {
-                \Uwb_Activator::remove_object_cache_dropin();
-            }
+        \Ultimate_WP_Booster\Engine\Activation\Activation::copy_advanced_cache_dropin();
+        if ( ! empty( $config['redis_enabled'] ) ) {
+            \Ultimate_WP_Booster\Engine\Activation\Activation::copy_object_cache_dropin();
+        } else {
+            \Ultimate_WP_Booster\Engine\Activation\Activation::remove_object_cache_dropin();
         }
 
         self::write_valid_post_ids_json();

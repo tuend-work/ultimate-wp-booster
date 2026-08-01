@@ -161,9 +161,7 @@ function uwb_import_wp_rocket_settings() {
     }
 
     // Regenerate config files
-    if ( class_exists( 'Uwb_Cache' ) ) {
-        Uwb_Cache::write_config_file();
-    }
+    \Ultimate_WP_Booster\Engine\Cache\CacheManager::write_config_file();
 }
 
 // 3. WP Rocket Compatibility Wrapper Functions
@@ -171,28 +169,22 @@ function uwb_import_wp_rocket_settings() {
 
 if ( ! function_exists( 'rocket_clean_domain' ) ) {
     function rocket_clean_domain() {
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new Uwb_Cache();
-            $uwb_cache->purge_all();
-        }
+        $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
+        $uwb_cache->purge_all();
     }
 }
 
 if ( ! function_exists( 'rocket_clean_post' ) ) {
     function rocket_clean_post( $post_id ) {
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new Uwb_Cache();
-            $uwb_cache->purge_post_cache( $post_id );
-        }
+        $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
+        $uwb_cache->purge_post_cache( $post_id );
     }
 }
 
 if ( ! function_exists( 'rocket_clean_home' ) ) {
     function rocket_clean_home() {
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            $uwb_cache = new Uwb_Cache();
-            $uwb_cache->purge_url( home_url( '/' ) );
-        }
+        $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
+        $uwb_cache->purge_url( home_url( '/' ) );
     }
 }
 

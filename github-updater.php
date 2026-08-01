@@ -210,7 +210,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             $was_active = false;
             if ( is_plugin_active( $this->basename ) ) {
                 // Temporarily remove deactivation hook so drop-ins and config are not deleted during update
-                remove_action( 'deactivate_' . $this->basename, array( 'Uwb_Deactivator', 'deactivate' ) );
+                remove_action( 'deactivate_' . $this->basename, array( 'Ultimate_WP_Booster\Engine\Deactivation\Deactivation', 'deactivate_plugin' ) );
                 deactivate_plugins( $this->basename );
                 $was_active = true;
             }

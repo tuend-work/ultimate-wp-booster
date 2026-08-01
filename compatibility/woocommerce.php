@@ -100,8 +100,8 @@ function uwb_woocommerce_purge_product( $product ) {
         return;
     }
 
-    if ( $product_id > 0 && class_exists( 'Uwb_Cache' ) ) {
-        $cache = new Uwb_Cache();
+    if ( $product_id > 0 ) {
+        $cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
         $cache->purge_post_cache( $product_id );
     }
 }
