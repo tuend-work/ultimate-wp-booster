@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2012, Matthias Mullie. All rights reserved
  * @license MIT License
  */
-namespace WP_Rocket\Dependencies\Minify;
+namespace Ultimate_WP_Booster\\Dependencies\Minify;
 
 /**
  * JavaScript Minifier Class
@@ -124,7 +124,7 @@ class JS extends Minify
 	 */
 	public function __construct()
 	{
-		call_user_func_array(array('\\WP_Rocket\Dependencies\Minify\\Minify', '__construct'), func_get_args());
+		call_user_func_array(array('\\Ultimate_WP_Booster\\Dependencies\Minify\\Minify', '__construct'), func_get_args());
 
 		$dataDir = __DIR__.'/data/js/';
 		$options = FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES;
@@ -620,3 +620,4 @@ class JS extends Minify
 		return $content;
 	}
 }
+

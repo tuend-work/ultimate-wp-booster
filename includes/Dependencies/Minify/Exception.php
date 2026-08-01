@@ -6,7 +6,7 @@
  *
  * @author Matthias Mullie <minify@mullie.eu>
  */
-namespace WP_Rocket\Dependencies\Minify;
+namespace Ultimate_WP_Booster\\Dependencies\Minify;
 
 /**
  * Base Exception Class
@@ -18,3 +18,4 @@ namespace WP_Rocket\Dependencies\Minify;
 abstract class Exception extends \Exception
 {
 }
+

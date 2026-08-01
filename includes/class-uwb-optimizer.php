@@ -1564,9 +1564,9 @@ class Uwb_Optimizer {
      * Safe JS minifier that uses professional WP Rocket dependencies (matthiasmullie/minify).
      */
     private static function minify_js_safe( $js ) {
-        if ( class_exists( 'WP_Rocket\Dependencies\Minify\JS' ) ) {
+        if ( class_exists( 'Ultimate_WP_Booster\Dependencies\Minify\JS' ) ) {
             try {
-                $minifier = new \WP_Rocket\Dependencies\Minify\JS( $js );
+                $minifier = new \Ultimate_WP_Booster\Dependencies\Minify\JS( $js );
                 $minified = $minifier->minify();
                 if ( $minified !== false && $minified !== '' ) {
                     return $minified;

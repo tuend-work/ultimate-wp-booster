@@ -3,7 +3,7 @@
  * Plugin Name: Ultimate WP Booster
  * Plugin URI:  https://github.com/tuend-work/ultimate-wp-booster
  * Description: Ultra-fast Static Cache and Sitemap Preloader. High-compatibility with rocket-nginx.
- * Version:     1.18.0
+ * Version:     1.18.1
  * Author:      tuend-work
  * Author URI:  https://github.com/tuend-work
  * License:     GPL2
@@ -12,14 +12,14 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-define( 'UWB_VERSION', '1.18.0' );
+define( 'UWB_VERSION', '1.18.1' );
 define( 'UWB_PLUGIN_FILE', __FILE__ );
 define( 'UWB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
 
-// 0. Autoload for WP_Rocket\Dependencies (matthiasmullie/minify package)
+// 0. Autoload for Ultimate_WP_Booster\Dependencies (matthiasmullie/minify package)
 spl_autoload_register( function( $class ) {
-    $prefix = 'WP_Rocket\\Dependencies\\';
+    $prefix = 'Ultimate_WP_Booster\\Dependencies\\';
     $len = strlen( $prefix );
     if ( strncmp( $prefix, $class, $len ) !== 0 ) {
         return;

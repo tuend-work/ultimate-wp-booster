@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2012, Matthias Mullie. All rights reserved
  * @license MIT License
  */
-namespace WP_Rocket\Dependencies\Minify\Exceptions;
+namespace Ultimate_WP_Booster\\Dependencies\Minify\Exceptions;
 
 /**
  * IO Exception Class
@@ -19,3 +19,4 @@ namespace WP_Rocket\Dependencies\Minify\Exceptions;
 class IOException extends BasicException
 {
 }
+

@@ -1,6 +1,6 @@
 <?php
 
-namespace WP_Rocket\Dependencies\PathConverter;
+namespace Ultimate_WP_Booster\\Dependencies\PathConverter;
 
 /**
  * Convert paths relative from 1 file to another.
@@ -202,3 +202,4 @@ class Converter implements ConverterInterface
         return $path;
     }
 }
+

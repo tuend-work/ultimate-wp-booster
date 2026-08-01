@@ -9,11 +9,11 @@
  * @license MIT License
  */
 
-namespace WP_Rocket\Dependencies\Minify;
+namespace Ultimate_WP_Booster\\Dependencies\Minify;
 
-use WP_Rocket\Dependencies\Minify\Exceptions\FileImportException;
-use WP_Rocket\Dependencies\PathConverter\ConverterInterface;
-use WP_Rocket\Dependencies\PathConverter\Converter;
+use Ultimate_WP_Booster\\Dependencies\Minify\Exceptions\FileImportException;
+use Ultimate_WP_Booster\\Dependencies\PathConverter\ConverterInterface;
+use Ultimate_WP_Booster\\Dependencies\PathConverter\Converter;
 
 /**
  * CSS minifier
@@ -788,3 +788,4 @@ class CSS extends Minify
 		return new Converter($source, $target);
 	}
 }
+
