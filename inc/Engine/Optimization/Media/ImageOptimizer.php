@@ -165,9 +165,16 @@ class ImageOptimizer {
         $filename_no_ext = pathinfo( $file, PATHINFO_FILENAME );
 
         if ( $target_mime && $target_ext && 'original' !== $format ) {
-            // Mode 1: Overwrite in-place (save binary directly into $file e.g. image.jpg)
+            // Mode 1: Overwrite in-place (force genuine WebP/AVIF binary data into original file path)
             if ( $do_overwrite ) {
-                $editor->save( $file, $target_mime );
+                $temp_file = $dir . '/temp_' . md5( $file ) . '.' . $target_ext;
+                $saved     = $editor->save( $temp_file, $target_mime );
+                if ( ! is_wp_error( $saved ) && file_exists( $temp_file ) ) {
+                    @copy( $temp_file, $file );
+                    @unlink( $temp_file );
+                } else {
+                    $editor->save( $file, $target_mime );
+                }
             }
 
             // Mode 2: Create Sidecar Files (generate image.webp & image.jpg.webp)
@@ -236,7 +243,14 @@ class ImageOptimizer {
                         $thumb_editor->set_quality( $quality );
                         if ( $target_mime && $target_ext && 'original' !== $format ) {
                             if ( $do_overwrite ) {
-                                $thumb_editor->save( $thumb_path, $target_mime );
+                                $temp_thumb = $dir . '/temp_' . md5( $thumb_path ) . '.' . $target_ext;
+                                $saved_temp = $thumb_editor->save( $temp_thumb, $target_mime );
+                                if ( ! is_wp_error( $saved_temp ) && file_exists( $temp_thumb ) ) {
+                                    @copy( $temp_thumb, $thumb_path );
+                                    @unlink( $temp_thumb );
+                                } else {
+                                    $thumb_editor->save( $thumb_path, $target_mime );
+                                }
                             }
 
                             if ( $do_sidecar ) {
