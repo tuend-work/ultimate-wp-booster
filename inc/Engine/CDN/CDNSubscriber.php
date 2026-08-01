@@ -17,6 +17,11 @@ class CDNSubscriber implements Subscriber_Interface {
             'wp_calculate_image_srcset'       => array( 'filter_attachment_srcset', 10, 5 ),
             'wp_get_attachment_image_src'     => array( 'filter_attachment_image_src', 10, 4 ),
             'attachment_fields_to_edit'       => array( 'filter_attachment_fields_to_edit', 10, 2 ),
+            'restrict_manage_posts'           => 'add_media_filter_dropdown',
+            'parse_query'                     => 'filter_media_query_by_status',
+            'bulk_actions-upload'             => 'register_media_bulk_actions',
+            'handle_bulk_actions-upload'      => array( 'handle_media_bulk_actions', 10, 3 ),
+            'admin_notices'                   => 'show_media_bulk_action_notice',
             'admin_footer'                    => 'print_attachment_modal_script',
             'manage_media_columns'            => 'add_media_columns',
             'manage_media_custom_column'      => array( 'render_media_column', 10, 2 ),
@@ -390,37 +395,55 @@ class CDNSubscriber implements Subscriber_Interface {
         $file    = get_attached_file( $post_id );
         $has_bak = $file && file_exists( $file . '.bak' );
 
-        $html = '<div class="uwb-attachment-modal-status-box" data-id="' . esc_attr( $post_id ) . '" style="padding:10px 12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:8px;">';
-        $html .= '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">';
-
+        $html = '<div class="uwb-attachment-modal-status-box" data-id="' . esc_attr( $post_id ) . '" style="padding:12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:10px;">';
+        
+        // Status Labels List
+        $html .= '<div style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px; font-size:12px;">';
+        
+        // Compression & Conversion Status
+        $html .= '<div style="display:flex; align-items:center; gap:6px;"><strong>Optimization:</strong> ';
         if ( 'converted' === $webp_status ) {
-            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ WEBP</span>';
+            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ WEBP Converted</span>';
         } elseif ( 'converted' === $avif_status ) {
-            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ AVIF</span>';
+            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ AVIF Converted</span>';
         } elseif ( 'compressed' === $comp_status ) {
-            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ COMPRESSED</span>';
+            $html .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">⚡ Compressed</span>';
         } else {
             $html .= '<span style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">Unoptimized</span>';
         }
+        $html .= '</div>';
 
+        // S3 Cloud Status
+        $html .= '<div style="display:flex; align-items:center; gap:6px;"><strong>S3 Cloud:</strong> ';
         if ( $offloaded ) {
-            $html .= '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">☁️ S3 CDN</span>';
+            $html .= '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">☁️ Synced to S3</span>';
+        } else {
+            $html .= '<span style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">Not Synced</span>';
         }
+        $html .= '</div>';
 
+        // Local Server Status
+        $html .= '<div style="display:flex; align-items:center; gap:6px;"><strong>Local Server:</strong> ';
         if ( $local_deleted ) {
             $html .= '<span style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">🗑️ Local Removed</span>';
         } else {
             $html .= '<span style="background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">📁 Local Kept</span>';
         }
+        $html .= '</div>';
 
         $html .= '</div>';
 
         // Action Buttons
         $html .= '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">';
         $html .= '<button type="button" class="button button-secondary button-small btn-uwb-opt-single" data-id="' . esc_attr( $post_id ) . '" style="font-weight:600; border-color:#0284c7; color:#0284c7;">⚡ Optimize Now</button>';
+        $html .= '<button type="button" class="button button-secondary button-small btn-uwb-upload-s3-single" data-id="' . esc_attr( $post_id ) . '" style="font-weight:600; border-color:#16a34a; color:#16a34a;">☁️ Upload to S3</button>';
+
+        if ( $local_deleted && $offloaded ) {
+            $html .= '<button type="button" class="button button-secondary button-small btn-uwb-download-local-single" data-id="' . esc_attr( $post_id ) . '" style="font-weight:600; border-color:#d97706; color:#d97706;">📥 Download to Local</button>';
+        }
 
         if ( $has_bak ) {
-            $html .= '<button type="button" class="button button-secondary button-small btn-uwb-restore-single" data-id="' . esc_attr( $post_id ) . '" style="font-weight:600; border-color:#ea580c; color:#ea580c;">↺ Restore Now (.bak)</button>';
+            $html .= '<button type="button" class="button button-secondary button-small btn-uwb-restore-single" data-id="' . esc_attr( $post_id ) . '" style="font-weight:600; border-color:#dc2626; color:#dc2626;">↺ Restore Original (.bak)</button>';
         }
 
         $html .= '</div>';
@@ -436,6 +459,142 @@ class CDNSubscriber implements Subscriber_Interface {
         return $form_fields;
     }
 
+    // -------------------------------------------------------------------------
+    // Media Library List Filters & Bulk Actions
+    // -------------------------------------------------------------------------
+    public function add_media_filter_dropdown() {
+        $scr = get_current_screen();
+        if ( ! $scr || $scr->base !== 'upload' ) {
+            return;
+        }
+
+        $selected = isset( $_GET['uwb_media_status_filter'] ) ? sanitize_text_field( $_GET['uwb_media_status_filter'] ) : '';
+        ?>
+        <select name="uwb_media_status_filter" id="filter-by-uwb-status">
+            <option value=""><?php _e( 'All WP Booster Statuses', 'ultimate-wp-booster' ); ?></option>
+            <option value="optimized" <?php selected( $selected, 'optimized' ); ?>><?php _e( '⚡ Optimized Images', 'ultimate-wp-booster' ); ?></option>
+            <option value="unoptimized" <?php selected( $selected, 'unoptimized' ); ?>><?php _e( '⏳ Unoptimized Images', 'ultimate-wp-booster' ); ?></option>
+            <option value="s3_synced" <?php selected( $selected, 's3_synced' ); ?>><?php _e( '☁️ Synced to S3', 'ultimate-wp-booster' ); ?></option>
+            <option value="local_removed" <?php selected( $selected, 'local_removed' ); ?>><?php _e( '🗑️ Local Removed', 'ultimate-wp-booster' ); ?></option>
+        </select>
+        <?php
+    }
+
+    public function filter_media_query_by_status( $query ) {
+        if ( ! is_admin() || ! $query->is_main_query() ) {
+            return;
+        }
+
+        $filter = isset( $_GET['uwb_media_status_filter'] ) ? sanitize_text_field( $_GET['uwb_media_status_filter'] ) : '';
+        if ( empty( $filter ) ) {
+            return;
+        }
+
+        $meta_query = $query->get( 'meta_query' );
+        if ( ! is_array( $meta_query ) ) {
+            $meta_query = array();
+        }
+
+        if ( 'optimized' === $filter ) {
+            $meta_query[] = array(
+                'key'     => '_uwb_img_compress_status',
+                'value'   => 'compressed',
+                'compare' => '=',
+            );
+        } elseif ( 'unoptimized' === $filter ) {
+            $meta_query[] = array(
+                'key'     => '_uwb_img_compress_status',
+                'compare' => 'NOT EXISTS',
+            );
+        } elseif ( 's3_synced' === $filter ) {
+            $meta_query[] = array(
+                'key'     => '_uwb_s3_uploaded',
+                'compare' => 'EXISTS',
+            );
+        } elseif ( 'local_removed' === $filter ) {
+            $meta_query[] = array(
+                'key'     => '_uwb_s3_local_status',
+                'value'   => 'removed',
+                'compare' => '=',
+            );
+        }
+
+        $query->set( 'meta_query', $meta_query );
+    }
+
+    public function register_media_bulk_actions( $bulk_actions ) {
+        $bulk_actions['uwb_bulk_optimize']       = __( '⚡ Optimize Selected Images', 'ultimate-wp-booster' );
+        $bulk_actions['uwb_bulk_upload_s3']      = __( '☁️ Upload Selected to S3', 'ultimate-wp-booster' );
+        $bulk_actions['uwb_bulk_download_local'] = __( '📥 Download Selected S3 to Local', 'ultimate-wp-booster' );
+        $bulk_actions['uwb_bulk_restore_bak']    = __( '↺ Restore Selected Originals (.bak)', 'ultimate-wp-booster' );
+        return $bulk_actions;
+    }
+
+    public function handle_media_bulk_actions( $redirect_to, $action, $post_ids ) {
+        if ( empty( $post_ids ) || ! is_array( $post_ids ) ) {
+            return $redirect_to;
+        }
+
+        $count = 0;
+        if ( 'uwb_bulk_optimize' === $action ) {
+            foreach ( $post_ids as $id ) {
+                if ( \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $id, array(), true ) ) {
+                    $count++;
+                }
+            }
+            $redirect_to = add_query_arg( 'uwb_bulk_msg', 'optimized_' . $count, $redirect_to );
+        } elseif ( 'uwb_bulk_upload_s3' === $action ) {
+            foreach ( $post_ids as $id ) {
+                if ( $this->upload_attachment_to_s3( $id, true ) ) {
+                    $count++;
+                }
+            }
+            $redirect_to = add_query_arg( 'uwb_bulk_msg', 'uploaded_' . $count, $redirect_to );
+        } elseif ( 'uwb_bulk_download_local' === $action ) {
+            foreach ( $post_ids as $id ) {
+                if ( CDNManager::download_attachment_from_s3( $id ) ) {
+                    $count++;
+                }
+            }
+            $redirect_to = add_query_arg( 'uwb_bulk_msg', 'downloaded_' . $count, $redirect_to );
+        } elseif ( 'uwb_bulk_restore_bak' === $action ) {
+            foreach ( $post_ids as $id ) {
+                if ( \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::restore_attachment( $id ) ) {
+                    $count++;
+                }
+            }
+            $redirect_to = add_query_arg( 'uwb_bulk_msg', 'restored_' . $count, $redirect_to );
+        }
+
+        return $redirect_to;
+    }
+
+    public function show_media_bulk_action_notice() {
+        if ( empty( $_GET['uwb_bulk_msg'] ) ) {
+            return;
+        }
+
+        $msg = sanitize_text_field( $_GET['uwb_bulk_msg'] );
+        $parts = explode( '_', $msg );
+        $type  = isset( $parts[0] ) ? $parts[0] : '';
+        $num   = isset( $parts[1] ) ? intval( $parts[1] ) : 0;
+
+        $text = '';
+        if ( 'optimized' === $type ) {
+            $text = sprintf( 'Successfully optimized %d image(s).', $num );
+        } elseif ( 'uploaded' === $type ) {
+            $text = sprintf( 'Successfully uploaded %d file(s) to S3 CDN.', $num );
+        } elseif ( 'downloaded' === $type ) {
+            $text = sprintf( 'Successfully downloaded %d file(s) from S3 to local server.', $num );
+        } elseif ( 'restored' === $type ) {
+            $text = sprintf( 'Successfully restored %d original file(s) from .bak backup.', $num );
+        }
+
+        if ( $text ) {
+            echo '<div class="notice notice-success is-dismissible"><p><strong>WP Booster:</strong> ' . esc_html( $text ) . '</p></div>';
+        }
+    }
+
     public function print_attachment_modal_script() {
         if ( ! is_admin() ) {
             return;
@@ -443,6 +602,7 @@ class CDNSubscriber implements Subscriber_Interface {
         ?>
         <script id="uwb-attachment-modal-js">
         jQuery(document).ready(function($) {
+            // 1. Optimize Now Button Handler
             $(document).on('click', '.btn-uwb-opt-single', function(e) {
                 e.preventDefault();
                 var $btn = $(this);
@@ -471,6 +631,65 @@ class CDNSubscriber implements Subscriber_Interface {
                 });
             });
 
+            // 2. Upload to S3 Button Handler
+            $(document).on('click', '.btn-uwb-upload-s3-single', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var id = $btn.data('id');
+                var $box = $btn.closest('.uwb-attachment-modal-status-box');
+                var $msg = $box.find('.uwb-modal-opt-msg');
+
+                $btn.prop('disabled', true).text('Uploading...');
+                $msg.show().css('color', '#16a34a').text('Uploading file to S3 CDN...');
+
+                $.post(ajaxurl, {
+                    action: 'uwb_upload_single_attachment',
+                    attachment_id: id,
+                    nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
+                }, function(res) {
+                    if (res.success) {
+                        $msg.css('color', '#16a34a').text('Successfully uploaded to S3 CDN! Reloading details...');
+                        setTimeout(function() { location.reload(); }, 600);
+                    } else {
+                        $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Upload failed'));
+                        $btn.prop('disabled', false).text('☁️ Upload to S3');
+                    }
+                }).fail(function() {
+                    $msg.css('color', '#dc2626').text('AJAX error occurred.');
+                    $btn.prop('disabled', false).text('☁️ Upload to S3');
+                });
+            });
+
+            // 3. Download to Local Button Handler
+            $(document).on('click', '.btn-uwb-download-local-single', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var id = $btn.data('id');
+                var $box = $btn.closest('.uwb-attachment-modal-status-box');
+                var $msg = $box.find('.uwb-modal-opt-msg');
+
+                $btn.prop('disabled', true).text('Downloading...');
+                $msg.show().css('color', '#d97706').text('Downloading file from S3 to local server...');
+
+                $.post(ajaxurl, {
+                    action: 'uwb_download_single_attachment',
+                    attachment_id: id,
+                    nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
+                }, function(res) {
+                    if (res.success) {
+                        $msg.css('color', '#16a34a').text('Successfully downloaded to local server! Reloading details...');
+                        setTimeout(function() { location.reload(); }, 600);
+                    } else {
+                        $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Download failed'));
+                        $btn.prop('disabled', false).text('📥 Download to Local');
+                    }
+                }).fail(function() {
+                    $msg.css('color', '#dc2626').text('AJAX error occurred.');
+                    $btn.prop('disabled', false).text('📥 Download to Local');
+                });
+            });
+
+            // 4. Restore Now (.bak) Button Handler
             $(document).on('click', '.btn-uwb-restore-single', function(e) {
                 e.preventDefault();
                 var $btn = $(this);
@@ -483,7 +702,7 @@ class CDNSubscriber implements Subscriber_Interface {
                 }
 
                 $btn.prop('disabled', true).text('Restoring...');
-                $msg.show().css('color', '#ea580c').text('Restoring original file...');
+                $msg.show().css('color', '#dc2626').text('Restoring original file...');
 
                 $.post(ajaxurl, {
                     action: 'uwb_restore_single_attachment',
@@ -495,11 +714,11 @@ class CDNSubscriber implements Subscriber_Interface {
                         setTimeout(function() { location.reload(); }, 600);
                     } else {
                         $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Restore failed'));
-                        $btn.prop('disabled', false).text('↺ Restore Now (.bak)');
+                        $btn.prop('disabled', false).text('↺ Restore Original (.bak)');
                     }
                 }).fail(function() {
                     $msg.css('color', '#dc2626').text('AJAX error occurred.');
-                    $btn.prop('disabled', false).text('↺ Restore Now (.bak)');
+                    $btn.prop('disabled', false).text('↺ Restore Original (.bak)');
                 });
             });
         });

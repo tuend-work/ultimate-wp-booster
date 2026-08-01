@@ -250,6 +250,60 @@ class CDNManager {
         update_post_meta( $attachment_id, '_uwb_s3_local_deleted', $is_deleted ? 1 : 0 );
     }
 
+    public static function download_attachment_from_s3( $attachment_id ) {
+        if ( ! self::is_attachment_offloaded( $attachment_id ) ) {
+            return false;
+        }
+
+        $s3_client = self::get_s3_client();
+        if ( ! $s3_client->is_configured() ) {
+            return false;
+        }
+
+        $file = get_attached_file( $attachment_id );
+        if ( ! $file ) {
+            return false;
+        }
+
+        $uploads     = wp_upload_dir();
+        $base_dir    = rtrim( str_replace( '\\', '/', $uploads['basedir'] ), '/' );
+        $file_norm   = str_replace( '\\', '/', $file );
+
+        if ( strpos( $file_norm, $base_dir ) !== 0 ) {
+            return false;
+        }
+
+        $relative_path = ltrim( substr( $file_norm, strlen( $base_dir ) ), '/' );
+        $s3_key        = 'wp-content/uploads/' . $relative_path;
+
+        $dir = dirname( $file );
+        if ( ! is_dir( $dir ) ) {
+            @mkdir( $dir, 0755, true );
+        }
+
+        $got_main = $s3_client->get_object( $s3_key, $file );
+        if ( ! $got_main ) {
+            return false;
+        }
+
+        $meta = wp_get_attachment_metadata( $attachment_id );
+        if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
+            $relative_dir = dirname( $relative_path );
+            $relative_dir = ( $relative_dir === '.' ) ? '' : $relative_dir . '/';
+
+            foreach ( $meta['sizes'] as $info ) {
+                if ( ! empty( $info['file'] ) ) {
+                    $thumb_file = $dir . '/' . $info['file'];
+                    $thumb_key  = 'wp-content/uploads/' . $relative_dir . $info['file'];
+                    $s3_client->get_object( $thumb_key, $thumb_file );
+                }
+            }
+        }
+
+        self::mark_local_deleted( $attachment_id, false );
+        return true;
+    }
+
     public static function remove_attachment_offload_flag( $attachment_id ) {
         delete_post_meta( $attachment_id, '_uwb_s3_cloud_status' );
         delete_post_meta( $attachment_id, '_uwb_s3_local_status' );

@@ -122,6 +122,8 @@ class Admin {
         add_action( 'wp_ajax_uwb_clear_preload_log', array( $this, 'ajax_clear_preload_log' ) );
         add_action( 'wp_ajax_uwb_batch_optimize_images', array( $this, 'ajax_batch_optimize_images' ) );
         add_action( 'wp_ajax_uwb_optimize_single_attachment', array( $this, 'ajax_optimize_single_attachment' ) );
+        add_action( 'wp_ajax_uwb_upload_single_attachment', array( $this, 'ajax_upload_single_attachment' ) );
+        add_action( 'wp_ajax_uwb_download_single_attachment', array( $this, 'ajax_download_single_attachment' ) );
         add_action( 'wp_ajax_uwb_restore_single_attachment', array( $this, 'ajax_restore_single_attachment' ) );
         add_action( 'admin_init', array( $this, 'handle_import_export' ) );
     }
@@ -5272,6 +5274,49 @@ js-(before|after)
             wp_send_json_success( array( 'message' => 'Attachment restored from .bak successfully.' ) );
         } else {
             wp_send_json_error( array( 'message' => 'No .bak backup file found to restore.' ) );
+        }
+    }
+
+    public function ajax_upload_single_attachment() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        $attachment_id = isset( $_POST['attachment_id'] ) ? intval( $_POST['attachment_id'] ) : 0;
+        if ( ! $attachment_id ) {
+            wp_send_json_error( array( 'message' => 'Invalid attachment ID.' ) );
+        }
+
+        $subscriber = new \Ultimate_WP_Booster\Engine\CDN\CDNSubscriber();
+        $reflector  = new \ReflectionMethod( $subscriber, 'upload_attachment_to_s3' );
+        $reflector->setAccessible( true );
+        $res = $reflector->invoke( $subscriber, $attachment_id, true );
+
+        if ( $res ) {
+            wp_send_json_success( array( 'message' => 'Attachment uploaded to S3 successfully.' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'Upload failed or S3 is not configured.' ) );
+        }
+    }
+
+    public function ajax_download_single_attachment() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        $attachment_id = isset( $_POST['attachment_id'] ) ? intval( $_POST['attachment_id'] ) : 0;
+        if ( ! $attachment_id ) {
+            wp_send_json_error( array( 'message' => 'Invalid attachment ID.' ) );
+        }
+
+        $res = \Ultimate_WP_Booster\Engine\CDN\CDNManager::download_attachment_from_s3( $attachment_id );
+
+        if ( $res ) {
+            wp_send_json_success( array( 'message' => 'Attachment downloaded from S3 to local server successfully.' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'Download failed or file not found on S3.' ) );
         }
     }
 
