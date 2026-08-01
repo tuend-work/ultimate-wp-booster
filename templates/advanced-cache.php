@@ -196,12 +196,36 @@ function uwb_advanced_cache_run() {
     $logged_in_cookie_hash = '';
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
-            if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products|woocommerce_items_in_cart|woocommerce_cart_hash|wp_woocommerce_session_)/', $key ) ) {
+            // Always bypass for these session/auth cookies (regardless of value)
+            if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products|wp_woocommerce_session_)/', $key ) ) {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: Logged-in/Bypass cookie key matched: {$key}." );
                 }
                 return;
             }
+
+            // WooCommerce cart cookies: only bypass if cart actually has items
+            // woocommerce_items_in_cart = 0 means empty cart → serve cache
+            // woocommerce_cart_hash = '' means empty cart → serve cache
+            if ( $key === 'woocommerce_items_in_cart' ) {
+                if ( intval( $val ) > 0 ) {
+                    if ( $debug ) {
+                        error_log( "UWB: Run bypassed: WooCommerce cart has {$val} item(s)." );
+                    }
+                    return;
+                }
+                continue; // cart is empty, allow cache
+            }
+            if ( $key === 'woocommerce_cart_hash' ) {
+                if ( ! empty( $val ) ) {
+                    if ( $debug ) {
+                        error_log( "UWB: Run bypassed: WooCommerce cart hash is set ({$val})." );
+                    }
+                    return;
+                }
+                continue; // empty hash means empty cart, allow cache
+            }
+
             if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
                 if ( ! $cache_logged_in ) {
                     if ( $debug ) {
@@ -213,6 +237,7 @@ function uwb_advanced_cache_run() {
             }
         }
     }
+
 
     // 6. Normalize host & URI
     $host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( $_SERVER['HTTP_HOST'] ) : '';
@@ -416,14 +441,18 @@ function uwb_advanced_cache_ob_callback( $buffer, $phase = 0 ) {
         $GLOBALS['uwb_accumulated_html'] = '';
     }
 
-    $is_clean = ( $phase & PHP_OUTPUT_HANDLER_CLEAN ) && ! ( $phase & PHP_OUTPUT_HANDLER_FINAL );
+    // Only bypass cache if this is a true discard (clean without final and without write)
+    // PHP_OUTPUT_HANDLER_CLEAN = 2, PHP_OUTPUT_HANDLER_WRITE = 0, PHP_OUTPUT_HANDLER_FINAL = 4
+    $is_final = (bool) ( $phase & PHP_OUTPUT_HANDLER_FINAL );
+    $is_clean = (bool) ( $phase & PHP_OUTPUT_HANDLER_CLEAN );
+    $has_content = strlen( $buffer ) > 0;
 
-    if ( $is_clean ) {
+    // If it's a clean phase without final AND without actual content, treat as discard
+    if ( $is_clean && ! $is_final && ! $has_content ) {
         if ( $debug ) {
-            error_log( "UWB: Callback clean phase matched. Bypassing cache." );
+            error_log( "UWB: Callback empty clean phase. Resetting accumulated buffer." );
         }
         $GLOBALS['uwb_accumulated_html'] = '';
-        $GLOBALS['uwb_do_not_cache'] = true;
         return $buffer;
     }
 
