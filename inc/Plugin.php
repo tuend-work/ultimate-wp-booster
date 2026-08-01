@@ -65,6 +65,7 @@ class Plugin {
             new AdminBarSubscriber(),
             new PostRowActionsSubscriber(),
             new HeartbeatSubscriber(),
+            new \Ultimate_WP_Booster\Engine\Cache\CacheSubscriber(),
         );
 
         if ( is_admin() ) {
@@ -77,15 +78,11 @@ class Plugin {
     }
 
     /**
-     * Initialize legacy core engines (Cache, Preloader, Admin).
+     * Initialize core engines (Preloader, Admin, Github Updater).
      *
      * @return void
      */
     private function init_engines() {
-        if ( class_exists( 'Uwb_Cache' ) ) {
-            new \Uwb_Cache();
-        }
-
         if ( class_exists( 'Uwb_Preloader' ) ) {
             new \Uwb_Preloader();
         }
