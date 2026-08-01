@@ -1,6 +1,6 @@
 <?php
 
-namespace Ultimate_WP_Booster\\Dependencies\PathConverter;
+namespace Ultimate_WP_Booster\Dependencies\PathConverter;
 
 /**
  * Convert file paths.
@@ -22,4 +22,5 @@ interface ConverterInterface
      */
     public function convert($path);
 }
+
 

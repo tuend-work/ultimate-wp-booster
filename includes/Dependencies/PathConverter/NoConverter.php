@@ -1,6 +1,6 @@
 <?php
 
-namespace Ultimate_WP_Booster\\Dependencies\PathConverter;
+namespace Ultimate_WP_Booster\Dependencies\PathConverter;
 
 /**
  * Don't convert paths.
@@ -21,4 +21,5 @@ class NoConverter implements ConverterInterface
         return $path;
     }
 }
+
 

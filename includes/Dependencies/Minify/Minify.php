@@ -8,9 +8,9 @@
  * @copyright Copyright (c) 2012, Matthias Mullie. All rights reserved
  * @license MIT License
  */
-namespace Ultimate_WP_Booster\\Dependencies\Minify;
+namespace Ultimate_WP_Booster\Dependencies\Minify;
 
-use Ultimate_WP_Booster\\Dependencies\Minify\Exceptions\IOException;
+use Ultimate_WP_Booster\Dependencies\Minify\Exceptions\IOException;
 use Psr\Cache\CacheItemInterface;
 
 /**
@@ -495,4 +495,5 @@ abstract class Minify
 		}
 	}
 }
+
 
