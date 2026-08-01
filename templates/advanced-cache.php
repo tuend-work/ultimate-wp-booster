@@ -196,34 +196,15 @@ function uwb_advanced_cache_run() {
     $logged_in_cookie_hash = '';
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
-            // Always bypass for these session/auth cookies (regardless of value)
+            // Bypass for auth/session cookies only — NOT cart cookies.
+            // WooCommerce cart state (woocommerce_items_in_cart, woocommerce_cart_hash)
+            // is handled dynamically via wc-cart-fragments AJAX — same as WP Rocket behavior.
+            // Only bypass for: password-protected posts, comment authors, no-cache flags, wishlist sessions, and active WC sessions.
             if ( preg_match( '/^(wp-postpass_|comment_author_|wordpress_no_cache_|yith_wcwl_products|wp_woocommerce_session_)/', $key ) ) {
                 if ( $debug ) {
-                    error_log( "UWB: Run bypassed: Logged-in/Bypass cookie key matched: {$key}." );
+                    error_log( "UWB: Run bypassed: Auth/session cookie matched: {$key}." );
                 }
                 return;
-            }
-
-            // WooCommerce cart cookies: only bypass if cart actually has items
-            // woocommerce_items_in_cart = 0 means empty cart → serve cache
-            // woocommerce_cart_hash = '' means empty cart → serve cache
-            if ( $key === 'woocommerce_items_in_cart' ) {
-                if ( intval( $val ) > 0 ) {
-                    if ( $debug ) {
-                        error_log( "UWB: Run bypassed: WooCommerce cart has {$val} item(s)." );
-                    }
-                    return;
-                }
-                continue; // cart is empty, allow cache
-            }
-            if ( $key === 'woocommerce_cart_hash' ) {
-                if ( ! empty( $val ) ) {
-                    if ( $debug ) {
-                        error_log( "UWB: Run bypassed: WooCommerce cart hash is set ({$val})." );
-                    }
-                    return;
-                }
-                continue; // empty hash means empty cart, allow cache
             }
 
             if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
@@ -237,8 +218,6 @@ function uwb_advanced_cache_run() {
             }
         }
     }
-
-
     // 6. Normalize host & URI
     $host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( $_SERVER['HTTP_HOST'] ) : '';
     if ( empty( $host ) ) {
