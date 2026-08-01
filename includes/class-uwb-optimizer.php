@@ -1170,9 +1170,8 @@ class Uwb_Optimizer {
                 }
             }
 
-            // 2. Check special/async attributes
-            $is_special = stripos( $attrs, 'async' ) !== false
-                       || stripos( $attrs, 'text/uwb-lazyload' ) !== false
+            // 2. Check special attributes
+            $is_special = stripos( $attrs, 'text/uwb-lazyload' ) !== false
                        || stripos( $attrs, 'type="module"' ) !== false;
 
             if ( $is_special || $is_excluded ) {
