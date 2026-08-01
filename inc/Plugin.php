@@ -67,6 +67,7 @@ class Plugin {
             new HeartbeatSubscriber(),
             new \Ultimate_WP_Booster\Engine\Cache\CacheSubscriber(),
             new \Ultimate_WP_Booster\Engine\Preload\PreloadSubscriber(),
+            new \Ultimate_WP_Booster\Engine\CDN\CDNSubscriber(),
         );
 
         if ( is_admin() ) {

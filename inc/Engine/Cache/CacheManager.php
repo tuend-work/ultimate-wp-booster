@@ -315,6 +315,14 @@ class CacheManager {
             'delay_js'                    => intval( get_option( 'uwb_delay_js', 0 ) ),
             'delay_js_exclusions'         => get_option( 'uwb_delay_js_exclusions', "jquery.js\njquery.min.js\njquery-migrate\nflatsomeVars\nwp-i18n\nwp-hooks\nwp-polyfill\nnoscript\nuwb-lazy" ),
             'preload_secret_key'          => get_option( 'uwb_preload_secret_key', '' ),
+            'cdn_enabled'                 => intval( get_option( 'uwb_cdn_enabled', 0 ) ),
+            'cdn_provider'                => get_option( 'uwb_cdn_provider', 'cloudflare_r2' ),
+            'cdn_custom_domain'           => get_option( 'uwb_cdn_custom_domain', '' ),
+            'cdn_file_types_images'       => intval( get_option( 'uwb_cdn_file_types_images', 1 ) ),
+            'cdn_file_types_css'          => intval( get_option( 'uwb_cdn_file_types_css', 1 ) ),
+            'cdn_file_types_js'           => intval( get_option( 'uwb_cdn_file_types_js', 1 ) ),
+            'cdn_file_types_fonts'        => intval( get_option( 'uwb_cdn_file_types_fonts', 1 ) ),
+            'cdn_file_types_media'        => intval( get_option( 'uwb_cdn_file_types_media', 0 ) ),
         );
 
         $config_content = "<?php\n" .

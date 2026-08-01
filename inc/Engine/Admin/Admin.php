@@ -17,6 +17,8 @@ class Admin {
         add_action( 'admin_menu', array( $this, 'add_plugin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
         add_action( 'admin_init', array( $this, 'admin_init_sync' ) );
+        add_action( 'wp_ajax_uwb_test_cdn_connection', array( $this, 'ajax_test_cdn_connection' ) );
+        add_action( 'wp_ajax_uwb_sync_media_to_cdn', array( $this, 'ajax_sync_media_to_cdn' ) );
 
         $options_to_sync = array(
             'uwb_cache_page_enabled',
@@ -234,6 +236,26 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_loc_gravatar_cache', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_loc_gravatar_cache_cron', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_loc_resources', 'sanitize_textarea_field' );
+
+        // CDN Cache Settings
+        register_setting( 'uwb_settings_group', 'uwb_cdn_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_provider', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_account_id', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_access_key', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_secret_key', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_bucket', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_endpoint', 'esc_url_raw' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_region', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_custom_domain', 'esc_url_raw' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_cache_control', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_file_types_images', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_file_types_css', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_file_types_js', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_file_types_fonts', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_file_types_media', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_upload', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_auto_delete', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_delete_local', 'intval' );
 
         register_setting( 'uwb_settings_group', 'uwb_tuning_css_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_tuning_js_excludes', 'sanitize_textarea_field' );
@@ -1754,16 +1776,153 @@ class Admin {
 
                             <!-- SUB-TAB 2: CDN Cache -->
                             <div id="subtab-cdn_cache" class="uwb-subtab-content">
+                                <!-- Section 1: Provider Settings -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-                                        CDN Cache Status & Information
+                                        Provider Settings &amp; Credentials
                                     </h3>
-                                    <p style="font-size:13.5px; line-height:1.6; color:var(--uwb-text); margin-bottom:16px;">
-                                        CDN (Content Delivery Network) caching is managed at the DNS or proxy routing level. Ultimate WP Booster optimizes HTML response headers (such as <code>Cache-Control</code>, <code>Pragma</code>, and <code>ETag</code>) to ensure clean cache invalidation with edge providers.
-                                    </p>
-                                    <div style="padding:12px 16px; background:#e0e7ff; color:var(--uwb-primary-dark); border-radius:8px; font-size:13px; font-weight:600; display:inline-block;">
-                                        Status: <?php echo esc_html($cdn_details); ?>
+                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Configure your Cloudflare R2 or S3-Compatible storage connection settings.</p>
+
+                                    <div class="uwb-form-group" style="margin-bottom:20px;">
+                                        <label for="uwb_cdn_provider">CDN Storage Provider</label>
+                                        <select name="uwb_cdn_provider" id="uwb_cdn_provider" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px; background:#fff;">
+                                            <option value="cloudflare_r2" <?php selected( get_option( 'uwb_cdn_provider', 'cloudflare_r2' ), 'cloudflare_r2' ); ?>>Cloudflare R2 Storage (Recommended)</option>
+                                            <option value="other_s3" <?php selected( get_option( 'uwb_cdn_provider', 'cloudflare_r2' ), 'other_s3' ); ?>>Other S3 Compatible Storage (AWS S3, Wasabi, DigitalOcean Spaces, MinIO, Bunny S3)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Cloudflare Account ID (CF R2 only) -->
+                                    <div class="uwb-form-group uwb-cdn-cf-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'cloudflare_r2' ? '' : 'display:none;'; ?>">
+                                        <label for="uwb_cdn_account_id">Cloudflare Account ID</label>
+                                        <input type="text" name="uwb_cdn_account_id" id="uwb_cdn_account_id" value="<?php echo esc_attr( get_option( 'uwb_cdn_account_id', '' ) ); ?>" placeholder="e.g. 56a84f3c7e0b9d123456789abcdef012" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        <p class="description">Your Cloudflare Account ID found in your Cloudflare Dashboard URL or R2 overview.</p>
+                                    </div>
+
+                                    <!-- Endpoint URL (Other S3 only) -->
+                                    <div class="uwb-form-group uwb-cdn-s3-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'other_s3' ? '' : 'display:none;'; ?>">
+                                        <label for="uwb_cdn_endpoint">S3 Endpoint URL</label>
+                                        <input type="url" name="uwb_cdn_endpoint" id="uwb_cdn_endpoint" value="<?php echo esc_attr( get_option( 'uwb_cdn_endpoint', '' ) ); ?>" placeholder="e.g. https://s3.wasabisys.com or https://ams3.digitaloceanspaces.com" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        <p class="description">The REST API Endpoint of your S3 compatible provider.</p>
+                                    </div>
+
+                                    <!-- Region (Other S3 only) -->
+                                    <div class="uwb-form-group uwb-cdn-s3-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'other_s3' ? '' : 'display:none;'; ?>">
+                                        <label for="uwb_cdn_region">S3 Region</label>
+                                        <input type="text" name="uwb_cdn_region" id="uwb_cdn_region" value="<?php echo esc_attr( get_option( 'uwb_cdn_region', 'auto' ) ); ?>" placeholder="e.g. us-east-1, us-west-1, ams3" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                    </div>
+
+                                    <!-- Access Key & Secret Key Grid -->
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_cdn_access_key">Access Key ID</label>
+                                            <input type="text" name="uwb_cdn_access_key" id="uwb_cdn_access_key" value="<?php echo esc_attr( get_option( 'uwb_cdn_access_key', '' ) ); ?>" placeholder="Access Key ID" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        </div>
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_cdn_secret_key">Secret Access Key</label>
+                                            <input type="password" name="uwb_cdn_secret_key" id="uwb_cdn_secret_key" value="<?php echo esc_attr( get_option( 'uwb_cdn_secret_key', '' ) ); ?>" placeholder="Secret Access Key" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Bucket Name -->
+                                    <div class="uwb-form-group" style="margin-bottom:20px;">
+                                        <label for="uwb_cdn_bucket">Bucket Name</label>
+                                        <input type="text" name="uwb_cdn_bucket" id="uwb_cdn_bucket" value="<?php echo esc_attr( get_option( 'uwb_cdn_bucket', '' ) ); ?>" placeholder="e.g. my-website-assets" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                    </div>
+
+                                    <!-- Custom CDN Domain / CNAME -->
+                                    <div class="uwb-form-group" style="margin-bottom:20px;">
+                                        <label for="uwb_cdn_custom_domain">CDN Custom Domain / CNAME URL</label>
+                                        <input type="url" name="uwb_cdn_custom_domain" id="uwb_cdn_custom_domain" value="<?php echo esc_attr( get_option( 'uwb_cdn_custom_domain', '' ) ); ?>" placeholder="e.g. https://cdn.mysite.com or https://pub-xxx.r2.dev" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        <p class="description">The public URL domain used to rewrite and serve static assets to website visitors.</p>
+                                    </div>
+
+                                    <!-- Test Connection Button -->
+                                    <div style="margin-top:16px;">
+                                        <button type="button" id="btn-test-cdn-connection" class="button button-secondary" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
+                                            Test CDN Connection
+                                        </button>
+                                        <div id="uwb-cdn-test-result" style="margin-top:12px; display:none;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Section 2: File Types & Offloading Rules -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        File Types &amp; URL Rewriting Rules
+                                    </h3>
+
+                                    <?php $this->render_toggle_switch( 'uwb_cdn_enabled', 'Enable CDN Static Asset Offloading & URL Rewriter', 'Automatically rewrite static asset URLs in HTML output to serve from CDN Domain.' ); ?>
+
+                                    <h4 style="margin:20px 0 12px 0; font-size:13.5px; font-weight:700; color:var(--uwb-text);">Select File Types to Serve via CDN</h4>
+                                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:20px; background:#fff; padding:16px; border:1px solid var(--uwb-border); border-radius:8px;">
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_file_types_images" value="1" <?php checked( get_option( 'uwb_cdn_file_types_images', 1 ), 1 ); ?> />
+                                            Images (.jpg, .png, .webp, .svg, .gif)
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_file_types_css" value="1" <?php checked( get_option( 'uwb_cdn_file_types_css', 1 ), 1 ); ?> />
+                                            CSS Stylesheets (.css)
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_file_types_js" value="1" <?php checked( get_option( 'uwb_cdn_file_types_js', 1 ), 1 ); ?> />
+                                            JavaScript (.js)
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_file_types_fonts" value="1" <?php checked( get_option( 'uwb_cdn_file_types_fonts', 1 ), 1 ); ?> />
+                                            Fonts (.woff2, .woff, .ttf)
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_file_types_media" value="1" <?php checked( get_option( 'uwb_cdn_file_types_media', 0 ), 1 ); ?> />
+                                            Media &amp; Docs (.mp4, .pdf, .zip)
+                                        </label>
+                                    </div>
+
+                                    <div class="uwb-form-group" style="margin-bottom:20px;">
+                                        <label for="uwb_cdn_cache_control">Object Cache-Control Header</label>
+                                        <input type="text" name="uwb_cdn_cache_control" id="uwb_cdn_cache_control" value="<?php echo esc_attr( get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' ) ); ?>" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        <p class="description">Cache-Control header set on uploaded S3/R2 objects.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Section 3: Event Handling & Batch Sync Tools -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        Event Handling &amp; Sync Tools
+                                    </h3>
+
+                                    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px; background:#fff; padding:16px; border:1px solid var(--uwb-border); border-radius:8px;">
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_auto_upload" value="1" <?php checked( get_option( 'uwb_cdn_auto_upload', 1 ), 1 ); ?> />
+                                            Auto-upload new Media Library files to CDN (<code>add_attachment</code> hook)
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_auto_delete" value="1" <?php checked( get_option( 'uwb_cdn_auto_delete', 1 ), 1 ); ?> />
+                                            Auto-delete files from CDN when deleted in Media Library (<code>delete_attachment</code> hook)
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" name="uwb_cdn_delete_local" value="1" <?php checked( get_option( 'uwb_cdn_delete_local', 0 ), 1 ); ?> />
+                                            Delete local server files after offloading to CDN (Offload storage mode)
+                                        </label>
+                                    </div>
+
+                                    <div style="border-top:1px solid var(--uwb-border); padding-top:20px;">
+                                        <h4 style="margin:0 0 8px 0; font-size:14px; font-weight:700; color:var(--uwb-text);">Batch Sync Media Library to CDN</h4>
+                                        <p style="font-size:12.5px; color:var(--uwb-text-muted); margin-bottom:16px;">Bulk upload all existing media library files and thumbnails to your configured S3/R2 bucket.</p>
+
+                                        <button type="button" id="btn-sync-media-cdn" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">
+                                            Sync Existing Media Library to CDN
+                                        </button>
+
+                                        <div id="uwb-sync-cdn-progress-wrap" style="margin-top:16px; display:none;">
+                                            <div class="uwb-progress-bar-wrap" style="margin-bottom:8px;">
+                                                <div class="uwb-progress-bar-fill" id="uwb-sync-cdn-progress-fill" style="width:0%;"></div>
+                                            </div>
+                                            <div id="uwb-sync-cdn-status-text" style="font-size:12.5px; font-weight:600; color:var(--uwb-text);">Initializing batch sync...</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -3208,6 +3367,115 @@ js-(before|after)
             $('input[name="uwb_delay_js"]').on('change', function() {
                 var enabled = $('input[name="uwb_delay_js"]:checked').val() === '1';
                 $('.uwb-opt-disabled').toggle(!enabled);
+            });
+
+            // CDN Provider switch toggle (Cloudflare R2 vs Other S3)
+            $('#uwb_cdn_provider').on('change', function() {
+                var val = $(this).val();
+                if (val === 'cloudflare_r2') {
+                    $('.uwb-cdn-cf-field').slideDown();
+                    $('.uwb-cdn-s3-field').slideUp();
+                } else {
+                    $('.uwb-cdn-cf-field').slideUp();
+                    $('.uwb-cdn-s3-field').slideDown();
+                }
+            });
+
+            // Test CDN Connection
+            $('#btn-test-cdn-connection').on('click', function() {
+                var $btn = $(this);
+                var $res = $('#uwb-cdn-test-result');
+                var nonce = '<?php echo esc_js( wp_create_nonce( "uwb_admin_nonce" ) ); ?>';
+
+                $btn.prop('disabled', true).text('Testing Connection...');
+                $res.hide().html('');
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'uwb_test_cdn_connection',
+                        nonce: nonce,
+                        provider: $('#uwb_cdn_provider').val(),
+                        account_id: $('#uwb_cdn_account_id').val(),
+                        access_key: $('#uwb_cdn_access_key').val(),
+                        secret_key: $('#uwb_cdn_secret_key').val(),
+                        bucket: $('#uwb_cdn_bucket').val(),
+                        endpoint: $('#uwb_cdn_endpoint').val(),
+                        region: $('#uwb_cdn_region').val()
+                    },
+                    success: function(resp) {
+                        $btn.prop('disabled', false).html('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg> Test CDN Connection');
+                        if (resp.success) {
+                            $res.css({'padding':'10px 14px', 'background':'#d1fae5', 'color':'#065f46', 'border':'1px solid #6ee7b7', 'border-radius':'6px', 'font-size':'13px', 'font-weight':'600'}).html('✅ ' + resp.data).slideDown();
+                        } else {
+                            $res.css({'padding':'10px 14px', 'background':'#fee2e2', 'color':'#991b1b', 'border':'1px solid #fca5a5', 'border-radius':'6px', 'font-size':'13px', 'font-weight':'600'}).html('❌ Error: ' + resp.data).slideDown();
+                        }
+                    },
+                    error: function() {
+                        $btn.prop('disabled', false).text('Test CDN Connection');
+                        $res.css({'padding':'10px 14px', 'background':'#fee2e2', 'color':'#991b1b', 'border':'1px solid #fca5a5', 'border-radius':'6px', 'font-size':'13px', 'font-weight':'600'}).html('❌ Server request failed.').slideDown();
+                    }
+                });
+            });
+
+            // Sync Media Library to CDN Batch Handler
+            $('#btn-sync-media-cdn').on('click', function() {
+                var $btn = $(this);
+                var $progressWrap = $('#uwb-sync-cdn-progress-wrap');
+                var $progressFill = $('#uwb-sync-cdn-progress-fill');
+                var $statusText = $('#uwb-sync-cdn-status-text');
+                var nonce = '<?php echo esc_js( wp_create_nonce( "uwb_admin_nonce" ) ); ?>';
+
+                if (!confirm('Start batch syncing all Media Library files to CDN S3/R2 storage?')) {
+                    return;
+                }
+
+                $btn.prop('disabled', true).text('Syncing Media...');
+                $progressWrap.slideDown();
+                $progressFill.css('width', '5%');
+                $statusText.text('Starting media sync batch 1...');
+
+                function processBatch(paged) {
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'uwb_sync_media_to_cdn',
+                            nonce: nonce,
+                            paged: paged
+                        },
+                        success: function(resp) {
+                            if (resp.success) {
+                                var d = resp.data;
+                                if (d.total > 0) {
+                                    var pct = Math.min(100, Math.round(((d.paged - 1) * 20 / d.total) * 100));
+                                    $progressFill.css('width', pct + '%');
+                                } else {
+                                    $progressFill.css('width', '100%');
+                                }
+                                $statusText.text(d.message);
+
+                                if (!d.completed) {
+                                    processBatch(d.paged);
+                                } else {
+                                    $progressFill.css('width', '100%');
+                                    $btn.prop('disabled', false).text('Sync Existing Media Library to CDN');
+                                    alert('🎉 ' + d.message);
+                                }
+                            } else {
+                                $btn.prop('disabled', false).text('Sync Existing Media Library to CDN');
+                                alert('❌ Error: ' + resp.data);
+                            }
+                        },
+                        error: function() {
+                            $btn.prop('disabled', false).text('Sync Existing Media Library to CDN');
+                            alert('❌ Batch sync failed due to server error.');
+                        }
+                    });
+                }
+
+                processBatch(1);
             });
         });
         </script>
@@ -4677,5 +4945,113 @@ if ( ! function_exists( 'ultimate_wp_render_dashboard' ) ) {
             </div>
         </div>
         <?php
+    }
+
+    public function ajax_test_cdn_connection() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Permission denied' );
+        }
+
+        $config = array(
+            'provider'   => isset( $_POST['provider'] ) ? sanitize_text_field( $_POST['provider'] ) : 'cloudflare_r2',
+            'access_key' => isset( $_POST['access_key'] ) ? sanitize_text_field( $_POST['access_key'] ) : '',
+            'secret_key' => isset( $_POST['secret_key'] ) ? sanitize_text_field( $_POST['secret_key'] ) : '',
+            'bucket'     => isset( $_POST['bucket'] ) ? sanitize_text_field( $_POST['bucket'] ) : '',
+            'account_id' => isset( $_POST['account_id'] ) ? sanitize_text_field( $_POST['account_id'] ) : '',
+            'endpoint'   => isset( $_POST['endpoint'] ) ? esc_url_raw( $_POST['endpoint'] ) : '',
+            'region'     => isset( $_POST['region'] ) ? sanitize_text_field( $_POST['region'] ) : 'auto',
+        );
+
+        $client = new \Ultimate_WP_Booster\Engine\CDN\S3Client( $config );
+        $res = $client->test_connection();
+
+        if ( is_wp_error( $res ) ) {
+            wp_send_json_error( $res->get_error_message() );
+        }
+
+        wp_send_json_success( 'Successfully connected to S3/R2 storage bucket!' );
+    }
+
+    public function ajax_sync_media_to_cdn() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Permission denied' );
+        }
+
+        $paged = isset( $_POST['paged'] ) ? max( 1, intval( $_POST['paged'] ) ) : 1;
+        $posts_per_page = 20;
+
+        $args = array(
+            'post_type'      => 'attachment',
+            'post_status'    => 'inherit',
+            'posts_per_page' => $posts_per_page,
+            'paged'          => $paged,
+            'fields'         => 'ids',
+        );
+
+        $query = new \WP_Query( $args );
+        $total_attachments = $query->found_posts;
+        $attachment_ids = $query->posts;
+
+        if ( empty( $attachment_ids ) ) {
+            wp_send_json_success( array(
+                'completed' => true,
+                'paged'     => $paged,
+                'processed' => 0,
+                'total'     => $total_attachments,
+                'message'   => 'Media sync complete!',
+            ) );
+        }
+
+        $s3_client = \Ultimate_WP_Booster\Engine\CDN\CDNManager::get_s3_client();
+        if ( ! $s3_client->is_configured() ) {
+            wp_send_json_error( 'CDN credentials are missing or incomplete. Save settings first.' );
+        }
+
+        $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
+        $uploads = wp_upload_dir();
+        $base_dir = rtrim( str_replace( '\\', '/', $uploads['basedir'] ), '/' );
+        $count = 0;
+
+        foreach ( $attachment_ids as $id ) {
+            $file = get_attached_file( $id );
+            if ( $file && file_exists( $file ) ) {
+                $file_norm = str_replace( '\\', '/', $file );
+                if ( strpos( $file_norm, $base_dir ) === 0 ) {
+                    $rel = ltrim( substr( $file_norm, strlen( $base_dir ) ), '/' );
+                    $s3_key = 'wp-content/uploads/' . $rel;
+                    $s3_client->put_object( $file, $s3_key, '', $cache_control );
+                    $count++;
+
+                    $meta = wp_get_attachment_metadata( $id );
+                    if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
+                        $dir = dirname( $file );
+                        $rel_dir = dirname( $rel );
+                        $rel_dir = ( $rel_dir === '.' ) ? '' : $rel_dir . '/';
+                        foreach ( $meta['sizes'] as $info ) {
+                            if ( ! empty( $info['file'] ) ) {
+                                $thumb_file = $dir . '/' . $info['file'];
+                                if ( file_exists( $thumb_file ) ) {
+                                    $thumb_key = 'wp-content/uploads/' . $rel_dir . $info['file'];
+                                    $s3_client->put_object( $thumb_file, $thumb_key, '', $cache_control );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $next_paged = $paged + 1;
+        $is_done = ( $paged * $posts_per_page ) >= $total_attachments;
+
+        wp_send_json_success( array(
+            'completed' => $is_done,
+            'paged'     => $next_paged,
+            'processed' => $count,
+            'total'     => $total_attachments,
+            'message'   => $is_done ? 'All media library items successfully synced to CDN!' : "Synced batch {$paged} ({$count} files)...",
+        ) );
     }
 }

@@ -7,6 +7,7 @@ use Ultimate_WP_Booster\Engine\Optimization\Media\Lazyload;
 use Ultimate_WP_Booster\Engine\Optimization\JS\DelayJS;
 use Ultimate_WP_Booster\Engine\Optimization\JS\DeferJS;
 use Ultimate_WP_Booster\Engine\Optimization\HTML\Minify as HTMLMinifier;
+use Ultimate_WP_Booster\Engine\CDN\CDNManager;
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
@@ -157,6 +158,14 @@ class Optimizer {
             if ( $debug_enabled ) $debug_logs[] = "Delay JS Execution: Applied";
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "Delay JS Execution: Disabled in settings";
+        }
+
+        // 16. CDN Static Assets URL Rewriter
+        if ( ! empty( $config['cdn_enabled'] ) ) {
+            $html = CDNManager::process_html( $html, $config );
+            if ( $debug_enabled ) $debug_logs[] = "CDN URL Rewriter: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "CDN URL Rewriter: Disabled in settings";
         }
 
         // 12. Minify HTML markup
