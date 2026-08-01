@@ -256,6 +256,9 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_media_opt_quality', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_opt_format', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_media_opt_mode', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_media_opt_mode_sidecar', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_opt_mode_overwrite', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_opt_mode_replace_ext', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_img_opt_event_upload', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_img_opt_event_edit', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_img_opt_event_get_url', 'intval' );
@@ -2923,17 +2926,39 @@ js-(before|after)
                                             </select>
                                         </div>
 
-                                        <!-- Field 3: Output File Mode -->
-                                        <div class="uwb-form-group">
-                                            <label for="uwb_media_opt_mode" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
-                                                Phương thức ghi file (Output File Mode)
+                                        <!-- Field 3: Conversion Methods & Output Modes (Checkboxes) -->
+                                        <div class="uwb-form-group" style="grid-column:1 / -1;">
+                                            <label style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:10px;">
+                                                Phương thức ghi file (Conversion Output Modes)
                                             </label>
-                                            <?php $opt_mode = get_option( 'uwb_media_opt_mode', 'new_file' ); ?>
-                                            <select name="uwb_media_opt_mode" id="uwb_media_opt_mode" style="width:100%; border:1px solid var(--uwb-border); border-radius:6px; padding:9px 12px; font-size:13.5px; background:#fff;">
-                                                <option value="new_file" <?php selected( $opt_mode, 'new_file' ); ?>>Create Sidecar File (Default) — (Tạo file mới song song, ví dụ: image.webp)</option>
-                                                <option value="overwrite" <?php selected( $opt_mode, 'overwrite' ); ?>>Overwrite File Content In-Place — (Ghi đè dữ liệu binary trực tiếp lên file gốc)</option>
-                                                <option value="change_extension" <?php selected( $opt_mode, 'change_extension' ); ?>>Replace &amp; Change Extension — (Đổi trực tiếp đuôi file thành .webp / .avif)</option>
-                                            </select>
+                                            <div style="display:flex; flex-direction:column; gap:12px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:8px; padding:14px 16px;">
+                                                <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                                                    <input type="hidden" name="uwb_media_opt_mode_sidecar" value="0" />
+                                                    <input type="checkbox" name="uwb_media_opt_mode_sidecar" value="1" <?php checked( get_option( 'uwb_media_opt_mode_sidecar', 1 ), 1 ); ?> style="margin-top:2px;" />
+                                                    <div>
+                                                        <strong style="font-size:13px; color:var(--uwb-text); display:block;">Create Sidecar File (Default)</strong>
+                                                        <span style="font-size:12px; color:var(--uwb-text-muted);">Tạo file WebP/AVIF mới song song (ví dụ: <code>image.webp</code> hoặc <code>image.jpg.webp</code>)</span>
+                                                    </div>
+                                                </label>
+
+                                                <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                                                    <input type="hidden" name="uwb_media_opt_mode_overwrite" value="0" />
+                                                    <input type="checkbox" name="uwb_media_opt_mode_overwrite" value="1" <?php checked( get_option( 'uwb_media_opt_mode_overwrite', 0 ), 1 ); ?> style="margin-top:2px;" />
+                                                    <div>
+                                                        <strong style="font-size:13px; color:var(--uwb-text); display:block;">Overwrite File Content In-Place</strong>
+                                                        <span style="font-size:12px; color:var(--uwb-text-muted);">Ghi đè dữ liệu nhị phân (binary data) WebP/AVIF trực tiếp lên file gốc giữ nguyên đuôi mở rộng cũ</span>
+                                                    </div>
+                                                </label>
+
+                                                <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                                                    <input type="hidden" name="uwb_media_opt_mode_replace_ext" value="0" />
+                                                    <input type="checkbox" name="uwb_media_opt_mode_replace_ext" value="1" <?php checked( get_option( 'uwb_media_opt_mode_replace_ext', 0 ), 1 ); ?> style="margin-top:2px;" />
+                                                    <div>
+                                                        <strong style="font-size:13px; color:var(--uwb-text); display:block;">Replace &amp; Change File Extension</strong>
+                                                        <span style="font-size:12px; color:var(--uwb-text-muted);">Chuyển đổi định dạng và đổi trực tiếp đuôi file thành <code>.webp</code> / <code>.avif</code>, cập nhật database WordPress</span>
+                                                    </div>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
 
