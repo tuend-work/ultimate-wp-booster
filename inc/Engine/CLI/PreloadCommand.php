@@ -13,12 +13,9 @@ class PreloadCommand {
 
     public function run( $args, $assoc_args ) {
         $batch_size = isset( $assoc_args['batch-size'] ) ? intval( $assoc_args['batch-size'] ) : 0;
-        if ( class_exists( 'Uwb_Preloader' ) ) {
-            $preloader = new \Uwb_Preloader();
-            $processed = $preloader->run_preload_batch( $batch_size );
-            \WP_CLI::success( "Preloaded {$processed} URLs successfully!" );
-        } else {
-            \WP_CLI::error( "Preloader class not found." );
-        }
+        $preloader = new \Ultimate_WP_Booster\Engine\Preload\Preloader();
+        $res = $preloader->run_preload_batch( $batch_size );
+        $count = is_array( $res ) && isset( $res['count'] ) ? $res['count'] : 0;
+        \WP_CLI::success( "Preloaded {$count} URLs successfully!" );
     }
 }
