@@ -55,6 +55,22 @@ class JS {
                 }
             }
 
+            // Automatic Hardcoded Safety Exclusions for Theme & WooCommerce Critical Variables
+            if ( ! $is_excluded ) {
+                if ( stripos( $tag, 'flatsomeVars' ) !== false ||
+                     stripos( $inline_content, 'flatsomeVars' ) !== false ||
+                     stripos( $tag, 'flatsome' ) !== false ||
+                     stripos( $inline_content, 'flatsome' ) !== false ||
+                     stripos( $inline_content, 'wc_add_to_cart_params' ) !== false ||
+                     stripos( $inline_content, 'woocommerce_params' ) !== false ) {
+                    $is_excluded = true;
+                    if ( is_array( $logs ) ) {
+                        $label = preg_match( '/src=([\'"])(.*?)\1/i', $attrs, $src_m ) ? $src_m[2] : 'Inline Script';
+                        $logs[] = "JS Combine: Excluded {$label} (Automatic safety rule: Theme / WooCommerce core variables like flatsomeVars)";
+                    }
+                }
+            }
+
             $is_special = stripos( $attrs, 'text/uwb-lazyload' ) !== false
                        || stripos( $attrs, 'type="module"' ) !== false;
 
@@ -285,7 +301,8 @@ class JS {
                     if ( strpos( $chunk, 'webpackChunk' ) !== false ||
                          strpos( $chunk, '__webpack_require__' ) !== false ||
                          strpos( $chunk, 'document.currentScript.src' ) !== false ||
-                         strpos( $chunk, 'flatsomeVars' ) !== false ) {
+                         strpos( $chunk, 'flatsomeVars' ) !== false ||
+                         strpos( $chunk, 'flatsome' ) !== false ) {
                         return true;
                     }
                 }

@@ -24,6 +24,14 @@ class DelayJS {
                     }
                 }
 
+                // Automatic Hardcoded Safety Exclusions for Flatsome Theme & WooCommerce Core Script Vars
+                if ( stripos( $matches[0], 'flatsomeVars' ) !== false ||
+                     stripos( $matches[0], 'flatsome' ) !== false ||
+                     stripos( $matches[0], 'wc_add_to_cart_params' ) !== false ||
+                     stripos( $matches[0], 'woocommerce_params' ) !== false ) {
+                    return $matches[0];
+                }
+
                 if ( ! preg_match( '/\bsrc\s*=/i', $attrs ) ) {
                     if ( stripos( $content, 'wp.' ) !== false || stripos( $content, 'wp-i18n' ) !== false || stripos( $content, 'wp-hooks' ) !== false || stripos( $content, 'translations' ) !== false || stripos( $attrs, 'wp-' ) !== false ) {
                         return $matches[0];

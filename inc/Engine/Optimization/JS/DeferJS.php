@@ -41,6 +41,19 @@ class DeferJS {
                     }
                 }
 
+                // Automatic Safety Exclusions for Flatsome Theme & WooCommerce Core Script Vars
+                if ( stripos( $full_tag, 'flatsomeVars' ) !== false ||
+                     stripos( $full_tag, 'flatsome' ) !== false ||
+                     stripos( $url, 'flatsome' ) !== false ||
+                     stripos( $full_tag, 'wc_add_to_cart_params' ) !== false ||
+                     stripos( $full_tag, 'woocommerce_params' ) !== false ) {
+                    $skipped_count++;
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "Defer JS: Excluded {$url_clean} (Automatic safety rule: Theme / WooCommerce core variables like flatsomeVars)";
+                    }
+                    return $full_tag;
+                }
+
                 $deferred_count++;
                 return '<script defer="defer"' . $attrs_before . 'src="' . esc_url( $url ) . '"' . $attrs_after . '></script>';
             },
