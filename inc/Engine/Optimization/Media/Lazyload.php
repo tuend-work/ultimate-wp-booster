@@ -266,11 +266,19 @@ class Lazyload {
 
     public static function process_videos( $html, &$logs = null ) {
         $video_count = 0;
-        $processed = preg_replace_callback('#<video\b([^>]*?)>(.*?)</video>#is', function( $matches ) use ( &$video_count ) {
+        $skipped_count = 0;
+
+        $processed = preg_replace_callback('#<video\b([^>]*?)>(.*?)</video>#is', function( $matches ) use ( &$video_count, &$skipped_count ) {
             $attrs   = $matches[1];
             $content = $matches[2];
 
-            if ( stripos( $attrs, 'no-lazy' ) !== false || stripos( $attrs, 'skip-lazy' ) !== false ) {
+            // Automatic Safety Rule: Skip background videos, autoplay videos, or explicit no-lazy videos
+            if ( stripos( $attrs, 'autoplay' ) !== false ||
+                 stripos( $attrs, 'video-bg' ) !== false ||
+                 stripos( $attrs, 'no-lazy' ) !== false ||
+                 stripos( $attrs, 'skip-lazy' ) !== false ||
+                 stripos( $attrs, 'data-no-lazy' ) !== false ) {
+                $skipped_count++;
                 return $matches[0];
             }
 
@@ -300,7 +308,7 @@ class Lazyload {
         }, $html);
 
         if ( is_array( $logs ) ) {
-            $logs[] = "Lazy Load Videos: Applied to {$video_count} HTML5 video(s)";
+            $logs[] = "Lazy Load Videos: Applied to {$video_count} video(s), Skipped {$skipped_count} autoplay/background video(s)";
         }
 
         if ( $processed !== $html ) {
@@ -311,6 +319,7 @@ class Lazyload {
         if (!vids.length) return;
 
         function loadVideo(videoEl) {
+            if (!videoEl) return;
             var sources = videoEl.querySelectorAll('source[data-src]');
             for (var i = 0; i < sources.length; i++) {
                 var source = sources[i];
@@ -322,7 +331,13 @@ class Lazyload {
                 videoEl.src = ds;
                 videoEl.removeAttribute('data-src');
             }
-            videoEl.load();
+            try {
+                videoEl.load();
+                if (videoEl.hasAttribute('autoplay')) {
+                    var p = videoEl.play();
+                    if (p && p.catch) { p.catch(function(){}); }
+                }
+            } catch(e) {}
             videoEl.classList.add('uwb-loaded');
         }
 
