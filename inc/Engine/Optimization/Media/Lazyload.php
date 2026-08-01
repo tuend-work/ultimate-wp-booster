@@ -264,6 +264,109 @@ class Lazyload {
         return $processed;
     }
 
+    public static function process_videos( $html, &$logs = null ) {
+        $video_count = 0;
+        $processed = preg_replace_callback('#<video\b([^>]*?)>(.*?)</video>#is', function( $matches ) use ( &$video_count ) {
+            $attrs   = $matches[1];
+            $content = $matches[2];
+
+            if ( stripos( $attrs, 'no-lazy' ) !== false || stripos( $attrs, 'skip-lazy' ) !== false ) {
+                return $matches[0];
+            }
+
+            $new_attrs = $attrs;
+            if ( stripos( $new_attrs, 'preload=' ) === false ) {
+                $new_attrs .= ' preload="none"';
+            } else {
+                $new_attrs = preg_replace( '/preload=(["\'])(.*?)\1/i', 'preload="none"', $new_attrs );
+            }
+
+            // If video has src attribute directly
+            if ( preg_match('/src=([\'"])(.*?)\1/i', $new_attrs, $sm) && stripos( $new_attrs, 'data-src=' ) === false ) {
+                $real_src = $sm[2];
+                $new_attrs = preg_replace('/src=([\'"])(.*?)\1/i', 'data-src="' . $real_src . '"', $new_attrs);
+            }
+
+            // If video contains <source src="..."> tags
+            $new_content = preg_replace_callback('/<source\b([^>]*?)src=([\'"])(.*?)\2([^>]*?)>/i', function( $sub ) {
+                $s_before = $sub[1];
+                $s_url    = $sub[3];
+                $s_after  = $sub[4];
+                return '<source' . $s_before . 'data-src="' . $s_url . '"' . $s_after . '>';
+            }, $content);
+
+            $video_count++;
+            return '<video' . $new_attrs . '>' . $new_content . '</video>';
+        }, $html);
+
+        if ( is_array( $logs ) ) {
+            $logs[] = "Lazy Load Videos: Applied to {$video_count} HTML5 video(s)";
+        }
+
+        if ( $processed !== $html ) {
+            $lazy_js = "\n<script id=\"uwb-lazy-video-js\">
+(function() {
+    function uwbInitLazyVideos() {
+        var vids = [].slice.call(document.querySelectorAll('video[data-src], video source[data-src]'));
+        if (!vids.length) return;
+
+        function loadVideo(videoEl) {
+            var sources = videoEl.querySelectorAll('source[data-src]');
+            for (var i = 0; i < sources.length; i++) {
+                var source = sources[i];
+                source.src = source.getAttribute('data-src');
+                source.removeAttribute('data-src');
+            }
+            var ds = videoEl.getAttribute('data-src');
+            if (ds) {
+                videoEl.src = ds;
+                videoEl.removeAttribute('data-src');
+            }
+            videoEl.load();
+            videoEl.classList.add('uwb-loaded');
+        }
+
+        if ('IntersectionObserver' in window) {
+            var videoObserver = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting || entry.intersectionRatio > 0) {
+                        var target = entry.target;
+                        var parentVideo = target.tagName === 'SOURCE' ? target.parentNode : target;
+                        loadVideo(parentVideo);
+                        videoObserver.unobserve(target);
+                    }
+                });
+            }, { rootMargin: '300px 0px' });
+
+            vids.forEach(function(v) {
+                videoObserver.observe(v);
+            });
+        } else {
+            vids.forEach(function(v) {
+                var parentVideo = v.tagName === 'SOURCE' ? v.parentNode : v;
+                loadVideo(parentVideo);
+            });
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', uwbInitLazyVideos);
+    } else {
+        uwbInitLazyVideos();
+    }
+})();
+</script>";
+
+            if ( stripos( $processed, '</body>' ) !== false ) {
+                $processed = str_ireplace( '</body>', $lazy_js . '</body>', $processed );
+            } else {
+                $processed .= $lazy_js;
+            }
+        }
+
+        return $processed;
+    }
+
     public static function add_missing_sizes( $html ) {
         return preg_replace_callback('/<img\s+([^>]+)>/i', function( $matches ) {
             $attrs = $matches[1];
