@@ -13,6 +13,8 @@ class CDNSubscriber implements Subscriber_Interface {
             'edit_attachment'            => 'on_edit_attachment',
             'delete_attachment'          => 'on_delete_attachment',
             'wp_get_attachment_url'      => array( 'filter_attachment_url', 10, 2 ),
+            'wp_calculate_image_srcset'  => array( 'filter_attachment_srcset', 10, 5 ),
+            'wp_get_attachment_image_src'=> array( 'filter_attachment_image_src', 10, 4 ),
             'manage_media_columns'       => 'add_media_columns',
             'manage_media_custom_column' => array( 'render_media_column', 10, 2 ),
         );
@@ -156,6 +158,66 @@ class CDNSubscriber implements Subscriber_Interface {
         }
 
         return $url;
+    }
+
+    public function filter_attachment_srcset( $sources, $size_array, $image_src, $image_meta, $attachment_id ) {
+        if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
+            return $sources;
+        }
+        if ( ! get_option( 'uwb_cdn_auto_rewrite_attachment_url', 0 ) ) {
+            return $sources;
+        }
+
+        $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        if ( empty( $cdn_domain ) || ! is_array( $sources ) ) {
+            return $sources;
+        }
+
+        $cdn_domain = rtrim( $cdn_domain, '/' );
+        if ( strpos( $cdn_domain, 'http://' ) !== 0 && strpos( $cdn_domain, 'https://' ) !== 0 ) {
+            $cdn_domain = 'https://' . $cdn_domain;
+        }
+
+        $uploads  = wp_upload_dir();
+        $base_url = rtrim( $uploads['baseurl'], '/' );
+
+        foreach ( $sources as $width => &$source ) {
+            if ( isset( $source['url'] ) && strpos( $source['url'], $base_url ) === 0 ) {
+                $rel = ltrim( substr( $source['url'], strlen( $base_url ) ), '/' );
+                $source['url'] = $cdn_domain . '/wp-content/uploads/' . $rel;
+            }
+        }
+
+        return $sources;
+    }
+
+    public function filter_attachment_image_src( $image, $attachment_id, $size, $icon ) {
+        if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
+            return $image;
+        }
+        if ( ! get_option( 'uwb_cdn_auto_rewrite_attachment_url', 0 ) ) {
+            return $image;
+        }
+
+        $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        if ( empty( $cdn_domain ) || ! is_array( $image ) || empty( $image[0] ) ) {
+            return $image;
+        }
+
+        $cdn_domain = rtrim( $cdn_domain, '/' );
+        if ( strpos( $cdn_domain, 'http://' ) !== 0 && strpos( $cdn_domain, 'https://' ) !== 0 ) {
+            $cdn_domain = 'https://' . $cdn_domain;
+        }
+
+        $uploads  = wp_upload_dir();
+        $base_url = rtrim( $uploads['baseurl'], '/' );
+
+        if ( strpos( $image[0], $base_url ) === 0 ) {
+            $rel = ltrim( substr( $image[0], strlen( $base_url ) ), '/' );
+            $image[0] = $cdn_domain . '/wp-content/uploads/' . $rel;
+        }
+
+        return $image;
     }
 
     // -------------------------------------------------------------------------

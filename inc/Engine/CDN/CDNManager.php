@@ -52,17 +52,15 @@ class CDNManager {
 
         $ext_pattern = implode( '|', array_map( 'preg_quote', $allowed_exts ) );
         $home_host_quoted = preg_quote( $home_host, '/' );
-
-        // Match URLs starting with site host or relative wp-content / wp-includes
-        $pattern = '/(href|src|data-src|data-srcset)=([\'"])((?:https?:\/\/' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?)\2/i';
-
         $version = defined( 'UWB_VERSION' ) ? UWB_VERSION : time();
 
-        return preg_replace_callback( $pattern, function( $matches ) use ( $home_host, $cdn_domain, $version ) {
+        // 1. Rewrite single URL attributes: href, src, data-src
+        $pattern = '/(href|src|data-src)=([\'"])((?:https?:\/\/' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?)\2/i';
+
+        $html = preg_replace_callback( $pattern, function( $matches ) use ( $home_host, $cdn_domain, $version ) {
             $attr    = $matches[1];
             $quote   = $matches[2];
             $url     = $matches[3];
-            $ext     = $matches[4];
             $query   = isset( $matches[5] ) ? $matches[5] : '';
 
             $path_part = parse_url( $url, PHP_URL_PATH );
@@ -81,6 +79,51 @@ class CDNManager {
             $cdn_url = $cdn_domain . $path_part . $query;
             return $attr . '=' . $quote . esc_url( $cdn_url ) . $quote;
         }, $html );
+
+        // 2. Rewrite multi-entry attributes: srcset and data-srcset (supports descriptors like 300w, 2x)
+        $srcset_pattern = '/(srcset|data-srcset)=([\'"])(.*?)\2/i';
+        $html = preg_replace_callback( $srcset_pattern, function( $matches ) use ( $home_host_quoted, $cdn_domain, $version, $ext_pattern ) {
+            $attr  = $matches[1];
+            $quote = $matches[2];
+            $val   = $matches[3];
+
+            if ( empty( trim( $val ) ) ) {
+                return $matches[0];
+            }
+
+            $entries = explode( ',', $val );
+            $new_entries = array();
+
+            foreach ( $entries as $entry ) {
+                $entry_trimmed = trim( $entry );
+                if ( empty( $entry_trimmed ) ) {
+                    continue;
+                }
+
+                $parts = preg_split( '/\s+/', $entry_trimmed, 2 );
+                $url = $parts[0];
+                $descriptor = isset( $parts[1] ) ? ' ' . $parts[1] : '';
+
+                if ( preg_match( '/^(?:https?:\/\/' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?$/i', $url, $m ) ) {
+                    $path_part = parse_url( $url, PHP_URL_PATH );
+                    $query     = isset( $m[2] ) ? $m[2] : '';
+
+                    if ( empty( $query ) ) {
+                        $query = '?ver=' . $version;
+                    } elseif ( strpos( $query, 'ver=' ) === false && strpos( $query, 'v=' ) === false ) {
+                        $query .= '&ver=' . $version;
+                    }
+
+                    $url = $cdn_domain . $path_part . $query;
+                }
+
+                $new_entries[] = esc_url( $url ) . $descriptor;
+            }
+
+            return $attr . '=' . $quote . implode( ', ', $new_entries ) . $quote;
+        }, $html );
+
+        return $html;
     }
 
     public static function get_s3_client( $config = array() ) {
