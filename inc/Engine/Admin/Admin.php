@@ -2982,81 +2982,31 @@ js-(before|after)
 
                                     <?php $this->render_toggle_switch( 'uwb_cdn_enabled', 'Enable CDN Static Asset Offloading & URL Rewriter', 'Automatically rewrite static asset URLs in HTML output to serve from CDN Domain.' ); ?>
 
-                                    <h4 style="margin:20px 0 12px 0; font-size:13.5px; font-weight:700; color:var(--uwb-text);">Select File Types to Serve via CDN</h4>
-                                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:20px; background:#fff; padding:16px; border:1px solid var(--uwb-border); border-radius:8px;">
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_file_types_images" value="1" <?php checked( get_option( 'uwb_cdn_file_types_images', 1 ), 1 ); ?> />
-                                            Images (.jpg, .png, .webp, .svg, .gif)
-                                        </label>
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_file_types_css" value="1" <?php checked( get_option( 'uwb_cdn_file_types_css', 1 ), 1 ); ?> />
-                                            CSS Stylesheets (.css)
-                                        </label>
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_file_types_js" value="1" <?php checked( get_option( 'uwb_cdn_file_types_js', 1 ), 1 ); ?> />
-                                            JavaScript (.js)
-                                        </label>
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_file_types_fonts" value="1" <?php checked( get_option( 'uwb_cdn_file_types_fonts', 1 ), 1 ); ?> />
-                                            Fonts (.woff2, .woff, .ttf)
-                                        </label>
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_file_types_media" value="1" <?php checked( get_option( 'uwb_cdn_file_types_media', 0 ), 1 ); ?> />
-                                            Media &amp; Docs (.mp4, .pdf, .zip)
-                                        </label>
-                                    </div>
-
-                                    <div class="uwb-form-group" style="margin-bottom:20px;">
+                                    <div class="uwb-form-group" style="margin-bottom:0;">
                                         <label for="uwb_cdn_cache_control">Object Cache-Control Header</label>
                                         <input type="text" name="uwb_cdn_cache_control" id="uwb_cdn_cache_control" value="<?php echo esc_attr( get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' ) ); ?>" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
                                         <p class="description">Cache-Control header set on uploaded S3/R2 objects.</p>
                                     </div>
                                 </div>
 
-                                <!-- Section 3: Event Handling & Batch Sync Tools -->
+                                <!-- Section 3: Batch Sync Tools -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
                                     <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                        Event Handling &amp; Sync Tools
+                                        Batch Sync Media Library to CDN
                                     </h3>
 
-                                    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px; background:#fff; padding:16px; border:1px solid var(--uwb-border); border-radius:8px;">
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_auto_upload" value="1" <?php checked( get_option( 'uwb_cdn_auto_upload', 1 ), 1 ); ?> />
-                                            Auto-upload new Media Library files to CDN (<code>add_attachment</code> hook)
-                                        </label>
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_auto_upload_combined" value="1" <?php checked( get_option( 'uwb_cdn_auto_upload_combined', 1 ), 1 ); ?> />
-                                            Auto upload to CDN after minify or combine (automatically sync minified/combined CSS &amp; JS files to CDN)
-                                        </label>
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_auto_purge_minified" value="1" <?php checked( get_option( 'uwb_cdn_auto_purge_minified', 1 ), 1 ); ?> />
-                                            Auto-purge combined &amp; minified cache files from CDN when clearing cache (keep CDN cache synchronized)
-                                        </label>
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_auto_delete" value="1" <?php checked( get_option( 'uwb_cdn_auto_delete', 1 ), 1 ); ?> />
-                                            Auto-delete files from CDN when deleted in Media Library (<code>delete_attachment</code> hook)
-                                        </label>
-                                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
-                                            <input type="checkbox" name="uwb_cdn_delete_local" value="1" <?php checked( get_option( 'uwb_cdn_delete_local', 0 ), 1 ); ?> />
-                                            Delete local server files after offloading to CDN (Offload storage mode)
-                                        </label>
-                                    </div>
+                                    <p style="font-size:12.5px; color:var(--uwb-text-muted); margin-bottom:16px;">Bulk upload all existing media library files and thumbnails to your configured S3/R2 bucket.</p>
 
-                                    <div style="border-top:1px solid var(--uwb-border); padding-top:20px;">
-                                        <h4 style="margin:0 0 8px 0; font-size:14px; font-weight:700; color:var(--uwb-text);">Batch Sync Media Library to CDN</h4>
-                                        <p style="font-size:12.5px; color:var(--uwb-text-muted); margin-bottom:16px;">Bulk upload all existing media library files and thumbnails to your configured S3/R2 bucket.</p>
+                                    <button type="button" id="btn-sync-media-cdn" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">
+                                        Sync Existing Media Library to CDN
+                                    </button>
 
-                                        <button type="button" id="btn-sync-media-cdn" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">
-                                            Sync Existing Media Library to CDN
-                                        </button>
-
-                                        <div id="uwb-sync-cdn-progress-wrap" style="margin-top:16px; display:none;">
-                                            <div class="uwb-progress-bar-wrap" style="margin-bottom:8px;">
-                                                <div class="uwb-progress-bar-fill" id="uwb-sync-cdn-progress-fill" style="width:0%;"></div>
-                                            </div>
-                                            <div id="uwb-sync-cdn-status-text" style="font-size:12.5px; font-weight:600; color:var(--uwb-text);">Initializing batch sync...</div>
+                                    <div id="uwb-sync-cdn-progress-wrap" style="margin-top:16px; display:none;">
+                                        <div class="uwb-progress-bar-wrap" style="margin-bottom:8px;">
+                                            <div class="uwb-progress-bar-fill" id="uwb-sync-cdn-progress-fill" style="width:0%;"></div>
                                         </div>
+                                        <div id="uwb-sync-cdn-status-text" style="font-size:12.5px; font-weight:600; color:var(--uwb-text);">Initializing batch sync...</div>
                                     </div>
                                 </div>
                             </div>
