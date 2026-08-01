@@ -1132,7 +1132,7 @@ class Uwb_Optimizer {
      * @param bool   $include_ext  Whether to combine external domain assets as well.
      * @return string Modified HTML.
      */
-    public static function combine_js( $html, $excludes_str = '', $include_ext = false ) {
+    public static function combine_js( $html, $excludes_str = '', $include_ext = true ) {
         $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/combine';
         if ( ! is_dir( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
@@ -1153,75 +1153,8 @@ class Uwb_Optimizer {
             return $html;
         }
 
-        $current_chunk = array();
-
-        $flush_chunk = function() use ( &$html, &$current_chunk, $cache_dir, $include_ext, $debug_mode ) {
-            if ( count( $current_chunk ) < 1 ) {
-                return;
-            }
-
-            // If only 1 item in the chunk, do not combine
-            if ( count( $current_chunk ) === 1 ) {
-                $current_chunk = array();
-                return;
-            }
-
-            $urls_hashes = array();
-            foreach ( $current_chunk as $item ) {
-                if ( ! empty( $item['is_inline'] ) ) {
-                    $urls_hashes[] = 'inline_' . md5( $item['content'] );
-                } else {
-                    $mtime = ( $item['local_path'] && file_exists( $item['local_path'] ) ) ? filemtime( $item['local_path'] ) : 0;
-                    $urls_hashes[] = $item['url_clean'] . '_' . $mtime;
-                }
-            }
-
-            $hash = md5( implode( '|', $urls_hashes ) );
-            $cache_file = $cache_dir . '/uwb-js-' . $hash . '.js';
-            $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/combine/uwb-js-' . $hash . '.js' );
-
-            if ( ! file_exists( $cache_file ) ) {
-                $combined_content = '';
-                foreach ( $current_chunk as $item ) {
-                    $content = '';
-                    if ( ! empty( $item['is_inline'] ) ) {
-                        $content = $item['content'];
-                    } elseif ( $item['local_path'] && file_exists( $item['local_path'] ) ) {
-                        $content = @file_get_contents( $item['local_path'] );
-                    } elseif ( $include_ext ) {
-                        $content = self::download_url_content( $item['url'] );
-                    }
-
-                    if ( ! empty( $content ) ) {
-                        $content = self::minify_js_safe( $content );
-                        $name_label = ! empty( $item['is_inline'] ) ? 'Inline Script' : $item['url_clean'];
-                        $combined_content .= "\n;/* Combined: " . self::safe_esc_html( $name_label ) . " */\n" . trim( $content ) . ";";
-                    }
-                }
-
-                if ( ! empty( $combined_content ) ) {
-                    @file_put_contents( $cache_file, trim( $combined_content ) );
-                }
-            }
-
-            if ( file_exists( $cache_file ) ) {
-                $first = true;
-                foreach ( $current_chunk as $item ) {
-                    if ( $first ) {
-                        $new_tag = '<script src="' . self::safe_esc_url( $cache_url ) . '"></script>';
-                        $html = str_replace( $item['tag'], $new_tag, $html );
-                        $first = false;
-                    } else {
-                        $html = str_replace( $item['tag'], '', $html );
-                    }
-                }
-                if ( $debug_mode ) {
-                    $GLOBALS['uwb_debug_log'][] = "[combine_js] Flushed bundle for " . count($current_chunk) . " scripts into: " . $cache_url;
-                }
-            }
-
-            $current_chunk = array();
-        };
+        $to_combine = array();
+        $urls_hashes = array();
 
         foreach ( $matches as $m ) {
             $tag = $m[0];
@@ -1242,45 +1175,101 @@ class Uwb_Optimizer {
                        || stripos( $attrs, 'text/uwb-lazyload' ) !== false
                        || stripos( $attrs, 'type="module"' ) !== false;
 
+            if ( $is_special || $is_excluded ) {
+                if ( $debug_mode ) {
+                    $GLOBALS['uwb_debug_log'][] = "[combine_js] SKIPPED (special/excluded): " . (preg_match('/src=([\'"])(.*?)\1/i', $attrs, $sm) ? $sm[2] : 'inline script');
+                }
+                continue; // Keep in original position in HTML
+            }
+
             if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
                 // External script
                 $url = $src_match[2];
                 $url_clean = strtok( $url, '?' );
                 $is_js_file = strtolower( substr( $url_clean, -3 ) ) === '.js';
                 
+                if ( ! $is_js_file ) {
+                    continue;
+                }
+
                 $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
                 $is_webpack = self::is_webpack_bundle( $local_path, $url_clean );
 
-                if ( $is_js_file && ! $is_special && ! $is_excluded && ! $is_webpack && ( $local_path || $include_ext ) ) {
-                    $current_chunk[] = array(
-                        'tag'        => $tag,
-                        'is_inline'  => false,
-                        'url'        => $url,
-                        'url_clean'  => $url_clean,
-                        'local_path' => $local_path,
-                    );
-                } else {
-                    // Excluded or special script -> flush current chunk to preserve execution order
-                    $flush_chunk();
+                if ( $is_webpack ) {
+                    continue; // Webpack bundles are auto-skipped for safety
                 }
+
+                $urls_hashes[] = $url_clean . '_' . ( ($local_path && file_exists( $local_path )) ? filemtime( $local_path ) : 0 );
+                $to_combine[] = array(
+                    'tag'        => $tag,
+                    'is_inline'  => false,
+                    'url'        => $url,
+                    'url_clean'  => $url_clean,
+                    'local_path' => $local_path,
+                );
             } else {
                 // Inline script
-                if ( ! $is_special && ! $is_excluded ) {
-                    $current_chunk[] = array(
-                        'tag'        => $tag,
-                        'is_inline'  => true,
-                        'content'    => $inline_content,
-                        'url_clean'  => 'inline_script_' . md5( $inline_content ),
-                        'local_path' => '',
-                    );
-                } else {
-                    // Excluded or special inline script -> flush current chunk to preserve execution order
-                    $flush_chunk();
-                }
+                $urls_hashes[] = 'inline_' . md5( $inline_content );
+                $to_combine[] = array(
+                    'tag'        => $tag,
+                    'is_inline'  => true,
+                    'content'    => $inline_content,
+                    'url_clean'  => 'inline_script_' . md5( $inline_content ),
+                    'local_path' => '',
+                );
             }
         }
 
-        $flush_chunk();
+        if ( count( $to_combine ) < 1 ) {
+            return $html;
+        }
+
+        // Generate a single combined file hash
+        $hash = md5( implode( '|', $urls_hashes ) );
+        $cache_file = $cache_dir . '/uwb-js-' . $hash . '.js';
+        $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/combine/uwb-js-' . $hash . '.js' );
+
+        if ( ! file_exists( $cache_file ) ) {
+            $combined_content = '';
+            foreach ( $to_combine as $item ) {
+                $content = '';
+                if ( ! empty( $item['is_inline'] ) ) {
+                    $content = $item['content'];
+                } elseif ( $item['local_path'] && file_exists( $item['local_path'] ) ) {
+                    $content = @file_get_contents( $item['local_path'] );
+                } else {
+                    // Try to download foreign external scripts (CDNs, Google Tag, etc.)
+                    $content = self::download_url_content( $item['url'] );
+                }
+
+                if ( ! empty( $content ) ) {
+                    $content = self::minify_js_safe( $content );
+                    $name_label = ! empty( $item['is_inline'] ) ? 'Inline Script' : $item['url_clean'];
+                    $combined_content .= "\n;/* Combined: " . self::safe_esc_html( $name_label ) . " */\n" . trim( $content ) . ";";
+                }
+            }
+
+            if ( ! empty( $combined_content ) ) {
+                @file_put_contents( $cache_file, trim( $combined_content ) );
+            }
+        }
+
+        if ( file_exists( $cache_file ) ) {
+            // Remove all processed tags from HTML
+            foreach ( $to_combine as $item ) {
+                $html = str_replace( $item['tag'], '', $html );
+            }
+            // Inject the single combined script tag at the end (before </body>)
+            $new_tag = '<script src="' . self::safe_esc_url( $cache_url ) . '"></script>';
+            if ( stripos( $html, '</body>' ) !== false ) {
+                $html = str_ireplace( '</body>', $new_tag . "\n" . '</body>', $html );
+            } else {
+                $html .= "\n" . $new_tag;
+            }
+            if ( $debug_mode ) {
+                $GLOBALS['uwb_debug_log'][] = "[combine_js] Combined " . count($to_combine) . " scripts into a single file: " . $cache_url;
+            }
+        }
 
         return $html;
     }
