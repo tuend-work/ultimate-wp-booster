@@ -168,6 +168,9 @@ class Uwb_Cache {
 
         $ignored_query_raw = get_option( 'uwb_ignored_query', "utm_source\nutm_medium\nutm_campaign\nfbclid\ngclid\nage-verified" );
         $ignored_queries = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $ignored_query_raw ) ) ) );
+        if ( ! in_array( 'uwb_preload_key', $ignored_queries, true ) ) {
+            $ignored_queries[] = 'uwb_preload_key';
+        }
 
         $exclude_cookies_raw = get_option( 'uwb_exclude_cookies', '' );
         $exclude_cookies = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclude_cookies_raw ) ) ) );

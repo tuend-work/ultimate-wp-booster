@@ -69,8 +69,8 @@ function uwb_advanced_cache_run() {
     if ( ! empty( $_SERVER['QUERY_STRING'] ) ) {
         parse_str( $_SERVER['QUERY_STRING'], $query_params );
         
-        // WooCommerce, YITH WCAN, magic_login, orderby and preloader query bypass (never cache WooCommerce, YITH WCAN, magic_login, orderby, or preload trigger queries)
-        if ( isset( $query_params['wc-ajax'] ) || isset( $query_params['add-to-cart'] ) || isset( $query_params['pay_for_order'] ) || isset( $query_params['magic_login'] ) || isset( $query_params['uwb_preload_key'] ) || isset( $query_params['orderby'] ) || isset( $query_params['order'] ) || isset( $query_params['yith_wcan'] ) || isset( $query_params['yith-wcan-ajax'] ) || isset( $query_params['preset'] ) ) {
+        // WooCommerce, YITH WCAN, magic_login, orderby query bypass (never cache WooCommerce, YITH WCAN, magic_login, or orderby queries)
+        if ( isset( $query_params['wc-ajax'] ) || isset( $query_params['add-to-cart'] ) || isset( $query_params['pay_for_order'] ) || isset( $query_params['magic_login'] ) || isset( $query_params['orderby'] ) || isset( $query_params['order'] ) || isset( $query_params['yith_wcan'] ) || isset( $query_params['yith-wcan-ajax'] ) || isset( $query_params['preset'] ) ) {
             if ( $debug ) {
                 error_log( "UWB: Run bypassed: WooCommerce, YITH WCAN, magic_login, orderby or preloader query parameter detected." );
             }
