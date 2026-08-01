@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class CSS {
 
-    public static function combine( $html, $excludes_str = '', $include_ext = false, $font_display_opt = true ) {
+    public static function combine( $html, $excludes_str = '', $include_ext = false, $font_display_opt = true, &$logs = null ) {
         $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/combine';
         if ( ! is_dir( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
@@ -18,6 +18,9 @@ class CSS {
         preg_match_all('#<link\b[^>]*?href=([\'"])(.*?)\1[^>]*?>#is', $html, $matches, PREG_SET_ORDER);
 
         if ( empty( $matches ) ) {
+            if ( is_array( $logs ) ) {
+                $logs[] = "CSS Combine: Skipped - No <link rel=\"stylesheet\"> tags found in HTML";
+            }
             return $html;
         }
 
@@ -38,6 +41,9 @@ class CSS {
             }
 
             if ( stripos( $tag, 'uwb-critical-css' ) !== false || stripos( $tag, 'media="print"' ) !== false || stripos( $tag, "media='print'" ) !== false ) {
+                if ( is_array( $logs ) ) {
+                    $logs[] = "CSS Combine: Skipped {$url_clean} (Critical CSS or print media stylesheet)";
+                }
                 continue;
             }
 
@@ -45,6 +51,9 @@ class CSS {
             foreach ( $excludes as $ex ) {
                 if ( ! empty( $ex ) && ( stripos( $url, $ex ) !== false || stripos( $tag, $ex ) !== false ) ) {
                     $is_excluded = true;
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "CSS Combine: Excluded {$url_clean} (Matched exclusion rule: '{$ex}')";
+                    }
                     break;
                 }
             }
@@ -54,6 +63,9 @@ class CSS {
 
             $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
             if ( ! $local_path && ! $include_ext ) {
+                if ( is_array( $logs ) ) {
+                    $logs[] = "CSS Combine: Skipped {$url_clean} (External CSS file and css_combine_ext_inline is disabled)";
+                }
                 continue;
             }
 
@@ -69,6 +81,9 @@ class CSS {
         }
 
         if ( count( $to_combine ) < 2 ) {
+            if ( is_array( $logs ) ) {
+                $logs[] = "CSS Combine: Skipped - Only " . count( $to_combine ) . " CSS file(s) candidate found (requires at least 2 files to combine)";
+            }
             return $html;
         }
 
@@ -96,6 +111,9 @@ class CSS {
             }
 
             if ( empty( $combined_content ) ) {
+                if ( is_array( $logs ) ) {
+                    $logs[] = "CSS Combine: Failed - Combined content was empty after reading source files";
+                }
                 return $html;
             }
 
@@ -117,10 +135,14 @@ class CSS {
             }
         }
 
+        if ( is_array( $logs ) ) {
+            $logs[] = "CSS Combine: Applied - Combined " . count( $to_combine ) . " CSS files into uwb-combined-{$hash}.css";
+        }
+
         return $html;
     }
 
-    public static function minify_external( $html ) {
+    public static function minify_external( $html, &$logs = null ) {
         $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
         if ( ! is_dir( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
@@ -128,8 +150,10 @@ class CSS {
 
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
+        $minified_count = 0;
+        $skipped_count = 0;
 
-        return preg_replace_callback('#<link\b[^>]*?href=([\'"])(.*?)\1[^>]*?>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
+        $html = preg_replace_callback('#<link\b[^>]*?href=([\'"])(.*?)\1[^>]*?>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host, &$logs, &$minified_count, &$skipped_count ) {
             $tag = $matches[0];
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
@@ -152,8 +176,20 @@ class CSS {
                 $min_sibling = substr( $local_path, 0, -4 ) . '.min.css';
                 if ( file_exists( $min_sibling ) ) {
                     $sibling_url = substr( $url_clean, 0, -4 ) . '.min.css';
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "CSS Minify: Replaced {$url_clean} with pre-minified sibling {$sibling_url}";
+                    }
+                    $minified_count++;
                     return str_replace( $url, $sibling_url, $tag );
                 }
+            }
+
+            if ( stripos( $url_clean, '.min.css' ) !== false ) {
+                $skipped_count++;
+                if ( is_array( $logs ) ) {
+                    $logs[] = "CSS Minify: Skipped {$url_clean} (File is already minified .min.css)";
+                }
+                return $tag;
             }
 
             $file_mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : '';
@@ -182,15 +218,28 @@ class CSS {
 
                     $write_ok = @file_put_contents( $cache_file, trim( $content ) );
                     if ( $write_ok === false ) {
+                        if ( is_array( $logs ) ) {
+                            $logs[] = "CSS Minify: Failed to write minified file for {$url_clean}";
+                        }
                         return $tag;
                     }
                 } else {
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "CSS Minify: Skipped {$url_clean} (Content could not be read or fetched)";
+                    }
                     return $tag;
                 }
             }
 
+            $minified_count++;
             return preg_replace('/href=([\'"])(.*?)\1/i', 'href="' . esc_url( $cache_url ) . '"', $tag);
         }, $html);
+
+        if ( is_array( $logs ) ) {
+            $logs[] = "CSS Minify: Applied - Minified {$minified_count} file(s), Skipped {$skipped_count} pre-minified file(s)";
+        }
+
+        return $html;
     }
 
     public static function minify_inline( $html ) {
@@ -235,7 +284,6 @@ class CSS {
             }
         }
         $path = isset( $parsed['path'] ) ? $parsed['path'] : '';
-        $home_path = parse_url( $home_url, PHP_URL_HOST );
         $home_path = parse_url( $home_url, PHP_URL_PATH );
         $home_path = $home_path ? rtrim( $home_path, '/' ) : '';
         

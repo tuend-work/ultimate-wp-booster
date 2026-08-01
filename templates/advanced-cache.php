@@ -731,29 +731,28 @@ function uwb_advanced_cache_shutdown() {
             $box_comment .= $border;
         }
 
+        // Run Page Optimization Processor (Runs for both cached and bypassed requests)
+        $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
+        if ( ! file_exists( $plugin_dir . 'inc/Engine/Optimization/Optimizer.php' ) ) {
+            $plugin_dir = isset( $config['plugin_dir'] ) ? $config['plugin_dir'] : '';
+        }
+        $optimizer_path = $plugin_dir . 'inc/Engine/Optimization/Optimizer.php';
+        if ( file_exists( $optimizer_path ) ) {
+            require_once $optimizer_path;
+            if ( class_exists( 'Ultimate_WP_Booster\Engine\Optimization\Optimizer' ) ) {
+                $html = \Ultimate_WP_Booster\Engine\Optimization\Optimizer::process( $html, $config );
+            }
+        }
+
         if ( $should_cache ) {
-            // Run Page Optimization Processor
-            $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
-            if ( ! file_exists( $plugin_dir . 'inc/Engine/Optimization/Optimizer.php' ) ) {
-                $plugin_dir = isset( $config['plugin_dir'] ) ? $config['plugin_dir'] : '';
-            }
-            $optimizer_path = $plugin_dir . 'inc/Engine/Optimization/Optimizer.php';
-            if ( file_exists( $optimizer_path ) ) {
-                require_once $optimizer_path;
-                if ( class_exists( 'Ultimate_WP_Booster\Engine\Optimization\Optimizer' ) ) {
-                    $html = \Ultimate_WP_Booster\Engine\Optimization\Optimizer::process( $html, $config );
-                }
-            }
             $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} | Status: Cache Valid / Serviced -->\n";
             $html = $comment_to_append . $html;
         } else {
-            // Bypass case: HTML was already flushed to browser via ob_end_flush() above.
-            // We CANNOT prepend to it. Instead, echo the bypass reason comment at the END of the page.
-            // This is visible in view-source after </html> (debug only).
             $early_reason    = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
             $combined_reason = ! empty( $shutdown_bypass_reason ) ? $shutdown_bypass_reason : $early_reason;
             $bypass_str      = ! empty( $combined_reason ) ? " | Bypass Reason: {$combined_reason}" : ' | Bypass Reason: Unknown';
-            echo "\n<!-- Cached by WP Booster | Status: Bypassed{$bypass_str}{$oc_comment} -->\n";
+            $bypass_comment  = "\n<!-- Cached by WP Booster | Status: Bypassed{$bypass_str}{$oc_comment} -->\n";
+            $html            = $html . $bypass_comment;
         }
     }
 

@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class JS {
 
-    public static function combine( $html, $excludes_str = '', $include_ext = true ) {
+    public static function combine( $html, $excludes_str = '', $include_ext = true, &$logs = null ) {
         $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/combine';
         if ( ! is_dir( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
@@ -18,6 +18,9 @@ class JS {
         preg_match_all('#<script\b([^>]*?)>(.*?)</script>#is', $html, $matches, PREG_SET_ORDER);
 
         if ( empty( $matches ) ) {
+            if ( is_array( $logs ) ) {
+                $logs[] = "JS Combine: Skipped - No <script> tags found in HTML";
+            }
             return $html;
         }
 
@@ -33,6 +36,9 @@ class JS {
                 $type_value = strtolower( trim( $type_match[2] ) );
                 $valid_types = array( 'text/javascript', 'application/javascript', 'application/x-javascript', 'text/ecmascript' );
                 if ( ! in_array( $type_value, $valid_types ) ) {
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "JS Combine: Skipped script tag (non-JS type '{$type_value}')";
+                    }
                     continue;
                 }
             }
@@ -41,6 +47,10 @@ class JS {
             foreach ( $excludes as $ex ) {
                 if ( ! empty( $ex ) && ( stripos( $tag, $ex ) !== false || stripos( $inline_content, $ex ) !== false ) ) {
                     $is_excluded = true;
+                    if ( is_array( $logs ) ) {
+                        $label = preg_match( '/src=([\'"])(.*?)\1/i', $attrs, $src_m ) ? $src_m[2] : 'Inline Script';
+                        $logs[] = "JS Combine: Excluded {$label} (Matched exclusion rule: '{$ex}')";
+                    }
                     break;
                 }
             }
@@ -49,6 +59,9 @@ class JS {
                        || stripos( $attrs, 'type="module"' ) !== false;
 
             if ( $is_special || $is_excluded ) {
+                if ( $is_special && is_array( $logs ) ) {
+                    $logs[] = "JS Combine: Skipped script tag (Special script type: module or lazyload)";
+                }
                 continue;
             }
 
@@ -65,6 +78,9 @@ class JS {
                 $is_webpack = self::is_webpack_bundle( $local_path, $url_clean );
 
                 if ( $is_webpack ) {
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "JS Combine: Excluded {$url_clean} (Webpack bundle / chunk detected)";
+                    }
                     continue;
                 }
 
@@ -89,6 +105,9 @@ class JS {
         }
 
         if ( count( $to_combine ) < 1 ) {
+            if ( is_array( $logs ) ) {
+                $logs[] = "JS Combine: Skipped - No candidate JS scripts found to combine";
+            }
             return $html;
         }
 
@@ -130,12 +149,16 @@ class JS {
             } else {
                 $html .= "\n" . $new_tag;
             }
+
+            if ( is_array( $logs ) ) {
+                $logs[] = "JS Combine: Applied - Combined " . count( $to_combine ) . " JS script(s) into uwb-js-{$hash}.js";
+            }
         }
 
         return $html;
     }
 
-    public static function minify_external( $html ) {
+    public static function minify_external( $html, &$logs = null ) {
         $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
         if ( ! is_dir( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
@@ -143,8 +166,10 @@ class JS {
 
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
+        $minified_count = 0;
+        $skipped_count = 0;
 
-        return preg_replace_callback('#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host ) {
+        $html = preg_replace_callback('#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host, &$logs, &$minified_count, &$skipped_count ) {
             $tag = $matches[0];
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
@@ -159,8 +184,20 @@ class JS {
                 $min_sibling = substr( $local_path, 0, -3 ) . '.min.js';
                 if ( file_exists( $min_sibling ) ) {
                     $sibling_url = substr( $url_clean, 0, -3 ) . '.min.js';
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "JS Minify: Replaced {$url_clean} with pre-minified sibling {$sibling_url}";
+                    }
+                    $minified_count++;
                     return str_replace( $url, $sibling_url, $tag );
                 }
+            }
+
+            if ( stripos( $url_clean, '.min.js' ) !== false ) {
+                $skipped_count++;
+                if ( is_array( $logs ) ) {
+                    $logs[] = "JS Minify: Skipped {$url_clean} (File is already minified .min.js)";
+                }
+                return $tag;
             }
 
             $file_mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : '';
@@ -185,15 +222,28 @@ class JS {
 
                     $write_ok = @file_put_contents( $cache_file, trim( $content ) );
                     if ( $write_ok === false ) {
+                        if ( is_array( $logs ) ) {
+                            $logs[] = "JS Minify: Failed to write minified file for {$url_clean}";
+                        }
                         return $tag;
                     }
                 } else {
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "JS Minify: Skipped {$url_clean} (Content could not be read or fetched)";
+                    }
                     return $tag;
                 }
             }
 
+            $minified_count++;
             return preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . esc_url( $cache_url ) . '"', $tag);
         }, $html);
+
+        if ( is_array( $logs ) ) {
+            $logs[] = "JS Minify: Applied - Minified {$minified_count} file(s), Skipped {$skipped_count} pre-minified file(s)";
+        }
+
+        return $html;
     }
 
     public static function minify_inline( $html ) {

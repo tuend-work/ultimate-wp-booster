@@ -17,29 +17,51 @@ class Optimizer {
             return $html;
         }
 
+        $debug_enabled = ! empty( $config['debug_mode'] ) || ! empty( $config['optimizer_debug_log'] ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG );
+        $debug_logs = $debug_enabled ? array() : null;
+
+        if ( $debug_enabled ) {
+            $debug_logs[] = "Optimization Engine Started (Config version: " . ( defined( 'UWB_VERSION' ) ? UWB_VERSION : '2.2.3' ) . ")";
+        }
+
         // 1. Critical CSS Injection
         if ( ! empty( $config['tuning_critical_css'] ) ) {
             $html = self::inject_critical_css( $html, $config['tuning_critical_css'] );
+            if ( $debug_enabled ) $debug_logs[] = "Critical CSS: Injected inline critical stylesheet";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Critical CSS: Disabled (no Critical CSS defined)";
         }
 
         // 2. Remove Google Fonts
         if ( ! empty( $config['html_remove_gfonts'] ) ) {
             $html = self::remove_google_fonts( $html );
+            if ( $debug_enabled ) $debug_logs[] = "Google Fonts Removal: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Google Fonts Removal: Disabled in settings";
         }
 
         // 3. Remove WordPress Emoji
         if ( ! empty( $config['html_remove_emoji'] ) ) {
             $html = self::remove_emoji( $html );
+            if ( $debug_enabled ) $debug_logs[] = "Emoji Removal: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Emoji Removal: Disabled in settings";
         }
 
         // 4. Remove Noscript Tags
         if ( ! empty( $config['html_remove_noscript'] ) ) {
             $html = self::remove_noscript( $html );
+            if ( $debug_enabled ) $debug_logs[] = "Noscript Removal: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Noscript Removal: Disabled in settings";
         }
 
         // 5. Remove Query Strings
         if ( ! empty( $config['html_remove_qs'] ) ) {
             $html = self::remove_query_strings( $html );
+            if ( $debug_enabled ) $debug_logs[] = "Query Strings Removal: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Query Strings Removal: Disabled in settings";
         }
 
         // 6. Lazy Load Images
@@ -47,16 +69,25 @@ class Optimizer {
             $excludes = isset( $config['media_lazy_load_excludes'] ) ? $config['media_lazy_load_excludes'] : '';
             $class_excludes = isset( $config['media_lazy_load_class_excludes'] ) ? $config['media_lazy_load_class_excludes'] : '';
             $html = Lazyload::process_images( $html, $excludes, $class_excludes );
+            if ( $debug_enabled ) $debug_logs[] = "Lazy Load Images: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Lazy Load Images: Disabled in settings";
         }
 
         // 7. Lazy Load Iframes
         if ( ! empty( $config['media_lazy_load_iframes'] ) ) {
             $html = Lazyload::process_iframes( $html );
+            if ( $debug_enabled ) $debug_logs[] = "Lazy Load Iframes: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Lazy Load Iframes: Disabled in settings";
         }
 
         // 8. Add Missing Image Sizes
         if ( ! empty( $config['media_add_missing_sizes'] ) ) {
             $html = Lazyload::add_missing_sizes( $html );
+            if ( $debug_enabled ) $debug_logs[] = "Add Missing Image Sizes: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Add Missing Image Sizes: Disabled in settings";
         }
 
         // 10. Combine or Minify CSS
@@ -64,57 +95,98 @@ class Optimizer {
             $css_excludes = isset( $config['tuning_css_excludes'] ) ? $config['tuning_css_excludes'] : '';
             $include_ext = ! empty( $config['css_combine_ext_inline'] );
             $font_display_opt = ! empty( $config['css_font_display_opt'] );
-            $html = CSSMinifier::combine( $html, $css_excludes, $include_ext, $font_display_opt );
+            $html = CSSMinifier::combine( $html, $css_excludes, $include_ext, $font_display_opt, $debug_logs );
         } elseif ( ! empty( $config['css_minify'] ) ) {
-            $html = CSSMinifier::minify_external( $html );
+            $html = CSSMinifier::minify_external( $html, $debug_logs );
             $html = CSSMinifier::minify_inline( $html );
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "CSS Optimization (Combine & Minify): Disabled in settings";
         }
 
         // 10.2. Load CSS Asynchronously
         if ( ! empty( $config['css_load_async'] ) ) {
             $html = self::make_css_async( $html );
+            if ( $debug_enabled ) $debug_logs[] = "Async CSS Loading: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Async CSS Loading: Disabled in settings";
         }
 
         // 10.5. Font Display Swap Optimization
         if ( ! empty( $config['css_font_display_opt'] ) ) {
             $html = self::apply_font_display_swap( $html );
+            if ( $debug_enabled ) $debug_logs[] = "Font Display Swap: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Font Display Swap: Disabled in settings";
         }
 
         // 11. Combine or Minify JS
         if ( ! empty( $config['js_combine'] ) ) {
             $js_excludes = isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '';
             $include_ext = ! empty( $config['js_combine_ext_inline'] );
-            $html = JSMinifier::combine( $html, $js_excludes, $include_ext );
+            $html = JSMinifier::combine( $html, $js_excludes, $include_ext, $debug_logs );
         } elseif ( ! empty( $config['js_minify'] ) ) {
-            $html = JSMinifier::minify_external( $html );
+            $html = JSMinifier::minify_external( $html, $debug_logs );
             $html = JSMinifier::minify_inline( $html );
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "JS Optimization (Combine & Minify): Disabled in settings";
         }
 
         // 11.5. Defer Javascript
         if ( ! empty( $config['js_load_defer'] ) ) {
             $js_defer_excludes = isset( $config['tuning_js_defer_excludes'] ) ? $config['tuning_js_defer_excludes'] : ( isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '' );
-            $html = DeferJS::process( $html, $js_defer_excludes );
-        }
-
-        // 12. Minify HTML markup
-        if ( ! empty( $config['html_minify'] ) ) {
-            $html = HTMLMinifier::process( $html );
+            $html = DeferJS::process( $html, $js_defer_excludes, $debug_logs );
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Defer JS: Disabled in settings";
         }
 
         // 13. Preconnect External Domains
         if ( ! empty( $config['preconnect_domains'] ) ) {
             $html = self::inject_preconnect( $html, $config['preconnect_domains'] );
+            if ( $debug_enabled ) $debug_logs[] = "Preconnect Domains: Injected";
         }
 
         // 14. Preload Key Fonts
         if ( ! empty( $config['preload_fonts'] ) ) {
             $html = self::inject_preload_fonts( $html, $config['preload_fonts'] );
+            if ( $debug_enabled ) $debug_logs[] = "Preload Fonts: Injected";
         }
 
         // 15. Delay JS Execution
         if ( ! empty( $config['delay_js'] ) ) {
             $excludes = isset( $config['delay_js_exclusions'] ) ? $config['delay_js_exclusions'] : '';
             $html = DelayJS::process( $html, $excludes );
+            if ( $debug_enabled ) $debug_logs[] = "Delay JS Execution: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Delay JS Execution: Disabled in settings";
+        }
+
+        // 12. Minify HTML markup
+        if ( ! empty( $config['html_minify'] ) ) {
+            $html = HTMLMinifier::process( $html );
+            if ( $debug_enabled ) $debug_logs[] = "HTML Minification: Applied";
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "HTML Minification: Disabled in settings";
+        }
+
+        // Append Debug Log Comment if enabled
+        if ( $debug_enabled && ! empty( $debug_logs ) ) {
+            $log_lines = implode( "\n", array_map( function( $line ) {
+                return " - " . $line;
+            }, $debug_logs ) );
+
+            $debug_block = "\n<!--\n" .
+                           "===================================================================\n" .
+                           " [ULTIMATE WP BOOSTER OPTIMIZER DEBUG LOG]\n" .
+                           "-------------------------------------------------------------------\n" .
+                           $log_lines . "\n" .
+                           "===================================================================\n" .
+                           "-->\n";
+
+            if ( stripos( $html, '</html>' ) !== false ) {
+                $html = str_ireplace( '</html>', $debug_block . '</html>', $html );
+            } else {
+                $html .= $debug_block;
+            }
         }
 
         return $html;
