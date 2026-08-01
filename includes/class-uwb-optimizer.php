@@ -1042,7 +1042,7 @@ class Uwb_Optimizer {
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
         $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         
-        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate', 'wp-i18n', 'wp-hooks', 'wp-polyfill' );
         $excludes = array_merge( $default_excludes, $user_excludes );
 
         $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
@@ -1694,9 +1694,6 @@ class Uwb_Optimizer {
             $out .= $c;
             $i++;
         }
-        
-        $out = preg_replace('/[ \t]+/', ' ', $out);
-        $out = preg_replace('/[\r\n]+/', "\n", $out);
         
         return trim( $out );
     }
