@@ -66,6 +66,7 @@ class Plugin {
             new PostRowActionsSubscriber(),
             new HeartbeatSubscriber(),
             new \Ultimate_WP_Booster\Engine\Cache\CacheSubscriber(),
+            new \Ultimate_WP_Booster\Engine\Preload\PreloadSubscriber(),
         );
 
         if ( is_admin() ) {
@@ -78,19 +79,13 @@ class Plugin {
     }
 
     /**
-     * Initialize core engines (Preloader, Admin, Github Updater).
+     * Initialize core admin & updater engines.
      *
      * @return void
      */
     private function init_engines() {
-        if ( class_exists( 'Uwb_Preloader' ) ) {
-            new \Uwb_Preloader();
-        }
-
         if ( is_admin() ) {
-            if ( class_exists( 'Uwb_Admin' ) ) {
-                new \Uwb_Admin();
-            }
+            new \Ultimate_WP_Booster\Engine\Admin\Admin();
 
             if ( class_exists( 'Uwb_Github_Updater' ) ) {
                 new \Uwb_Github_Updater( UWB_PLUGIN_FILE );
