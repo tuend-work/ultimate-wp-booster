@@ -1104,6 +1104,9 @@ class Uwb_Optimizer {
                     }
 
                     if ( ! empty( $content ) ) {
+                        if ( stripos( $item['url_clean'], '.min.js' ) === false ) {
+                            $content = self::minify_js_safe( $content );
+                        }
                         $combined_content .= "\n;/* Combined: " . self::safe_esc_html( $item['url_clean'] ) . " */\n" . trim( $content ) . ";";
                     }
                 }
@@ -1558,161 +1561,25 @@ class Uwb_Optimizer {
     }
 
     /**
-     * Safe character-by-character JS minifier that preserves strings, template literals, and regexes.
+     * Safe JS minifier that uses professional WP Rocket dependencies (matthiasmullie/minify).
      */
     private static function minify_js_safe( $js ) {
-        $len = strlen( $js );
-        $out = '';
-        $i = 0;
-        
-        $in_string = false; // false, or '"', "'", "`"
-        $in_regex = false;
-        $in_single_comment = false;
-        $in_multi_comment = false;
-        
-        while ( $i < $len ) {
-            $c = $js[$i];
-            $next = ($i + 1 < $len) ? $js[$i + 1] : '';
-            
-            // 1. If inside single-line comment
-            if ( $in_single_comment ) {
-                if ( $c === "\n" || $c === "\r" ) {
-                    $in_single_comment = false;
-                    $out .= "\n";
+        if ( class_exists( 'WP_Rocket\Dependencies\Minify\JS' ) ) {
+            try {
+                $minifier = new \WP_Rocket\Dependencies\Minify\JS( $js );
+                $minified = $minifier->minify();
+                if ( $minified !== false && $minified !== '' ) {
+                    return $minified;
                 }
-                $i++;
-                continue;
-            }
-            
-            // 2. If inside multi-line comment
-            if ( $in_multi_comment ) {
-                if ( $c === '*' && $next === '/' ) {
-                    $in_multi_comment = false;
-                    $i += 2;
-                } else {
-                    $i++;
-                }
-                continue;
-            }
-            
-            // 3. If inside string literal
-            if ( $in_string !== false ) {
-                if ( $c === '\\' ) {
-                    // Skip escaped character
-                    $out .= $c . $next;
-                    $i += 2;
-                    continue;
-                }
-                if ( $c === $in_string ) {
-                    $in_string = false;
-                }
-                $out .= $c;
-                $i++;
-                continue;
-            }
-            
-            // 4. Check for comments start
-            if ( $c === '/' && $next === '/' ) {
-                $in_single_comment = true;
-                $i += 2;
-                continue;
-            }
-            if ( $c === '/' && $next === '*' ) {
-                $in_multi_comment = true;
-                $i += 2;
-                continue;
-            }
-            
-            // 5. Check for string literal start
-            if ( $c === '"' || $c === "'" || $c === '`' ) {
-                $in_string = $c;
-                $out .= $c;
-                $i++;
-                continue;
-            }
-            
-            // 6. Check for regular expression literal start
-            if ( $c === '/' ) {
-                $last_non_ws = '';
-                $out_len = strlen( $out );
-                for ( $k = $out_len - 1; $k >= 0; $k-- ) {
-                    if ( ! ctype_space( $out[$k] ) ) {
-                        $last_non_ws = $out[$k];
-                        break;
-                    }
-                }
-                
-                $is_regex_start = false;
-                if ( $last_non_ws === '' ) {
-                    $is_regex_start = true;
-                } else {
-                    $operators = array( '=', ':', ',', '?', '&', '|', '^', '!', '~', '*', '+', '-', '%', '/', '<', '>', '(', '[', '{', ';' );
-                    if ( in_array( $last_non_ws, $operators, true ) ) {
-                        $is_regex_start = true;
-                    } else {
-                        $last_word = '';
-                        for ( $k = $out_len - 1; $k >= 0; $k-- ) {
-                            if ( preg_match( '/[a-zA-Z0-9_$]/', $out[$k] ) ) {
-                                $last_word = $out[$k] . $last_word;
-                            } else {
-                                if ( ! empty( $last_word ) || ctype_space( $out[$k] ) ) {
-                                    if ( ! empty( $last_word ) ) break;
-                                }
-                            }
-                        }
-                        $keywords = array( 'return', 'yield', 'typeof', 'delete', 'throw', 'instanceof', 'new', 'in', 'void', 'case' );
-                        if ( in_array( $last_word, $keywords, true ) ) {
-                            $is_regex_start = true;
-                        }
-                    }
-                }
-                
-                if ( $is_regex_start ) {
-                    $out .= $c;
-                    $i++;
-                    while ( $i < $len ) {
-                        $rc = $js[$i];
-                        $rnext = ($i + 1 < $len) ? $js[$i + 1] : '';
-                        if ( $rc === '\\' ) {
-                            $out .= $rc . $rnext;
-                            $i += 2;
-                            continue;
-                        }
-                        if ( $rc === '[' ) {
-                            $out .= $rc;
-                            $i++;
-                            while ( $i < $len ) {
-                                $bc = $js[$i];
-                                $bnext = ($i + 1 < $len) ? $js[$i + 1] : '';
-                                if ( $bc === '\\' ) {
-                                    $out .= $bc . $bnext;
-                                    $i += 2;
-                                    continue;
-                                }
-                                $out .= $bc;
-                                $i++;
-                                if ( $bc === ']' ) {
-                                    break;
-                                }
-                            }
-                            continue;
-                        }
-                        $out .= $rc;
-                        $i++;
-                        if ( $rc === '/' ) {
-                            break;
-                        }
-                    }
-                    continue;
+            } catch ( \Exception $e ) {
+                if ( ! empty( $GLOBALS['uwb_debug_log'] ) ) {
+                    $GLOBALS['uwb_debug_log'][] = "Minify JS Exception: " . $e->getMessage();
                 }
             }
-            
-            $out .= $c;
-            $i++;
         }
-        
-        return trim( $out );
+        return $js;
     }
+
     /**
      * Detect if a JS file is a webpack bundle by scanning its path, URL, or up to 256 KB.
      * Webpack bundles use document.currentScript.src or global variables (like flatsomeVars)
