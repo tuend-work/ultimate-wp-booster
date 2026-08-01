@@ -521,12 +521,31 @@ class Uwb_Optimizer {
      * Minify HTML source code.
      */
     public static function minify_html( $html ) {
+        // Protect whitespace-sensitive blocks with placeholders
+        $placeholders = array();
+        $i = 0;
+        
+        $html = preg_replace_callback('#<(script|style|pre|code)\b[^>]*>.*?</\1>#is', function( $matches ) use ( &$placeholders, &$i ) {
+            $placeholder = "%%%UWB_HTML_PLACEHOLDER_" . $i . "%%%";
+            $placeholders[$placeholder] = $matches[0];
+            $i++;
+            return $placeholder;
+        }, $html);
+
         // Remove HTML comments, except IE conditional comments and cache/pipeline comment signatures
         $html = preg_replace('/<!--(?!\s*(?:\[if|Cached by WP Booster|Dynamic Page)).*?-->/s', '', $html);
+        
         // Replace multiple whitespace/newline with a single space
         $html = preg_replace('/\s+/', ' ', $html);
+        
         // Clean space between tags
         $html = preg_replace('/>\s+</', '><', $html);
+
+        // Restore protected blocks
+        if ( ! empty( $placeholders ) ) {
+            $html = str_replace( array_keys( $placeholders ), array_values( $placeholders ), $html );
+        }
+        
         return trim( $html );
     }
 
@@ -1085,9 +1104,6 @@ class Uwb_Optimizer {
                     }
 
                     if ( ! empty( $content ) ) {
-                        if ( stripos( $item['url_clean'], '.min.js' ) === false ) {
-                            $content = self::minify_js_safe( $content );
-                        }
                         $combined_content .= "\n;/* Combined: " . self::safe_esc_html( $item['url_clean'] ) . " */\n" . trim( $content ) . ";";
                     }
                 }
