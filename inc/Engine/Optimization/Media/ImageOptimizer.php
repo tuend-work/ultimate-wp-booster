@@ -138,10 +138,15 @@ class ImageOptimizer {
             if ( 'overwrite' === $mode ) {
                 // In overwrite mode: save WebP/AVIF binary data DIRECTLY into original file path
                 $editor->save( $file, $target_mime );
-            } else {
-                // New file mode (generate .webp / .avif next to original file, e.g. banner.jpg.webp)
-                $dest_file = $dir . '/' . $filename_no_ext . '.' . $original_ext . '.' . $target_ext;
-                $editor->save( $dest_file, $target_mime );
+            }
+            // Always generate sidecar .webp / .avif files so CDN requests for filename.webp never 404
+            $sidecar_file1 = $dir . '/' . $filename_no_ext . '.' . $target_ext;
+            if ( $sidecar_file1 !== $file ) {
+                $editor->save( $sidecar_file1, $target_mime );
+            }
+            $sidecar_file2 = $dir . '/' . $filename_no_ext . '.' . $original_ext . '.' . $target_ext;
+            if ( $sidecar_file2 !== $file && $sidecar_file2 !== $sidecar_file1 ) {
+                $editor->save( $sidecar_file2, $target_mime );
             }
         } else {
             // Keep original format (JPEG/PNG/GIF): strictly save with original mime
@@ -172,11 +177,17 @@ class ImageOptimizer {
                         if ( $target_mime && $target_ext && 'original' !== $format ) {
                             if ( 'overwrite' === $mode ) {
                                 $thumb_editor->save( $thumb_path, $target_mime );
-                            } else {
-                                $thumb_no_ext   = pathinfo( $thumb_path, PATHINFO_FILENAME );
-                                $thumb_orig_ext = pathinfo( $thumb_path, PATHINFO_EXTENSION );
-                                $dest_thumb     = $dir . '/' . $thumb_no_ext . '.' . $thumb_orig_ext . '.' . $target_ext;
-                                $thumb_editor->save( $dest_thumb, $target_mime );
+                            }
+                            $thumb_no_ext   = pathinfo( $thumb_path, PATHINFO_FILENAME );
+                            $thumb_orig_ext = pathinfo( $thumb_path, PATHINFO_EXTENSION );
+                            
+                            $thumb_sidecar1 = $dir . '/' . $thumb_no_ext . '.' . $target_ext;
+                            if ( $thumb_sidecar1 !== $thumb_path ) {
+                                $thumb_editor->save( $thumb_sidecar1, $target_mime );
+                            }
+                            $thumb_sidecar2 = $dir . '/' . $thumb_no_ext . '.' . $thumb_orig_ext . '.' . $target_ext;
+                            if ( $thumb_sidecar2 !== $thumb_path && $thumb_sidecar2 !== $thumb_sidecar1 ) {
+                                $thumb_editor->save( $thumb_sidecar2, $target_mime );
                             }
                         } else {
                             $thumb_orig_ext  = strtolower( pathinfo( $thumb_path, PATHINFO_EXTENSION ) );

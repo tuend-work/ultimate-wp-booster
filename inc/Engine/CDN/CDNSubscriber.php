@@ -77,28 +77,50 @@ class CDNSubscriber implements Subscriber_Interface {
             CDNManager::mark_attachment_offloaded( $attachment_id, $s3_key );
         }
 
-        // Check for new_file mode WebP/AVIF sidecar files
+        $dir             = dirname( $file );
+        $filename_no_ext = pathinfo( $file, PATHINFO_FILENAME );
+        $relative_dir    = dirname( $relative_path );
+        $relative_dir    = ( $relative_dir === '.' ) ? '' : $relative_dir . '/';
+
+        // Check & Upload WebP/AVIF sidecar files (both filename.jpg.webp AND filename.webp)
         foreach ( array( 'webp', 'avif' ) as $side_ext ) {
-            $side_file = $file . '.' . $side_ext;
-            if ( file_exists( $side_file ) ) {
-                $side_key = $s3_key . '.' . $side_ext;
-                $s3_client->put_object( $side_file, $side_key, '', $cache_control );
+            $side_file1 = $file . '.' . $side_ext;
+            if ( file_exists( $side_file1 ) ) {
+                $side_key1 = $s3_key . '.' . $side_ext;
+                $s3_client->put_object( $side_file1, $side_key1, '', $cache_control );
+            }
+
+            $side_file2 = $dir . '/' . $filename_no_ext . '.' . $side_ext;
+            if ( file_exists( $side_file2 ) && $side_file2 !== $file ) {
+                $side_key2 = 'wp-content/uploads/' . $relative_dir . $filename_no_ext . '.' . $side_ext;
+                $s3_client->put_object( $side_file2, $side_key2, '', $cache_control );
             }
         }
 
-        // Upload thumbnails
+        // Upload thumbnails + thumbnail WebP/AVIF sidecars
         $meta = wp_get_attachment_metadata( $attachment_id );
         if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
-            $dir         = dirname( $file );
-            $relative_dir = dirname( $relative_path );
-            $relative_dir = ( $relative_dir === '.' ) ? '' : $relative_dir . '/';
-
             foreach ( $meta['sizes'] as $info ) {
                 if ( ! empty( $info['file'] ) ) {
                     $thumb_file = $dir . '/' . $info['file'];
                     if ( file_exists( $thumb_file ) ) {
                         $thumb_key = 'wp-content/uploads/' . $relative_dir . $info['file'];
                         $s3_client->put_object( $thumb_file, $thumb_key, '', $cache_control );
+
+                        $thumb_no_ext = pathinfo( $thumb_file, PATHINFO_FILENAME );
+                        foreach ( array( 'webp', 'avif' ) as $side_ext ) {
+                            $thumb_side1 = $thumb_file . '.' . $side_ext;
+                            if ( file_exists( $thumb_side1 ) ) {
+                                $thumb_side_key1 = $thumb_key . '.' . $side_ext;
+                                $s3_client->put_object( $thumb_side1, $thumb_side_key1, '', $cache_control );
+                            }
+
+                            $thumb_side2 = $dir . '/' . $thumb_no_ext . '.' . $side_ext;
+                            if ( file_exists( $thumb_side2 ) && $thumb_side2 !== $thumb_file ) {
+                                $thumb_side_key2 = 'wp-content/uploads/' . $relative_dir . $thumb_no_ext . '.' . $side_ext;
+                                $s3_client->put_object( $thumb_side2, $thumb_side_key2, '', $cache_control );
+                            }
+                        }
                     }
                 }
             }
