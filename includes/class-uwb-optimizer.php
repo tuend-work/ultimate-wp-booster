@@ -260,7 +260,9 @@ class Uwb_Optimizer {
      * @return string Modified HTML.
      */
     public static function defer_js( $html, $excludes_str = '' ) {
-        $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
+        $default_excludes = array( 'jquery.js', 'jquery.min.js', 'jquery-migrate' );
+        $user_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
+        $excludes = array_merge( $default_excludes, $user_excludes );
 
         return preg_replace_callback(
             '#<script\b([^>]*?)src=([\'"])(.*?)\2([^>]*?)>\s*</script>#is',
