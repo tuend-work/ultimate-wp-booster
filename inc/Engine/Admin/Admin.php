@@ -1,11 +1,11 @@
 <?php
+namespace Ultimate_WP_Booster\Engine\Admin;
+
 /**
  * Admin Panel Dashboard & Settings
  */
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
-
-namespace Ultimate_WP_Booster\Engine\Admin;
 
 use Ultimate_WP_Booster\Engine\Cache\CacheManager;
 use Ultimate_WP_Booster\Engine\Preload\Preloader;
