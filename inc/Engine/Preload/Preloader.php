@@ -234,6 +234,61 @@ class Preloader {
         return home_url( '/' . ltrim( $value, '/' ) );
     }
 
+    public function normalize_url_by_permalink_settings( $url_or_path ) {
+        $url_or_path = trim( (string) $url_or_path );
+        if ( empty( $url_or_path ) ) {
+            return '';
+        }
+
+        if ( preg_match( '/[\*\?\(\)\|\[\]]/', $url_or_path ) ) {
+            return $url_or_path;
+        }
+
+        $parsed = wp_parse_url( $url_or_path );
+        if ( ! $parsed ) {
+            return $url_or_path;
+        }
+
+        $path = isset( $parsed['path'] ) ? $parsed['path'] : '';
+        if ( empty( $path ) ) {
+            if ( isset( $parsed['host'] ) ) {
+                $path = '/';
+            } else {
+                return $url_or_path;
+            }
+        }
+
+        $filename = basename( $path );
+        if ( strpos( $filename, '.' ) === false && $path !== '/' ) {
+            if ( function_exists( 'user_trailingslashit' ) ) {
+                $path = user_trailingslashit( $path );
+            } else {
+                global $wp_rewrite;
+                if ( isset( $wp_rewrite->use_trailing_slashes ) && ! $wp_rewrite->use_trailing_slashes ) {
+                    $path = rtrim( $path, '/' );
+                } else {
+                    $path = rtrim( $path, '/' ) . '/';
+                }
+            }
+        }
+
+        $scheme   = isset( $parsed['scheme'] ) ? $parsed['scheme'] : '';
+        $host     = isset( $parsed['host'] ) ? $parsed['host'] : '';
+        $port     = isset( $parsed['port'] ) ? ':' . $parsed['port'] : '';
+        $query    = isset( $parsed['query'] ) ? '?' . $parsed['query'] : '';
+        $fragment = isset( $parsed['fragment'] ) ? '#' . $parsed['fragment'] : '';
+
+        if ( $scheme && $host ) {
+            return $scheme . '://' . $host . $port . $path . $query . $fragment;
+        }
+
+        if ( strpos( $path, '/' ) !== 0 && ! empty( $path ) ) {
+            $path = '/' . $path;
+        }
+
+        return $path . $query . $fragment;
+    }
+
     private function collect_public_taxonomy_urls() {
         $urls = array();
         $home_url = home_url( '/' );
@@ -583,5 +638,382 @@ class Preloader {
             'count' => $processed_count,
             'urls'  => wp_list_pluck( $processed_urls, 'url' )
         );
+    }
+
+    // --- AJAX HANDLERS ---
+
+    public function ajax_start_preload() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        $log_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/preload-debug.log';
+        @unlink( $log_file );
+
+        if ( get_transient( 'uwb_populating_queue' ) ) {
+            wp_send_json_error( array( 'message' => 'Queue is already being populated.' ) );
+        }
+
+        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
+        wp_schedule_single_event( time(), 'uwb_start_preload_async' );
+        update_option( 'uwb_preload_running', 1 );
+
+        if ( function_exists( 'spawn_cron' ) ) {
+            spawn_cron();
+        }
+
+        wp_send_json_success( array(
+            'message' => 'Sitemap parsing scheduled. URLs will be added to the preloading queue shortly!'
+        ) );
+    }
+
+    public function ajax_stop_preload() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
+        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
+        delete_transient( 'uwb_populating_queue' );
+        update_option( 'uwb_preload_running', 0 );
+
+        wp_send_json_success( array( 'message' => 'Preloader stopped.' ) );
+    }
+
+    public function ajax_clear_preload() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+        $wpdb->query( "TRUNCATE TABLE {$this->table_name}" );
+        wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
+        wp_clear_scheduled_hook( 'uwb_start_preload_async' );
+        delete_transient( 'uwb_populating_queue' );
+        update_option( 'uwb_preload_running', 0 );
+
+        wp_send_json_success( array( 'message' => 'Preload queue cleared.' ) );
+    }
+
+    public function ajax_get_preload_status() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+        $total      = $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name}" );
+        $pending    = $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name} WHERE status = 'pending'" );
+        $processing = $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name} WHERE status = 'processing'" );
+        $completed  = $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name} WHERE status = 'completed'" );
+        $failed     = $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name} WHERE status = 'failed'" );
+
+        $running = intval( get_option( 'uwb_preload_running', 0 ) );
+
+        $log_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/preload-debug.log';
+        $log_content = 'No logs available. Start a preload run to generate logs.';
+        if ( file_exists( $log_file ) ) {
+            $fsize = filesize( $log_file );
+            $handle = @fopen( $log_file, "r" );
+            if ( $handle ) {
+                if ( $fsize > 15000 ) {
+                    @fseek( $handle, -15000, SEEK_END );
+                }
+                $log_content = @fread( $handle, 15000 );
+                @fclose( $handle );
+            }
+        }
+
+        wp_send_json_success( array(
+            'total'      => intval( $total ),
+            'pending'    => intval( $pending ),
+            'processing' => intval( $processing ),
+            'completed'  => intval( $completed ),
+            'failed'     => intval( $failed ),
+            'running'    => $running,
+            'log'        => $log_content
+        ) );
+    }
+
+    public function ajax_trigger_preload_batch() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        $result = $this->run_preload_batch();
+        wp_send_json_success( $result );
+    }
+
+    public function ajax_get_url_table() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+
+        $page = isset( $_POST['page'] ) ? max( 1, intval( $_POST['page'] ) ) : 1;
+        $limit = isset( $_POST['limit'] ) ? max( 1, intval( $_POST['limit'] ) ) : 20;
+        $offset = ( $page - 1 ) * $limit;
+        $search = isset( $_POST['search'] ) ? trim( sanitize_text_field( $_POST['search'] ) ) : '';
+
+        $where = '';
+        if ( ! empty( $search ) ) {
+            $like = '%' . $wpdb->esc_like( $search ) . '%';
+            $where = $wpdb->prepare( "WHERE url LIKE %s", $like );
+        }
+
+        $total = $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table_name} {$where}" );
+        $items = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->table_name} {$where} ORDER BY priority ASC, id ASC LIMIT %d OFFSET %d", $limit, $offset ) );
+
+        $priority_raw = get_option( 'uwb_priority_urls', '' );
+        $priority_lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $priority_raw ) ) ) );
+
+        $rows = array();
+        foreach ( $items as $item ) {
+            $is_prio = false;
+            $path = wp_parse_url( $item->url, PHP_URL_PATH );
+            if ( empty( $path ) ) $path = '/';
+            $path = $this->normalize_url_by_permalink_settings( $path );
+
+            foreach ( $priority_lines as $pl ) {
+                $norm_pl = $this->normalize_url_by_permalink_settings( $pl );
+                if ( $path === $norm_pl || $item->url === $pl ) {
+                    $is_prio = true;
+                    break;
+                }
+            }
+
+            $rows[] = array(
+                'id'          => $item->id,
+                'url'         => $item->url,
+                'priority'    => $item->priority,
+                'status'      => $item->status,
+                'attempts'    => $item->attempts,
+                'is_priority' => $is_prio,
+            );
+        }
+
+        wp_send_json_success( array(
+            'rows'        => $rows,
+            'total'       => intval( $total ),
+            'page'        => $page,
+            'total_pages' => ceil( $total / $limit ),
+        ) );
+    }
+
+    public function ajax_process_url_now() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+        $id = intval( $_POST['id'] ?? 0 );
+        if ( ! $id ) wp_send_json_error( array( 'message' => 'Invalid ID.' ) );
+
+        $item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE id = %d", $id ) );
+        if ( ! $item ) wp_send_json_error( array( 'message' => 'Not found.' ) );
+
+        $url = $item->url;
+        if ( strpos( $url, 'http' ) !== 0 ) {
+            $url = home_url( '/' . ltrim( $url, '/' ) );
+        }
+
+        $args = array(
+            'timeout'    => 15,
+            'sslverify'  => false,
+            'user-agent' => 'Ultimate-WP-Booster-Preloader',
+            'headers'    => array( 'X-Ultimate-WP-Booster-Preload' => '1' )
+        );
+
+        $response = wp_remote_get( $url, $args );
+        $status = 'failed';
+        if ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 ) {
+            $status = 'completed';
+        }
+
+        $wpdb->update( $this->table_name, array( 'status' => $status ), array( 'id' => $id ) );
+
+        wp_send_json_success( array( 'status' => $status, 'url' => $url ) );
+    }
+
+    public function ajax_add_to_exclude() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+        $id = intval( $_POST['id'] ?? 0 );
+        if ( ! $id ) wp_send_json_error( array( 'message' => 'Invalid ID.' ) );
+
+        $item = $wpdb->get_row( $wpdb->prepare( "SELECT url FROM {$this->table_name} WHERE id = %d", $id ) );
+        if ( ! $item ) wp_send_json_error( array( 'message' => 'Not found.' ) );
+
+        $path = wp_parse_url( $item->url, PHP_URL_PATH );
+        if ( empty( $path ) ) $path = '/';
+
+        $existing = get_option( 'uwb_excluded_urls', '' );
+        $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $existing ) ) ) );
+
+        if ( ! in_array( $path, $lines, true ) ) {
+            $lines[] = $path;
+            update_option( 'uwb_excluded_urls', implode( "\n", array_unique( $lines ) ) );
+            \Ultimate_WP_Booster\Engine\Cache\CacheManager::write_config_file();
+        }
+
+        wp_send_json_success( array( 'message' => "Added {$path} to excluded URLs.", 'path' => $path ) );
+    }
+
+    public function ajax_add_to_priority() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        global $wpdb;
+        $id = intval( $_POST['id'] ?? 0 );
+        if ( ! $id ) wp_send_json_error( array( 'message' => 'Invalid ID.' ) );
+
+        $item = $wpdb->get_row( $wpdb->prepare( "SELECT url FROM {$this->table_name} WHERE id = %d", $id ) );
+        if ( ! $item ) wp_send_json_error( array( 'message' => 'Not found.' ) );
+
+        $path = wp_parse_url( $item->url, PHP_URL_PATH );
+        if ( empty( $path ) ) $path = '/';
+        $path = $this->normalize_url_by_permalink_settings( $path );
+
+        $existing = get_option( 'uwb_priority_urls', '' );
+        $lines    = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $existing ) ) ) );
+
+        $normalized_lines = array();
+        foreach ( $lines as $line ) {
+            $normalized_line = $this->normalize_url_by_permalink_settings( $line );
+            if ( ! empty( $normalized_line ) ) {
+                $normalized_lines[] = $normalized_line;
+            }
+        }
+        $normalized_lines = array_unique( $normalized_lines );
+
+        if ( in_array( $path, $normalized_lines, true ) ) {
+            $normalized_lines = array_diff( $normalized_lines, array( $path ) );
+            update_option( 'uwb_priority_urls', implode( "\n", $normalized_lines ) );
+
+            $max_priority = $wpdb->get_var( "SELECT MAX(priority) FROM {$this->table_name}" );
+            $new_priority = max( 1, intval( $max_priority ) + 1 );
+            $wpdb->update( $this->table_name, array( 'priority' => $new_priority ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
+
+            $updated_urls = implode( "\n", $normalized_lines );
+            wp_send_json_success( array( 'message' => "Removed {$path} from Important URLs.", 'path' => $path, 'urls' => $updated_urls ) );
+        } else {
+            $normalized_lines[] = $path;
+            $updated_urls = implode( "\n", $normalized_lines );
+            update_option( 'uwb_priority_urls', $updated_urls );
+            $wpdb->update( $this->table_name, array( 'priority' => 0 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
+
+            wp_send_json_success( array( 'message' => "Added {$path} to Important URLs.", 'path' => $path, 'urls' => $updated_urls ) );
+        }
+    }
+
+    public function maybe_output_preload_links_script() {
+        if ( is_admin() || is_customize_preview() ) {
+            return;
+        }
+
+        $enabled = intval( get_option( 'uwb_preload_links', 0 ) );
+        if ( $enabled !== 1 ) {
+            return;
+        }
+
+        $wc_exclude = array( 'cart', 'checkout', 'my-account', 'wp-login.php' );
+        if ( class_exists( 'WooCommerce' ) ) {
+            $cart_id = wc_get_page_id( 'cart' );
+            $checkout_id = wc_get_page_id( 'checkout' );
+            $myaccount_id = wc_get_page_id( 'myaccount' );
+            if ( $cart_id > 0 ) {
+                $cart_url = get_permalink( $cart_id );
+                if ( $cart_url ) {
+                    $wc_exclude[] = trim( wp_parse_url( $cart_url, PHP_URL_PATH ), '/' );
+                }
+            }
+            if ( $checkout_id > 0 ) {
+                $checkout_url = get_permalink( $checkout_id );
+                if ( $checkout_url ) {
+                    $wc_exclude[] = trim( wp_parse_url( $checkout_url, PHP_URL_PATH ), '/' );
+                }
+            }
+            if ( $myaccount_id > 0 ) {
+                $myaccount_url = get_permalink( $myaccount_id );
+                if ( $myaccount_url ) {
+                    $wc_exclude[] = trim( wp_parse_url( $myaccount_url, PHP_URL_PATH ), '/' );
+                }
+            }
+        }
+        
+        $exclusions_raw = get_option( 'uwb_excluded_urls', '' );
+        $excluded_patterns = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $exclusions_raw ) ) ) );
+        
+        $all_excludes = array_merge( $wc_exclude, $excluded_patterns );
+        $all_excludes = array_values( array_unique( array_filter( $all_excludes ) ) );
+
+        ?>
+        <script id="uwb-preload-links-js">
+        document.addEventListener('DOMContentLoaded', () => {
+            const preloaded = new Set();
+            const excludes = <?php echo json_encode( $all_excludes ); ?>;
+            
+            const isExcluded = (url) => {
+                if (url.search) return true;
+                if (url.pathname.match(/\.(wp-admin|xml|json|zip|pdf|jpg|jpeg|png|gif|svg|webp|mp4|mp3|ogg|wav)$/i)) return true;
+                
+                const path = url.pathname.replace(/^\/|\/$/g, '');
+                const fullPath = url.pathname;
+                for (let pattern of excludes) {
+                    pattern = pattern.replace(/^\/|\/$/g, '');
+                    if (pattern === '') continue;
+                    
+                    if (pattern.includes('*')) {
+                        const regexStr = '^' + pattern.replace(/[-\/\\^$+?.()|[\]{}]/g, '\\$&').replace(/\\\*/g, '.*') + '$';
+                        const regex = new RegExp(regexStr, 'i');
+                        if (regex.test(path) || regex.test(fullPath) || regex.test(url.href)) return true;
+                    } else {
+                        if (path === pattern || fullPath === '/' + pattern || path.includes(pattern) || url.href.includes(pattern)) return true;
+                    }
+                }
+                
+                return false;
+            };
+
+            const preload = (url) => {
+                if (preloaded.has(url)) return;
+                preloaded.add(url);
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = url;
+                document.head.appendChild(link);
+            };
+
+            const handle = (e) => {
+                const a = e.target.closest('a');
+                if (!a || !a.href) return;
+                
+                try {
+                    const url = new URL(a.href, window.location.href);
+                    if (url.origin !== window.location.origin) return;
+                    if (url.hash && url.pathname === window.location.pathname) return;
+                    if (isExcluded(url)) return;
+                    preload(url.href);
+                } catch(err) {}
+            };
+
+            document.addEventListener('mouseover', handle, { passive: true });
+            document.addEventListener('touchstart', handle, { passive: true });
+        });
+        </script>
+        <?php
     }
 }
