@@ -1410,6 +1410,9 @@ class Admin {
 
     public function render_settings_page() {
         $this->render_assets();
+
+        $cdn_active = ! empty( $_SERVER['HTTP_CF_RAY'] ) || ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) || ! empty( $_SERVER['HTTP_X_CDN_FORWARD'] );
+        $cdn_details = $cdn_active ? 'Cloudflare / CDN Proxy Detected' : 'No active CDN proxy header detected.';
         
         $server_software = ! empty( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
         $detected_server = 'other';
@@ -1936,7 +1939,7 @@ class Admin {
                                             if ( intval( $curr_port ) === 6379 ) {
                                                 $curr_port = 11211;
                                             }
-                                            $m = new Memcached();
+                                            $m = new \Memcached();
                                             $m->addServer( $curr_host, $curr_port );
                                             $m_stats = $m->getStats();
 
@@ -1975,7 +1978,7 @@ class Admin {
                                             if ( intval( $curr_port ) === 11211 ) {
                                                 $curr_port = 6379;
                                             }
-                                            $redis = new Redis();
+                                            $redis = new \Redis();
                                             try {
                                                 if ( $curr_conn_type === 'socket' && ! empty( $curr_socket ) ) {
                                                     $connected = @$redis->connect( $curr_socket );
@@ -2035,7 +2038,7 @@ class Admin {
                                                 } else {
                                                     $stats_error = 'Could not connect to Redis server.';
                                                 }
-                                            } catch ( Exception $e ) {
+                                            } catch ( \Exception $e ) {
                                                 $stats_error = 'Redis client error: ' . $e->getMessage();
                                             }
                                         } else {
@@ -2761,8 +2764,8 @@ class Admin {
                                 $cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket';
                                 $file_count = 0;
                                 if ( is_dir( $cache_dir ) ) {
-                                    $di = new RecursiveDirectoryIterator( $cache_dir, RecursiveDirectoryIterator::SKIP_DOTS );
-                                    $it = new RecursiveIteratorIterator( $di );
+                                    $di = new \RecursiveDirectoryIterator( $cache_dir, \RecursiveDirectoryIterator::SKIP_DOTS );
+                                    $it = new \RecursiveIteratorIterator( $di );
                                     foreach ( $it as $file ) {
                                         if ( $file->isFile() && ( $file->getExtension() === 'html' || $file->getExtension() === 'html_gzip' ) ) {
                                             $file_count++;
@@ -4194,7 +4197,7 @@ class Admin {
                 exit;
             }
 
-            $m = new Memcached();
+            $m = new \Memcached();
             $m->addServer( $host, $port );
             $statuses = $m->getVersion();
             
@@ -4230,7 +4233,7 @@ class Admin {
             exit;
         }
 
-        $redis = new Redis();
+        $redis = new \Redis();
         try {
             if ( $conn_type === 'socket' && ! empty( $socket ) ) {
                 $connected = @$redis->connect( $socket );
@@ -4260,7 +4263,7 @@ class Admin {
                 'message' => sprintf( 'Connection successful! Host: %s:%d | Ping: %s', $host, $port, $ping_str )
             ) );
 
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             wp_send_json_error( array(
                 'message' => 'Redis error: ' . $e->getMessage()
             ) );
@@ -4287,7 +4290,7 @@ class Admin {
                     if ( $mc_port === 6379 ) {
                         $mc_port = 11211;
                     }
-                    $m = new Memcached();
+                    $m = new \Memcached();
                     $m->addServer( $mc_host, $mc_port );
                     if ( $m->flush() ) {
                         wp_send_json_success( array( 'message' => 'Memcached flushed successfully via direct connection!' ) );
@@ -4300,7 +4303,7 @@ class Admin {
                     $redis_port = get_option( 'uwb_redis_port', 6379 );
                     $redis_password = get_option( 'uwb_redis_password', '' );
 
-                    $redis = new Redis();
+                    $redis = new \Redis();
                     try {
                         if ( @$redis->connect( $redis_host, $redis_port, 1.0 ) ) {
                             if ( ! empty( $redis_password ) ) {
@@ -4310,7 +4313,7 @@ class Admin {
                             wp_send_json_success( array( 'message' => 'Redis DB flushed successfully via direct connection!' ) );
                             exit;
                         }
-                    } catch ( Exception $e ) {
+                    } catch ( \Exception $e ) {
                         // fall through
                     }
                 }
