@@ -2928,10 +2928,11 @@ js-(before|after)
                                             <label for="uwb_media_opt_mode" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
                                                 Phương thức ghi file (Output File Mode)
                                             </label>
-                                            <?php $opt_mode = get_option( 'uwb_media_opt_mode', 'overwrite' ); ?>
+                                            <?php $opt_mode = get_option( 'uwb_media_opt_mode', 'new_file' ); ?>
                                             <select name="uwb_media_opt_mode" id="uwb_media_opt_mode" style="width:100%; border:1px solid var(--uwb-border); border-radius:6px; padding:9px 12px; font-size:13.5px; background:#fff;">
-                                                <option value="overwrite" <?php selected( $opt_mode, 'overwrite' ); ?>>Ghi đè nội dung file ảnh gốc (Overwrite in-place)</option>
-                                                <option value="new_file" <?php selected( $opt_mode, 'new_file' ); ?>>Tạo file mới song song (ví dụ: image.jpg.webp)</option>
+                                                <option value="new_file" <?php selected( $opt_mode, 'new_file' ); ?>>Create Sidecar File (Default) — (Tạo file mới song song, ví dụ: image.webp)</option>
+                                                <option value="overwrite" <?php selected( $opt_mode, 'overwrite' ); ?>>Overwrite File Content In-Place — (Ghi đè dữ liệu binary trực tiếp lên file gốc)</option>
+                                                <option value="change_extension" <?php selected( $opt_mode, 'change_extension' ); ?>>Replace &amp; Change Extension — (Đổi trực tiếp đuôi file thành .webp / .avif)</option>
                                             </select>
                                         </div>
                                     </div>
