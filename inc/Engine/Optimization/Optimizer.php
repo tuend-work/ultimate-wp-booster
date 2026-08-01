@@ -68,16 +68,14 @@ class Optimizer {
         if ( ! empty( $config['media_lazy_load_images'] ) ) {
             $excludes = isset( $config['media_lazy_load_excludes'] ) ? $config['media_lazy_load_excludes'] : '';
             $class_excludes = isset( $config['media_lazy_load_class_excludes'] ) ? $config['media_lazy_load_class_excludes'] : '';
-            $html = Lazyload::process_images( $html, $excludes, $class_excludes );
-            if ( $debug_enabled ) $debug_logs[] = "Lazy Load Images: Applied";
+            $html = Lazyload::process_images( $html, $excludes, $class_excludes, $debug_logs );
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "Lazy Load Images: Disabled in settings";
         }
 
         // 7. Lazy Load Iframes
         if ( ! empty( $config['media_lazy_load_iframes'] ) ) {
-            $html = Lazyload::process_iframes( $html );
-            if ( $debug_enabled ) $debug_logs[] = "Lazy Load Iframes: Applied";
+            $html = Lazyload::process_iframes( $html, $debug_logs );
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "Lazy Load Iframes: Disabled in settings";
         }

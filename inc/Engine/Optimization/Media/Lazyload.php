@@ -5,13 +5,28 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class Lazyload {
 
-    public static function process_images( $html, $excludes_str = '', $class_excludes_str = '' ) {
+    public static function process_images( $html, $excludes_str = '', $class_excludes_str = '', &$logs = null ) {
         $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         $class_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $class_excludes_str ) ) ) );
 
-        $processed = preg_replace_callback('/<img\s+([^>]+)>/i', function( $matches ) use ( $excludes, $class_excludes ) {
+        $placeholder = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201%201'%3E%3C/svg%3E";
+        $lazy_count = 0;
+        $skipped_count = 0;
+
+        $processed = preg_replace_callback('/<img\s+([^>]+)>/i', function( $matches ) use ( $excludes, $class_excludes, $placeholder, &$lazy_count, &$skipped_count ) {
             $attrs = $matches[1];
-            
+
+            // 1. Skip if already lazyloaded or marked no-lazy / eager
+            if ( stripos( $attrs, 'no-lazy' ) !== false ||
+                 stripos( $attrs, 'skip-lazy' ) !== false ||
+                 stripos( $attrs, 'data-no-lazy' ) !== false ||
+                 stripos( $attrs, 'loading="eager"' ) !== false ||
+                 stripos( $attrs, "loading='eager'" ) !== false ) {
+                $skipped_count++;
+                return $matches[0];
+            }
+
+            // 2. Check src or data-src
             $src = '';
             if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
                 $src = $src_match[2];
@@ -19,48 +34,56 @@ class Lazyload {
                 $src = $src_match[2];
             }
 
-            if ( empty( $src ) ) {
+            if ( empty( $src ) || strpos( $src, 'data:image/svg+xml' ) === 0 ) {
+                $skipped_count++;
                 return $matches[0];
             }
 
+            // 3. URL Exclusions
             foreach ( $excludes as $ex ) {
                 if ( ! empty( $ex ) && stripos( $src, $ex ) !== false ) {
+                    $skipped_count++;
                     return $matches[0];
                 }
             }
 
+            // 4. Class Exclusions
             if ( preg_match('/class=([\'"])(.*?)\1/i', $attrs, $class_match) ) {
                 $class = $class_match[2];
                 foreach ( $class_excludes as $cx ) {
                     if ( ! empty( $cx ) && stripos( $class, $cx ) !== false ) {
+                        $skipped_count++;
                         return $matches[0];
                     }
                 }
             }
 
-            if ( stripos( $attrs, 'no-lazy' ) !== false || stripos( $attrs, 'skip-lazy' ) !== false ) {
-                return $matches[0];
-            }
-
             $new_attrs = $attrs;
 
+            // If image doesn't have data-src yet, convert src to data-src and replace src with SVG placeholder
+            if ( stripos( $new_attrs, 'data-src=' ) === false && preg_match('/src=([\'"])(.*?)\1/i', $new_attrs, $sm) ) {
+                $real_src = $sm[2];
+                $new_attrs = preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . $placeholder . '" data-src="' . $real_src . '"', $new_attrs);
+            }
+
+            // Convert srcset to data-srcset
+            if ( stripos( $new_attrs, 'data-srcset=' ) === false && preg_match('/srcset=([\'"])(.*?)\1/i', $new_attrs, $ssm) ) {
+                $real_srcset = $ssm[2];
+                $new_attrs = preg_replace('/srcset=([\'"])(.*?)\1/i', 'data-srcset="' . $real_srcset . '"', $new_attrs);
+            }
+
+            // Ensure loading="lazy" is present
             if ( stripos( $new_attrs, 'loading=' ) === false ) {
                 $new_attrs .= ' loading="lazy"';
             }
 
-            if ( stripos( $new_attrs, 'data-src=' ) !== false && ( stripos( $new_attrs, 'src=' ) === false || stripos( $new_attrs, 'src="data:' ) !== false || stripos( $new_attrs, "src='data:" ) !== false ) ) {
-                if ( preg_match('/data-src=([\'"])(.*?)\1/i', $new_attrs, $ds_match) ) {
-                    $real_url = $ds_match[2];
-                    if ( preg_match('/src=([\'"])(.*?)\1/i', $new_attrs) ) {
-                        $new_attrs = preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . $real_url . '"', $new_attrs);
-                    } else {
-                        $new_attrs .= ' src="' . $real_url . '"';
-                    }
-                }
-            }
-
+            $lazy_count++;
             return '<img ' . $new_attrs . '>';
         }, $html);
+
+        if ( is_array( $logs ) ) {
+            $logs[] = "Lazy Load Images: Applied to {$lazy_count} image(s), Skipped {$skipped_count} image(s)";
+        }
 
         if ( $processed !== $html ) {
             $lazy_js = "\n<script id=\"uwb-lazy-load-js\">
@@ -70,43 +93,42 @@ class Lazyload {
     function uwbObserveImg(img) {
         if (!img || !img.getAttribute) return;
         var dataSrc = img.getAttribute('data-src');
-        if (!dataSrc) return;
-        
+        var dataSrcset = img.getAttribute('data-srcset');
+        if (!dataSrc && !dataSrcset) return;
+
+        function loadImg(target) {
+            var ds = target.getAttribute('data-src');
+            var dss = target.getAttribute('data-srcset');
+            if (ds) {
+                target.src = ds;
+                target.removeAttribute('data-src');
+            }
+            if (dss) {
+                target.srcset = dss;
+                target.removeAttribute('data-srcset');
+            }
+            target.classList.add('uwb-loaded');
+        }
+
         if ('IntersectionObserver' in window) {
             if (!lazyObserver) {
                 lazyObserver = new IntersectionObserver(function(entries) {
                     entries.forEach(function(entry) {
                         if (entry.isIntersecting || entry.intersectionRatio > 0) {
-                            var el = entry.target;
-                            var ds = el.getAttribute('data-src');
-                            if (ds) {
-                                el.src = ds;
-                                el.removeAttribute('data-src');
-                            }
-                            var dss = el.getAttribute('data-srcset');
-                            if (dss) {
-                                el.srcset = dss;
-                                el.removeAttribute('data-srcset');
-                            }
-                            lazyObserver.unobserve(el);
+                            loadImg(entry.target);
+                            lazyObserver.unobserve(entry.target);
                         }
                     });
                 }, { rootMargin: '300px 0px' });
             }
             lazyObserver.observe(img);
         } else {
-            img.src = dataSrc;
-            img.removeAttribute('data-src');
-            var dss = img.getAttribute('data-srcset');
-            if (dss) {
-                img.srcset = dss;
-                img.removeAttribute('data-srcset');
-            }
+            loadImg(img);
         }
     }
 
     function uwbInitLazyImages() {
-        var imgs = document.querySelectorAll('img[data-src]');
+        var imgs = document.querySelectorAll('img[data-src], img[data-srcset]');
         for (var i = 0; i < imgs.length; i++) {
             uwbObserveImg(imgs[i]);
         }
@@ -121,11 +143,11 @@ class Lazyload {
                     for (var i = 0; i < m.addedNodes.length; i++) {
                         var node = m.addedNodes[i];
                         if (node.nodeType === 1) {
-                            if (node.tagName === 'IMG' && node.getAttribute('data-src')) {
+                            if (node.tagName === 'IMG' && (node.getAttribute('data-src') || node.getAttribute('data-srcset'))) {
                                 uwbObserveImg(node);
                             }
                             if (node.querySelectorAll) {
-                                var subImgs = node.querySelectorAll('img[data-src]');
+                                var subImgs = node.querySelectorAll('img[data-src], img[data-srcset]');
                                 for (var j = 0; j < subImgs.length; j++) {
                                     uwbObserveImg(subImgs[j]);
                                 }
@@ -160,7 +182,7 @@ class Lazyload {
     }
 })();
 </script>";
-            
+
             if ( stripos( $processed, '</body>' ) !== false ) {
                 $processed = str_ireplace( '</body>', $lazy_js . '</body>', $processed );
             } else {
@@ -171,8 +193,9 @@ class Lazyload {
         return $processed;
     }
 
-    public static function process_iframes( $html ) {
-        $processed = preg_replace_callback('/<iframe\s+([^>]+)>/i', function( $matches ) {
+    public static function process_iframes( $html, &$logs = null ) {
+        $iframe_count = 0;
+        $processed = preg_replace_callback('/<iframe\s+([^>]+)>/i', function( $matches ) use ( &$iframe_count ) {
             $attrs = $matches[1];
             if ( stripos( $attrs, 'data-src' ) !== false ) {
                 return $matches[0];
@@ -184,10 +207,15 @@ class Lazyload {
                 if ( stripos( $new_attrs, 'loading=' ) === false ) {
                     $new_attrs .= ' loading="lazy"';
                 }
+                $iframe_count++;
                 return '<iframe ' . $new_attrs . '>';
             }
             return $matches[0];
         }, $html);
+
+        if ( is_array( $logs ) ) {
+            $logs[] = "Lazy Load Iframes: Applied to {$iframe_count} iframe(s)";
+        }
 
         if ( $processed !== $html ) {
             $lazy_js = "\n<script id=\"uwb-lazy-iframe-js\">
