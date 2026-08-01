@@ -5111,6 +5111,7 @@ js-(before|after)
                                                 }
                                             ?>
                                                 <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                                    <input type="hidden" name="<?php echo esc_attr( $event_key ); ?>" value="0" />
                                                     <input type="checkbox" name="<?php echo esc_attr( $event_key ); ?>" value="1" <?php checked( get_option( $event_key, $default_val ), 1 ); ?> />
                                                     <?php echo esc_html( $event_label ); ?>
                                                 </label>
@@ -5119,6 +5120,7 @@ js-(before|after)
                                     </div>
                                 <?php else : ?>
                                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                        <input type="hidden" name="<?php echo esc_attr( $group_label ); ?>" value="0" />
                                         <input type="checkbox" name="<?php echo esc_attr( $group_label ); ?>" value="1" <?php checked( get_option( $group_label, 1 ), 1 ); ?> />
                                         <?php echo esc_html( $group_data ); ?>
                                     </label>
