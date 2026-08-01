@@ -2642,7 +2642,11 @@ class Admin {
 
                                 <h4 style="margin: 24px 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Load JS Deferred</h4>
                                 <?php
-                                $this->render_toggle_switch( 'uwb_js_load_defer', 'Load JS Deferred', 'Load JS with defer attribute so scripts download in background without blocking DOM parsing.' );
+                                $js_quick_fix_notice = '<br><span style="display:block; margin-top:8px; padding:10px 14px; background:#f8fafc; border-left:3px solid #6366f1; border-radius:6px; font-size:12px; color:#334155; line-height:1.5;"><strong>💡 Quick Fix:</strong> If you have problems after activating this option, copy and paste the default exclusions to quickly resolve issues:<br><code style="display:block; margin-top:6px; padding:8px 10px; background:#0f172a; color:#f8fafc; border-radius:6px; font-family:monospace; font-size:11.5px; white-space:pre; overflow-x:auto;">\/jquery(-migrate)?-?([0-9.]+)?(.min|.slim|.slim.min)?.js(\?(.*))?( |\'|"|&gt;)
+js-(before|after)
+(?:/wp-content/|/wp-includes/)(.*)</code></span>';
+
+                                $this->render_toggle_switch( 'uwb_js_load_defer', 'Load JS Deferred', 'Load JS with defer attribute so scripts download in background without blocking DOM parsing.' . $js_quick_fix_notice );
                                 $this->render_textarea_setting( 'uwb_tuning_js_defer_excludes', 'JS Deferred Excludes', '', 'JS files or inline keywords to exclude from deferred loading (one per line).' );
                                 ?>
 
@@ -2651,7 +2655,7 @@ class Admin {
                                     <span style="background:#7c3aed; color:#fff; font-size:10px; padding:2px 8px; border-radius:12px; font-weight:700;">NEW</span>
                                 </h4>
                                 <?php
-                                $this->render_toggle_switch( 'uwb_delay_js', 'Enable Delay JS', 'Delay execution of JavaScript until first user interaction (scroll, click, keypress). Dramatically improves <strong>LCP</strong> and <strong>TBT</strong> scores.' );
+                                $this->render_toggle_switch( 'uwb_delay_js', 'Enable Delay JS', 'Delay execution of JavaScript until first user interaction (scroll, click, keypress). Dramatically improves <strong>LCP</strong> and <strong>TBT</strong> scores.' . $js_quick_fix_notice );
                                 $this->render_textarea_setting(
                                     'uwb_delay_js_exclusions',
                                     'Delay JS Exclusions',
