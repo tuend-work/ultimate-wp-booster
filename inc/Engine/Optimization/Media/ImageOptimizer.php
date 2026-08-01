@@ -112,17 +112,10 @@ class ImageOptimizer {
 
         if ( $target_mime && $target_ext ) {
             if ( 'overwrite' === $mode ) {
-                $dest_file = $dir . '/' . $filename_no_ext . '.' . $target_ext;
-                $saved = $editor->save( $dest_file, $target_mime );
-                if ( ! is_wp_error( $saved ) && isset( $saved['path'] ) ) {
-                    if ( $dest_file !== $file && file_exists( $file ) ) {
-                        @unlink( $file );
-                    }
-                    $new_main_file = $saved['path'];
-                    update_attached_file( $attachment_id, $new_main_file );
-                }
+                // In overwrite mode: save WebP/AVIF binary data DIRECTLY into original file path (keeping original extension e.g. .jpg, .png)
+                $editor->save( $file, $target_mime );
             } else {
-                // New file mode (generate .webp / .avif next to original)
+                // New file mode (generate .webp / .avif next to original file, e.g. banner.jpg.webp)
                 $dest_file = $dir . '/' . $filename_no_ext . '.' . $original_ext . '.' . $target_ext;
                 $editor->save( $dest_file, $target_mime );
             }
@@ -131,7 +124,7 @@ class ImageOptimizer {
             $editor->save( $file );
         }
 
-        // 2. Optimize thumbnails / intermediate sizes
+        // 3. Optimize thumbnails / intermediate sizes
         $meta = wp_get_attachment_metadata( $attachment_id );
         if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
             foreach ( $meta['sizes'] as $size_key => $size_info ) {
@@ -144,20 +137,13 @@ class ImageOptimizer {
                     if ( ! is_wp_error( $thumb_editor ) ) {
                         $thumb_editor->set_quality( $quality );
                         if ( $target_mime && $target_ext ) {
-                            $thumb_no_ext = pathinfo( $thumb_path, PATHINFO_FILENAME );
-                            $thumb_orig_ext = pathinfo( $thumb_path, PATHINFO_EXTENSION );
                             if ( 'overwrite' === $mode ) {
-                                $dest_thumb = $dir . '/' . $thumb_no_ext . '.' . $target_ext;
-                                $saved_thumb = $thumb_editor->save( $dest_thumb, $target_mime );
-                                if ( ! is_wp_error( $saved_thumb ) && isset( $saved_thumb['file'] ) ) {
-                                    if ( $dest_thumb !== $thumb_path && file_exists( $thumb_path ) ) {
-                                        @unlink( $thumb_path );
-                                    }
-                                    $meta['sizes'][ $size_key ]['file'] = $saved_thumb['file'];
-                                    $meta['sizes'][ $size_key ]['mime-type'] = $target_mime;
-                                }
+                                // Save WebP/AVIF binary data DIRECTLY into thumbnail file path
+                                $thumb_editor->save( $thumb_path, $target_mime );
                             } else {
-                                $dest_thumb = $dir . '/' . $thumb_no_ext . '.' . $thumb_orig_ext . '.' . $target_ext;
+                                $thumb_no_ext   = pathinfo( $thumb_path, PATHINFO_FILENAME );
+                                $thumb_orig_ext = pathinfo( $thumb_path, PATHINFO_EXTENSION );
+                                $dest_thumb     = $dir . '/' . $thumb_no_ext . '.' . $thumb_orig_ext . '.' . $target_ext;
                                 $thumb_editor->save( $dest_thumb, $target_mime );
                             }
                         } else {
