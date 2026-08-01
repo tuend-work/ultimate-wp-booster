@@ -128,6 +128,11 @@ class Uwb_Optimizer {
             $html = self::defer_js( $html, $js_defer_excludes );
         }
 
+        // 11.6. Inject jQuery stub to protect inline scripts from defer/delay/combine issues
+        if ( ! empty( $config['js_combine'] ) || ! empty( $config['js_load_defer'] ) || ! empty( $config['delay_js'] ) ) {
+            $html = self::inject_jquery_stub( $html );
+        }
+
         // 12. Minify HTML markup
         if ( ! empty( $config['html_minify'] ) ) {
             $html = self::minify_html( $html );
@@ -153,6 +158,88 @@ class Uwb_Optimizer {
             $html .= "\n<!-- UWB DEBUG LOG:\n" . implode( "\n", $GLOBALS['uwb_debug_log'] ) . "\n-->";
         }
 
+        return $html;
+    }
+
+    /**
+     * Inject a lightweight jQuery stub/wrapper into the head to capture early jQuery calls
+     * from inline/dynamic scripts before the actual jQuery library loads or executes.
+     */
+    public static function inject_jquery_stub( $html ) {
+        // Skip if jQuery stub is already injected or if head is not found
+        if ( stripos( $html, 'uwb-jquery-stub' ) !== false ) {
+            return $html;
+        }
+
+        $stub = "\n<script id=\"uwb-jquery-stub\">
+(function() {
+    var jqQueue = [];
+    var jqLoaded = false;
+    
+    function checkJQuery() {
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.jquery) {
+            jqLoaded = true;
+            while (jqQueue.length > 0) {
+                var item = jqQueue.shift();
+                try {
+                    if (item.type === 'ready') {
+                        window.jQuery(document).ready(item.callback);
+                    } else if (item.type === 'fn') {
+                        window.jQuery(item.callback);
+                    }
+                } catch(e) {
+                    console.error('Error running deferred jQuery callback: ', e);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // Stub jQuery
+    window.jQuery = function(arg) {
+        if (jqLoaded || checkJQuery()) {
+            return window.jQuery(arg);
+        }
+        if (typeof arg === 'function') {
+            jqQueue.push({type: 'fn', callback: arg});
+            return window.jQuery;
+        }
+        return {
+            ready: function(fn) {
+                if (jqLoaded || checkJQuery()) {
+                    window.jQuery(document).ready(fn);
+                } else {
+                    jqQueue.push({type: 'ready', callback: fn});
+                }
+            },
+            on: function() {
+                var args = arguments;
+                jqQueue.push({
+                    type: 'fn',
+                    callback: function() {
+                        var jqObj = window.jQuery(arg);
+                        jqObj.on.apply(jqObj, args);
+                    }
+                });
+                return this;
+            }
+        };
+    };
+    window.$ = window.jQuery;
+
+    // Periodically check if real jQuery is loaded
+    var interval = setInterval(function() {
+        if (checkJQuery()) {
+            clearInterval(interval);
+        }
+    }, 50);
+})();
+</script>";
+
+        if ( preg_match( '/<head[^>]*>/i', $html, $head_match ) ) {
+            return str_replace( $head_match[0], $head_match[0] . $stub, $html );
+        }
         return $html;
     }
 
@@ -1054,6 +1141,10 @@ class Uwb_Optimizer {
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
         $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
+        // Automatically allow jQuery and jQuery Migrate to be combined since we now have jQuery stub protection
+        $excludes = array_filter( $excludes, function( $ex ) {
+            return ( stripos( $ex, 'jquery.js' ) === false && stripos( $ex, 'jquery.min.js' ) === false && stripos( $ex, 'jquery-migrate' ) === false );
+        } );
 
         $debug_mode = ! empty( $GLOBALS['uwb_debug_log'] );
         if ( $debug_mode ) {
@@ -1087,6 +1178,33 @@ class Uwb_Optimizer {
                 $current_chunk = array();
                 return;
             }
+
+            // Sort current chunk so that jQuery and jQuery Migrate are always ordered first
+            usort( $current_chunk, function( $a, $b ) {
+                $a_score = 0;
+                $b_score = 0;
+                
+                if ( empty( $a['is_inline'] ) ) {
+                    if ( stripos( $a['url_clean'], 'jquery.js' ) !== false || stripos( $a['url_clean'], 'jquery.min.js' ) !== false ) {
+                        $a_score = 10;
+                    } elseif ( stripos( $a['url_clean'], 'jquery-migrate' ) !== false ) {
+                        $a_score = 9;
+                    }
+                }
+                
+                if ( empty( $b['is_inline'] ) ) {
+                    if ( stripos( $b['url_clean'], 'jquery.js' ) !== false || stripos( $b['url_clean'], 'jquery.min.js' ) !== false ) {
+                        $b_score = 10;
+                    } elseif ( stripos( $b['url_clean'], 'jquery-migrate' ) !== false ) {
+                        $b_score = 9;
+                    }
+                }
+                
+                if ( $a_score !== $b_score ) {
+                    return $b_score - $a_score;
+                }
+                return 0;
+            } );
 
             $urls_hashes = array();
             foreach ( $current_chunk as $item ) {
