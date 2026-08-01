@@ -120,6 +120,7 @@ class Admin {
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
         add_action( 'wp_ajax_uwb_flush_redis_cache', array( $this, 'ajax_flush_redis_cache' ) );
         add_action( 'wp_ajax_uwb_clear_preload_log', array( $this, 'ajax_clear_preload_log' ) );
+        add_action( 'wp_ajax_uwb_batch_optimize_images', array( $this, 'ajax_batch_optimize_images' ) );
         add_action( 'admin_init', array( $this, 'handle_import_export' ) );
     }
 
@@ -244,6 +245,12 @@ class Admin {
 
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_excludes', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_class_excludes', 'sanitize_textarea_field' );
+
+        // Image Optimization Settings
+        register_setting( 'uwb_settings_group', 'uwb_media_opt_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_opt_quality', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_opt_format', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_media_opt_mode', 'sanitize_text_field' );
 
         // CDN Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_cdn_enabled', 'intval' );
@@ -2836,6 +2843,78 @@ js-(before|after)
                                 $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
                                 $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
                                 $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', 'skip-lazy', 'CSS class names of images or containers to exclude from lazy loading (one per line).' );
+                                ?>
+
+                                <!-- Section: Optimize Image (Compress & Convert WebP/AVIF) -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-top:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                        Optimize Image (Compress, WebP / AVIF &amp; Meta Flags)
+                                    </h3>
+                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Tự động nén dung lượng hình ảnh, chuyển đổi sang WebP/AVIF, lưu cờ trạng thái <code>_uwb_img_optimize_status</code> &amp; <code>_uwb_img_convert_status</code> và tự động đồng bộ S3 CDN.</p>
+
+                                    <?php $this->render_toggle_switch( 'uwb_media_opt_enabled', 'Enable Automatic Image Optimization & Conversion', 'Tự động nén chất lượng ảnh và convert định dạng khi upload ảnh mới vào Thư viện Media.' ); ?>
+
+                                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-top:16px; margin-bottom:20px; background:#fff; padding:20px; border:1px solid var(--uwb-border); border-radius:10px;">
+                                        <!-- Field 1: Quality Percentage -->
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_media_opt_quality" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
+                                                Mức độ nén chất lượng (%) (Compression Quality)
+                                            </label>
+                                            <div style="display:flex; align-items:center; gap:10px;">
+                                                <input type="number" min="1" max="100" name="uwb_media_opt_quality" id="uwb_media_opt_quality" value="<?php echo esc_attr( get_option( 'uwb_media_opt_quality', 80 ) ); ?>" style="width:100px; padding:8px 12px; border:1px solid var(--uwb-border); border-radius:6px; font-size:13.5px; font-weight:700; text-align:center;" />
+                                                <span style="font-size:12.5px; color:var(--uwb-text-muted);">(Mặc định 80%. Mức 75% - 85% cho tỷ lệ nén dung lượng tối ưu nhất)</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Field 2: Target Format -->
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_media_opt_format" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
+                                                Chuyển đổi định dạng (Convert Format)
+                                            </label>
+                                            <?php
+                                            $opt_format = get_option( 'uwb_media_opt_format', 'original' );
+                                            $webp_ok = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::is_webp_supported();
+                                            $avif_ok = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::is_avif_supported();
+                                            ?>
+                                            <select name="uwb_media_opt_format" id="uwb_media_opt_format" style="width:100%; border:1px solid var(--uwb-border); border-radius:6px; padding:9px 12px; font-size:13.5px; background:#fff;">
+                                                <option value="original" <?php selected( $opt_format, 'original' ); ?>>Giữ nguyên định dạng gốc (Original format)</option>
+                                                <option value="webp" <?php selected( $opt_format, 'webp' ); ?> <?php disabled( ! $webp_ok ); ?>>Convert sang WebP (<?php echo $webp_ok ? 'Supported' : 'PHP GD/Imagick Not Supported'; ?>)</option>
+                                                <option value="avif" <?php selected( $opt_format, 'avif' ); ?> <?php disabled( ! $avif_ok ); ?>>Convert sang AVIF (<?php echo $avif_ok ? 'Supported' : 'PHP GD/Imagick Not Supported'; ?>)</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Field 3: Output File Mode -->
+                                        <div class="uwb-form-group">
+                                            <label for="uwb_media_opt_mode" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
+                                                Phương thức ghi file (Output File Mode)
+                                            </label>
+                                            <?php $opt_mode = get_option( 'uwb_media_opt_mode', 'overwrite' ); ?>
+                                            <select name="uwb_media_opt_mode" id="uwb_media_opt_mode" style="width:100%; border:1px solid var(--uwb-border); border-radius:6px; padding:9px 12px; font-size:13.5px; background:#fff;">
+                                                <option value="overwrite" <?php selected( $opt_mode, 'overwrite' ); ?>>Ghi đè nội dung file ảnh gốc (Overwrite in-place)</option>
+                                                <option value="new_file" <?php selected( $opt_mode, 'new_file' ); ?>>Tạo file mới song song (ví dụ: image.jpg.webp)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Batch Optimizer Button -->
+                                    <div style="border-top:1px solid var(--uwb-border); padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                        <div>
+                                            <strong style="font-size:13px; color:var(--uwb-text); display:block;">Batch Optimize Media Library</strong>
+                                            <span style="font-size:12px; color:var(--uwb-text-muted);">Nén &amp; convert toàn bộ ảnh hiện có trong Thư viện Media (Tự động lưu cờ status để không nén lặp lại).</span>
+                                        </div>
+                                        <button type="button" id="btn-batch-optimize-images" class="button button-secondary" style="font-weight:600; padding:8px 16px; border-radius:6px; cursor:pointer;">
+                                            Optimize &amp; Convert Existing Media
+                                        </button>
+                                    </div>
+                                    <div id="uwb-optimize-progress-wrap" style="margin-top:14px; display:none;">
+                                        <div class="uwb-progress-bar-wrap" style="margin-bottom:6px;">
+                                            <div class="uwb-progress-bar-fill" id="uwb-optimize-progress-fill" style="width:0%;"></div>
+                                        </div>
+                                        <div id="uwb-optimize-status-text" style="font-size:12px; font-weight:600; color:var(--uwb-text);">Processing batch optimization...</div>
+                                    </div>
+                                </div>
+                                <?php
 
                                 $this->render_cdn_distribution_card(
                                     'Cloudflare R2 / S3 CDN Distribution for Media Library & Files',
@@ -4679,6 +4758,47 @@ js-(before|after)
                     $wrap.slideUp(200);
                 }
             });
+
+            // Batch Image Optimization AJAX Handler
+            $(document).on('click', '#btn-batch-optimize-images', function() {
+                var $btn = $(this);
+                var $wrap = $('#uwb-optimize-progress-wrap');
+                var $fill = $('#uwb-optimize-progress-fill');
+                var $status = $('#uwb-optimize-status-text');
+
+                $btn.prop('disabled', true).text('Optimizing...');
+                $wrap.slideDown(200);
+                $fill.css('width', '0%');
+                $status.text('Starting image optimization batch...');
+
+                function runBatch(paged) {
+                    $.post(ajaxurl, {
+                        action: 'uwb_batch_optimize_images',
+                        paged: paged,
+                        nonce: '<?php echo wp_create_nonce( 'uwb_admin_nonce' ); ?>'
+                    }, function(res) {
+                        if (res.success) {
+                            var pct = Math.round((res.data.paged / Math.max(1, res.data.max_pages)) * 100);
+                            $fill.css('width', pct + '%');
+                            $status.text(res.data.message);
+
+                            if (!res.data.is_done) {
+                                runBatch(res.data.paged + 1);
+                            } else {
+                                $btn.prop('disabled', false).text('Optimize & Convert Existing Media');
+                            }
+                        } else {
+                            $status.text('Error: ' + (res.data ? res.data.message : 'Batch optimization failed.'));
+                            $btn.prop('disabled', false).text('Optimize & Convert Existing Media');
+                        }
+                    }).fail(function() {
+                        $status.text('AJAX error occurred during batch image optimization.');
+                        $btn.prop('disabled', false).text('Optimize & Convert Existing Media');
+                    });
+                }
+
+                runBatch(1);
+            });
         });
         </script>
         <?php
@@ -5016,6 +5136,48 @@ js-(before|after)
             'processed' => $count,
             'total'     => $total_attachments,
             'message'   => $is_done ? 'All media library items successfully synced to CDN!' : "Synced batch {$paged} ({$count} files)...",
+        ) );
+    }
+
+    public function ajax_batch_optimize_images() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        $paged = isset( $_POST['paged'] ) ? max( 1, intval( $_POST['paged'] ) ) : 1;
+        $posts_per_page = 10;
+
+        $query = new \WP_Query( array(
+            'post_type'      => 'attachment',
+            'post_status'    => 'inherit',
+            'post_mime_type' => 'image',
+            'posts_per_page' => $posts_per_page,
+            'paged'          => $paged,
+            'fields'         => 'ids',
+        ) );
+
+        $count = 0;
+        if ( $query->have_posts() ) {
+            foreach ( $query->posts as $attachment_id ) {
+                $res = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $attachment_id, array(), false );
+                if ( $res ) {
+                    $count++;
+                }
+            }
+        }
+
+        $total_attachments = $query->found_posts;
+        $total_pages       = $query->max_num_pages;
+        $is_done           = ( $paged >= $total_pages );
+
+        wp_send_json_success( array(
+            'paged'     => $paged,
+            'max_pages' => $total_pages,
+            'count'     => $count,
+            'total'     => $total_attachments,
+            'is_done'   => $is_done,
+            'message'   => $is_done ? 'All Media Library images successfully optimized!' : "Optimized batch {$paged}/{$total_pages} ({$count} images)...",
         ) );
     }
 

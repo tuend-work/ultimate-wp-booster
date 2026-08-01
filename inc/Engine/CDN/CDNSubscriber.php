@@ -9,14 +9,15 @@ class CDNSubscriber implements Subscriber_Interface {
 
     public static function get_subscribed_events() {
         return array(
-            'add_attachment'             => 'on_add_attachment',
-            'edit_attachment'            => 'on_edit_attachment',
-            'delete_attachment'          => 'on_delete_attachment',
-            'wp_get_attachment_url'      => array( 'filter_attachment_url', 10, 2 ),
-            'wp_calculate_image_srcset'  => array( 'filter_attachment_srcset', 10, 5 ),
-            'wp_get_attachment_image_src'=> array( 'filter_attachment_image_src', 10, 4 ),
-            'manage_media_columns'       => 'add_media_columns',
-            'manage_media_custom_column' => array( 'render_media_column', 10, 2 ),
+            'add_attachment'                  => 'on_add_attachment',
+            'edit_attachment'                 => 'on_edit_attachment',
+            'delete_attachment'               => 'on_delete_attachment',
+            'wp_generate_attachment_metadata' => array( 'on_generate_attachment_metadata', 10, 2 ),
+            'wp_get_attachment_url'           => array( 'filter_attachment_url', 10, 2 ),
+            'wp_calculate_image_srcset'       => array( 'filter_attachment_srcset', 10, 5 ),
+            'wp_get_attachment_image_src'     => array( 'filter_attachment_image_src', 10, 4 ),
+            'manage_media_columns'            => 'add_media_columns',
+            'manage_media_custom_column'      => array( 'render_media_column', 10, 2 ),
         );
     }
 
@@ -28,6 +29,11 @@ class CDNSubscriber implements Subscriber_Interface {
     private function upload_attachment_to_s3( $attachment_id, $force = false ) {
         if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
             return false;
+        }
+
+        // Auto optimize & convert image if enabled
+        if ( get_option( 'uwb_media_opt_enabled', 0 ) ) {
+            \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $attachment_id, array(), false );
         }
 
         $s3_client = CDNManager::get_s3_client();
@@ -61,6 +67,15 @@ class CDNSubscriber implements Subscriber_Interface {
         $res = $s3_client->put_object( $file, $s3_key, '', $cache_control );
         if ( $res ) {
             CDNManager::mark_attachment_offloaded( $attachment_id, $s3_key );
+        }
+
+        // Check for new_file mode WebP/AVIF sidecar files
+        foreach ( array( 'webp', 'avif' ) as $side_ext ) {
+            $side_file = $file . '.' . $side_ext;
+            if ( file_exists( $side_file ) ) {
+                $side_key = $s3_key . '.' . $side_ext;
+                $s3_client->put_object( $side_file, $side_key, '', $cache_control );
+            }
         }
 
         // Upload thumbnails
@@ -122,6 +137,13 @@ class CDNSubscriber implements Subscriber_Interface {
         }
         // $force = true: file was edited → always re-upload even if flag exists
         $this->upload_attachment_to_s3( $attachment_id, true );
+    }
+
+    public function on_generate_attachment_metadata( $metadata, $attachment_id ) {
+        if ( get_option( 'uwb_media_opt_enabled', 0 ) ) {
+            \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $attachment_id, array(), false );
+        }
+        return $metadata;
     }
 
     // -------------------------------------------------------------------------
@@ -291,6 +313,17 @@ class CDNSubscriber implements Subscriber_Interface {
         if ( $column_name !== 'uwb_cdn' ) {
             return;
         }
+        $output = '<div style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">';
+        $has_badge = false;
+
+        $opt_status  = get_post_meta( $post_id, '_uwb_img_optimize_status', true );
+        $conv_status = get_post_meta( $post_id, '_uwb_img_convert_status', true );
+        if ( 'optimized' === $opt_status ) {
+            $format_label = $conv_status ? strtoupper( $conv_status ) : 'OPT';
+            $output .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="_uwb_img_optimize_status: optimized&#10;_uwb_img_convert_status: ' . esc_attr( $conv_status ) . '">⚡ ' . esc_html( $format_label ) . '</span>';
+            $has_badge = true;
+        }
+
         if ( CDNManager::is_attachment_offloaded( $post_id ) ) {
             $s3_key        = get_post_meta( $post_id, '_uwb_s3_key', true );
             $timestamp     = get_post_meta( $post_id, '_uwb_s3_uploaded', true );
@@ -302,7 +335,6 @@ class CDNSubscriber implements Subscriber_Interface {
             }
             $local_status  = $local_deleted ? 'removed' : 'kept';
 
-            $output = '<div style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">';
             $output .= '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="' . esc_attr( $s3_key ) . '&#10;_uwb_s3_cloud_status: ' . esc_attr( $cloud_status ) . '&#10;Uploaded: ' . esc_attr( $date ) . '">☁️ S3 CDN</span>';
             
             if ( $local_deleted ) {
@@ -310,8 +342,12 @@ class CDNSubscriber implements Subscriber_Interface {
             } else {
                 $output .= '<span style="background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="_uwb_s3_local_status: ' . esc_attr( $local_status ) . '">📁 Local Kept</span>';
             }
-            $output .= '</div>';
+            $has_badge = true;
+        }
 
+        $output .= '</div>';
+
+        if ( $has_badge ) {
             echo $output;
         } else {
             echo '<span style="color:#94a3b8; font-size:12px;">—</span>';
