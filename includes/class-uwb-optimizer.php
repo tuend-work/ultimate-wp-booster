@@ -1161,6 +1161,15 @@ class Uwb_Optimizer {
             $attrs = $m[1];
             $inline_content = $m[2];
 
+            // Filter out non-JS script types (e.g. speculationrules, application/json, text/template, importmap)
+            if ( preg_match( '/\btype\s*=\s*(["\'])(.*?)\1/i', $attrs, $type_match ) ) {
+                $type_value = strtolower( trim( $type_match[2] ) );
+                $valid_types = array( 'text/javascript', 'application/javascript', 'application/x-javascript', 'text/ecmascript' );
+                if ( ! in_array( $type_value, $valid_types ) ) {
+                    continue;
+                }
+            }
+
             // 1. Check exclusions
             $is_excluded = false;
             foreach ( $excludes as $ex ) {
