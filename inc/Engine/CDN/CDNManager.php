@@ -282,7 +282,7 @@ class CDNManager {
         }
 
         $got_main = $s3_client->get_object( $s3_key, $file );
-        if ( ! $got_main ) {
+        if ( is_wp_error( $got_main ) || ! $got_main ) {
             return false;
         }
 

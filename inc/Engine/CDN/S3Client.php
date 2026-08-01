@@ -92,6 +92,33 @@ class S3Client {
         return $this->request( 'DELETE', "/{$this->bucket}/{$key}" );
     }
 
+    public function get_object( $key, $dest_file = null ) {
+        if ( ! $this->is_configured() ) {
+            return new \WP_Error( 'cdn_not_configured', 'S3/R2 credentials are incomplete.' );
+        }
+
+        $key     = ltrim( $key, '/' );
+        $content = $this->request( 'GET', "/{$this->bucket}/{$key}" );
+
+        if ( is_wp_error( $content ) ) {
+            return $content;
+        }
+
+        if ( ! empty( $dest_file ) ) {
+            $dir = dirname( $dest_file );
+            if ( ! is_dir( $dir ) ) {
+                @mkdir( $dir, 0755, true );
+            }
+            $written = @file_put_contents( $dest_file, $content );
+            if ( false === $written ) {
+                return new \WP_Error( 'file_write_error', "Cannot write file: {$dest_file}" );
+            }
+            return true;
+        }
+
+        return $content;
+    }
+
     public function head_object( $key ) {
         if ( ! $this->is_configured() ) {
             return new \WP_Error( 'cdn_not_configured', 'S3/R2 credentials are incomplete.' );
@@ -227,6 +254,9 @@ class S3Client {
         $code = wp_remote_retrieve_response_code( $response );
 
         if ( $code >= 200 && $code < 300 ) {
+            if ( 'GET' === strtoupper( $method ) ) {
+                return wp_remote_retrieve_body( $response );
+            }
             return true;
         }
 
