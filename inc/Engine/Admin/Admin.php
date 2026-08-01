@@ -2851,7 +2851,7 @@ js-(before|after)
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                         Optimize Image (Compress, WebP / AVIF &amp; Meta Flags)
                                     </h3>
-                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Tự động nén dung lượng hình ảnh, chuyển đổi sang WebP/AVIF, lưu cờ trạng thái <code>_uwb_img_optimize_status</code> &amp; <code>_uwb_img_convert_status</code> và tự động đồng bộ S3 CDN.</p>
+                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Tự động nén dung lượng hình ảnh, chuyển đổi sang WebP/AVIF, quản lý cờ trạng thái <code>_uwb_img_compress_status</code>, <code>_uwb_img_convert_webp_status</code> &amp; <code>_uwb_img_convert_avif_status</code> và tự động đồng bộ S3 CDN.</p>
 
                                     <?php $this->render_toggle_switch( 'uwb_media_opt_enabled', 'Enable Automatic Image Optimization & Conversion', 'Tự động nén chất lượng ảnh và convert định dạng khi upload ảnh mới vào Thư viện Media.' ); ?>
 

@@ -60,12 +60,20 @@ class ImageOptimizer {
 
         // Check if already optimized with same parameters
         if ( ! $force_reoptimize ) {
-            $opt_status  = get_post_meta( $attachment_id, '_uwb_img_optimize_status', true );
-            $conv_status = get_post_meta( $attachment_id, '_uwb_img_convert_status', true );
+            $comp_status = get_post_meta( $attachment_id, '_uwb_img_compress_status', true );
+            $webp_status = get_post_meta( $attachment_id, '_uwb_img_convert_webp_status', true );
+            $avif_status = get_post_meta( $attachment_id, '_uwb_img_convert_avif_status', true );
             $prev_q      = get_post_meta( $attachment_id, '_uwb_img_opt_quality', true );
 
-            if ( 'optimized' === $opt_status && $conv_status === $format && intval( $prev_q ) === $quality ) {
-                return true; // Skip redundant re-compression
+            $is_comp_ok = ( 'compressed' === $comp_status && intval( $prev_q ) === $quality );
+            if ( 'webp' === $format && $is_comp_ok && 'converted' === $webp_status ) {
+                return true;
+            }
+            if ( 'avif' === $format && $is_comp_ok && 'converted' === $avif_status ) {
+                return true;
+            }
+            if ( 'original' === $format && $is_comp_ok ) {
+                return true;
             }
         }
 
@@ -155,6 +163,14 @@ class ImageOptimizer {
 
         // 3. Record Meta Flags as requested
         $effective_format = $target_ext ? $target_ext : 'original';
+        update_post_meta( $attachment_id, '_uwb_img_compress_status', 'compressed' );
+        if ( 'webp' === $effective_format ) {
+            update_post_meta( $attachment_id, '_uwb_img_convert_webp_status', 'converted' );
+        } elseif ( 'avif' === $effective_format ) {
+            update_post_meta( $attachment_id, '_uwb_img_convert_avif_status', 'converted' );
+        }
+
+        // Backwards compatibility meta flags
         update_post_meta( $attachment_id, '_uwb_img_optimize_status', 'optimized' );
         update_post_meta( $attachment_id, '_uwb_img_convert_status', $effective_format );
         update_post_meta( $attachment_id, '_uwb_img_optimize_timestamp', time() );

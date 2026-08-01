@@ -316,11 +316,18 @@ class CDNSubscriber implements Subscriber_Interface {
         $output = '<div style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">';
         $has_badge = false;
 
-        $opt_status  = get_post_meta( $post_id, '_uwb_img_optimize_status', true );
-        $conv_status = get_post_meta( $post_id, '_uwb_img_convert_status', true );
-        if ( 'optimized' === $opt_status ) {
-            $format_label = $conv_status ? strtoupper( $conv_status ) : 'OPT';
-            $output .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="_uwb_img_optimize_status: optimized&#10;_uwb_img_convert_status: ' . esc_attr( $conv_status ) . '">⚡ ' . esc_html( $format_label ) . '</span>';
+        $comp_status = get_post_meta( $post_id, '_uwb_img_compress_status', true );
+        $webp_status = get_post_meta( $post_id, '_uwb_img_convert_webp_status', true );
+        $avif_status = get_post_meta( $post_id, '_uwb_img_convert_avif_status', true );
+
+        if ( 'converted' === $webp_status ) {
+            $output .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="_uwb_img_compress_status: ' . esc_attr( $comp_status ) . '&#10;_uwb_img_convert_webp_status: converted">⚡ WEBP</span>';
+            $has_badge = true;
+        } elseif ( 'converted' === $avif_status ) {
+            $output .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="_uwb_img_compress_status: ' . esc_attr( $comp_status ) . '&#10;_uwb_img_convert_avif_status: converted">⚡ AVIF</span>';
+            $has_badge = true;
+        } elseif ( 'compressed' === $comp_status ) {
+            $output .= '<span style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="_uwb_img_compress_status: compressed">⚡ COMPRESSED</span>';
             $has_badge = true;
         }
 
