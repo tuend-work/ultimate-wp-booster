@@ -74,7 +74,7 @@ class Optimizer {
         }
 
         // 3. Remove WordPress Emoji
-        if ( ! empty( $config['html_remove_emoji'] ) ) {
+        if ( ! empty( $config['html_remove_emoji'] ) || ! empty( $config['general_disable_emojis'] ) ) {
             $html = self::remove_emoji( $html );
             if ( $debug_enabled ) $debug_logs[] = "Emoji Removal: Applied";
         } elseif ( $debug_enabled ) {
@@ -95,6 +95,38 @@ class Optimizer {
             if ( $debug_enabled ) $debug_logs[] = "Query Strings Removal: Applied";
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "Query Strings Removal: Disabled in settings";
+        }
+
+        // 5.6. General HTML Cleanups (wlwmanifest, RSD, shortlink, RSS, REST, Favicon, Global Styles, WP Version)
+        if ( ! empty( $config['general_remove_wlwmanifest'] ) ) {
+            $html = preg_replace( '/<link[^>]+rel=[\'"]wlwmanifest[\'"][^>]*>/i', '', $html );
+        }
+        if ( ! empty( $config['general_remove_rsd'] ) ) {
+            $html = preg_replace( '/<link[^>]+rel=[\'"]EditURI[\'"][^>]*>/i', '', $html );
+        }
+        if ( ! empty( $config['general_remove_shortlink'] ) ) {
+            $html = preg_replace( '/<link[^>]+rel=[\'"]shortlink[\'"][^>]*>/i', '', $html );
+        }
+        if ( ! empty( $config['general_remove_rss_feed_links'] ) ) {
+            $html = preg_replace( '/<link[^>]+rel=[\'"]alternate[\'"][^>]+type=[\'"]application\/rss\+xml[\'"][^>]*>/i', '', $html );
+        }
+        if ( ! empty( $config['general_remove_rest_api_links'] ) ) {
+            $html = preg_replace( '/<link[^>]+rel=[\'"]https:\/\/api\.w\.org\/[\'"][^>]*>/i', '', $html );
+        }
+        if ( ! empty( $config['general_add_blank_favicon'] ) ) {
+            if ( strpos( $html, 'rel="icon"' ) === false && strpos( $html, "rel='icon'" ) === false && strpos( $html, 'rel="shortcut icon"' ) === false ) {
+                $blank_favicon = '<link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">';
+                if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+                    $html = str_replace( $matches[0], $matches[0] . "\n" . $blank_favicon, $html );
+                }
+            }
+        }
+        if ( ! empty( $config['general_remove_global_styles'] ) ) {
+            $html = preg_replace( '/<style\b[^>]*?id=[\'"]global-styles-inline-css[\'"][^>]*?>.*?<\/style>/is', '', $html );
+            $html = preg_replace( '/<link[^>]+id=[\'"]global-styles-css[\'"][^>]*>/i', '', $html );
+        }
+        if ( ! empty( $config['general_hide_wp_version'] ) ) {
+            $html = preg_replace( '/<meta[^>]+name=[\'"]generator[\'"][^>]+content=[\'"]WordPress[^\'"]*[\'"][^>]*>/i', '', $html );
         }
 
         // 5.5. Lazy Load HTML Elements
