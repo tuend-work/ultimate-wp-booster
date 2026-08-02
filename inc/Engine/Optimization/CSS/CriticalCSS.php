@@ -4,19 +4,13 @@ namespace Ultimate_WP_Booster\Engine\Optimization\CSS;
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 /**
- * Server-Side Placeholder & Client-Side Passive Auto-Extraction Engine for Critical CSS
+ * Server-Side Placeholder & In-Memory Client Extractor Engine for Critical CSS
+ * Updates static HTML cache files directly and strips extractor JS after first real visit.
  */
 class CriticalCSS {
 
     /**
-     * Cache directory for Critical CSS files
-     */
-    public static function get_cache_dir() {
-        return WP_CONTENT_DIR . '/cache/ultimate-wp-booster/critical-css/';
-    }
-
-    /**
-     * Main Entry Point: Inject Critical CSS if cached, or inject Placeholder + Extractor JS
+     * Main Entry Point: Inject Critical CSS if already present, or inject Placeholder + Extractor JS
      *
      * @param string $html
      * @param string $url
@@ -32,40 +26,36 @@ class CriticalCSS {
             return $html;
         }
 
+        // If HTML already contains filled Critical CSS inside <style id="uwb-critical-css">, do not modify
+        if ( preg_match( '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>\s*([^\s<].*?)\s*</style>#is', $html, $css_matches ) ) {
+            if ( ! empty( $css_matches[1] ) && strlen( trim( $css_matches[1] ) ) > 10 ) {
+                return $html;
+            }
+        }
+
         if ( empty( $url ) ) {
             $url = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '/';
         }
 
         $url_clean = strtok( $url, '?' );
         $url_hash = md5( $url_clean );
-        $cache_dir = self::get_cache_dir();
-        $cache_file = $cache_dir . $url_hash . '.css';
 
-        // 1. If cached Critical CSS file exists on server: Inject directly into <head>
-        if ( file_exists( $cache_file ) && filesize( $cache_file ) > 20 ) {
-            $cached_css = @file_get_contents( $cache_file );
-            if ( ! empty( $cached_css ) ) {
-                $style_tag = '<style id="uwb-critical-css">' . trim( $cached_css ) . '</style>';
-                if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
-                    return str_replace( $matches[0], $matches[0] . "\n" . $style_tag, $html );
-                }
-                return $html;
+        // Inject Placeholder in <head> if not already present
+        $placeholder_tag = '<style id="uwb-critical-css"></style>';
+        if ( strpos( $html, 'id="uwb-critical-css"' ) === false ) {
+            if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+                $html = str_replace( $matches[0], $matches[0] . "\n" . $placeholder_tag, $html );
             }
         }
 
-        // 2. Fallback for Preloader / First Visit: Inject Placeholder in <head> & Extractor JS in <body>
-        $placeholder_tag = '<style id="uwb-critical-css"></style>';
-
-        if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
-            $html = str_replace( $matches[0], $matches[0] . "\n" . $placeholder_tag, $html );
-        }
-
-        // Inject background Client-Side Extractor JS before </body>
-        $extractor_script = self::render_extractor_script( $url_hash );
-        if ( stripos( $html, '</body>' ) !== false ) {
-            $html = str_ireplace( '</body>', $extractor_script . "\n" . '</body>', $html );
-        } else {
-            $html .= "\n" . $extractor_script;
+        // Inject background Client-Side Extractor JS before </body> if not already present
+        if ( strpos( $html, 'id="uwb-critical-extractor"' ) === false ) {
+            $extractor_script = self::render_extractor_script( $url_hash );
+            if ( stripos( $html, '</body>' ) !== false ) {
+                $html = str_ireplace( '</body>', $extractor_script . "\n" . '</body>', $html );
+            } else {
+                $html .= "\n" . $extractor_script;
+            }
         }
 
         return $html;
@@ -171,7 +161,7 @@ class CriticalCSS {
     }
 
     /**
-     * Handle AJAX endpoint to save Client-Side Extractor payload and update Static HTML cache file
+     * Handle AJAX endpoint to receive Client-Side Extractor payload, update Static HTML cache directly, and strip extractor JS
      */
     public static function ajax_save_critical_css() {
         $url_hash = isset( $_POST['url_hash'] ) ? (string) $_POST['url_hash'] : '';
@@ -183,7 +173,7 @@ class CriticalCSS {
             wp_send_json_error( array( 'message' => 'Invalid url_hash format' ) );
         }
 
-        // 2. Strict HMAC Token / Nonce Verification (Works for logged-in & guest users, static cache friendly)
+        // 2. Strict HMAC Token / Nonce Verification
         $salt = function_exists( 'wp_salt' ) ? wp_salt( 'auth' ) : 'uwb_secret_key';
         $expected_token = hash_hmac( 'sha256', 'uwb_crit_' . $url_hash, $salt );
 
@@ -200,7 +190,7 @@ class CriticalCSS {
             $css_raw = substr( $css_raw, 0, 307200 );
         }
 
-        // 4. Strict CSS Sanitization & Anti-XSS / Anti-PHP Injection
+        // 4. Strict CSS Sanitization
         $sanitized_css = self::sanitize_critical_css( $css_raw );
         if ( empty( $sanitized_css ) ) {
             wp_send_json_error( array( 'message' => 'Invalid CSS content' ) );
@@ -209,19 +199,14 @@ class CriticalCSS {
         // 5. Minify CSS payload
         $minified_css = self::minify_css( $sanitized_css );
 
-        // 6. Save to cache directory securely
-        $cache_dir = self::get_cache_dir();
-        if ( ! is_dir( $cache_dir ) ) {
-            @wp_mkdir_p( $cache_dir );
-        }
+        // 6. Directly update static HTML cache files and strip extractor script
+        $updated_count = self::update_static_html_cache_files( $minified_css );
 
-        $target_file = $cache_dir . $url_hash . '.css';
-        @file_put_contents( $target_file, $minified_css );
-
-        // 7. Update static HTML cache files safely
-        self::update_static_html_cache_files( $minified_css );
-
-        wp_send_json_success( array( 'message' => 'Critical CSS saved securely', 'bytes' => strlen( $minified_css ) ) );
+        wp_send_json_success( array(
+            'message' => 'Critical CSS embedded directly into static HTML cache files, extractor script stripped.',
+            'bytes'   => strlen( $minified_css ),
+            'updated' => $updated_count,
+        ) );
     }
 
     /**
@@ -235,13 +220,9 @@ class CriticalCSS {
             return '';
         }
 
-        // Strip any HTML tags (<script>, <iframe>, <style>, etc.)
         $css = wp_strip_all_tags( $css );
-
-        // Remove PHP tags
         $css = preg_replace( '/<\?php|<\?|\?>/i', '', $css );
 
-        // Disallow dangerous CSS functions & expressions
         $dangerous_patterns = array(
             '/javascript\s*:/i',
             '/expression\s*\(/i',
@@ -256,18 +237,20 @@ class CriticalCSS {
     }
 
     /**
-     * Update static HTML cache files on disk to fill placeholder <style id="uwb-critical-css"></style>
+     * Directly update static HTML cache files on disk to fill Critical CSS and strip extractor script
      *
      * @param string $critical_css
+     * @return int Number of updated cache files
      */
     private static function update_static_html_cache_files( $critical_css ) {
         $wp_rocket_dir = WP_CONTENT_DIR . '/cache/wp-rocket';
         if ( ! is_dir( $wp_rocket_dir ) ) {
-            return;
+            return 0;
         }
 
         $style_replacement = '<style id="uwb-critical-css">' . trim( $critical_css ) . '</style>';
         $empty_placeholder = '<style id="uwb-critical-css"></style>';
+        $updated_count     = 0;
 
         try {
             $iterator = new \RecursiveIteratorIterator(
@@ -276,13 +259,25 @@ class CriticalCSS {
             );
 
             foreach ( $iterator as $item ) {
-                if ( $item->isFile() && ( strpos( $item->getFilename(), 'index' ) === 0 && strpos( $item->getFilename(), '.html' ) !== false ) ) {
+                if ( $item->isFile() && strpos( $item->getFilename(), '.html' ) !== false ) {
                     $f = $item->getPathname();
                     if ( filesize( $f ) > 100 ) {
                         $content = @file_get_contents( $f );
                         if ( strpos( $content, $empty_placeholder ) !== false ) {
+                            // 1. Fill Critical CSS into placeholder
                             $content = str_replace( $empty_placeholder, $style_replacement, $content );
+
+                            // 2. Completely REMOVE extractor script tag from static HTML cache
+                            $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
+
                             @file_put_contents( $f, $content );
+                            $updated_count++;
+
+                            // 3. Purge matching .gzip file if present so webserver serves updated HTML
+                            $gzip_file = $f . '_gzip';
+                            if ( file_exists( $gzip_file ) ) {
+                                @unlink( $gzip_file );
+                            }
                         }
                     }
                 }
@@ -298,11 +293,19 @@ class CriticalCSS {
                     $content = @file_get_contents( $f );
                     if ( strpos( $content, $empty_placeholder ) !== false ) {
                         $content = str_replace( $empty_placeholder, $style_replacement, $content );
+                        $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
                         @file_put_contents( $f, $content );
+                        $updated_count++;
+                        $gzip_file = $f . '_gzip';
+                        if ( file_exists( $gzip_file ) ) {
+                            @unlink( $gzip_file );
+                        }
                     }
                 }
             }
         }
+
+        return $updated_count;
     }
 
     /**
@@ -322,17 +325,9 @@ class CriticalCSS {
     }
 
     /**
-     * Purge all generated Critical CSS files
+     * Purge cache placeholder
      */
     public static function purge_cache() {
-        $dir = self::get_cache_dir();
-        if ( is_dir( $dir ) ) {
-            $files = glob( $dir . '*.css' );
-            if ( ! empty( $files ) ) {
-                foreach ( $files as $f ) {
-                    @unlink( $f );
-                }
-            }
-        }
+        // No-op: Static HTML cache files are purged by CacheManager
     }
 }
