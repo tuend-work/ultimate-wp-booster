@@ -142,9 +142,49 @@ class CDNManager {
         return new S3Client( $config );
     }
 
+    private static $uploaded_runtime_cache = array();
+    private static $uploaded_db_cache      = null;
+
     public static function upload_asset_to_cdn( $file_path ) {
         if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
             return false;
+        }
+
+        $file_norm   = str_replace( '\\', '/', $file_path );
+        $content_dir = str_replace( '\\', '/', WP_CONTENT_DIR );
+        $abs_dir     = defined( 'ABSPATH' ) ? str_replace( '\\', '/', ABSPATH ) : '';
+
+        $s3_key = '';
+        if ( strpos( $file_norm, $content_dir ) === 0 ) {
+            $rel    = ltrim( substr( $file_norm, strlen( $content_dir ) ), '/' );
+            $s3_key = 'wp-content/' . $rel;
+        } elseif ( ! empty( $abs_dir ) && strpos( $file_norm, $abs_dir ) === 0 ) {
+            $s3_key = ltrim( substr( $file_norm, strlen( $abs_dir ) ), '/' );
+        }
+
+        if ( empty( $s3_key ) ) {
+            return false;
+        }
+
+        $mtime = filemtime( $file_path );
+
+        // 1. Check runtime in-memory cache (same PHP request)
+        if ( isset( self::$uploaded_runtime_cache[ $s3_key ] ) && self::$uploaded_runtime_cache[ $s3_key ] === $mtime ) {
+            return true;
+        }
+
+        // 2. Load DB persistent cache once per request
+        if ( null === self::$uploaded_db_cache ) {
+            self::$uploaded_db_cache = get_option( 'uwb_cdn_uploaded_assets', array() );
+            if ( ! is_array( self::$uploaded_db_cache ) ) {
+                self::$uploaded_db_cache = array();
+            }
+        }
+
+        // 3. Check DB persistent cache
+        if ( isset( self::$uploaded_db_cache[ $s3_key ] ) && self::$uploaded_db_cache[ $s3_key ] === $mtime ) {
+            self::$uploaded_runtime_cache[ $s3_key ] = $mtime;
+            return true;
         }
 
         $ext        = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
@@ -166,24 +206,21 @@ class CDNManager {
             return false;
         }
 
-        $file_norm   = str_replace( '\\', '/', $file_path );
-        $content_dir = str_replace( '\\', '/', WP_CONTENT_DIR );
-        $abs_dir     = defined( 'ABSPATH' ) ? str_replace( '\\', '/', ABSPATH ) : '';
+        $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
+        $upload_ok     = $s3_client->put_object( $file_path, $s3_key, '', $cache_control );
 
-        $s3_key = '';
-        if ( strpos( $file_norm, $content_dir ) === 0 ) {
-            $rel    = ltrim( substr( $file_norm, strlen( $content_dir ) ), '/' );
-            $s3_key = 'wp-content/' . $rel;
-        } elseif ( ! empty( $abs_dir ) && strpos( $file_norm, $abs_dir ) === 0 ) {
-            $s3_key = ltrim( substr( $file_norm, strlen( $abs_dir ) ), '/' );
+        if ( $upload_ok ) {
+            self::$uploaded_runtime_cache[ $s3_key ] = $mtime;
+            self::$uploaded_db_cache[ $s3_key ]      = $mtime;
+
+            if ( count( self::$uploaded_db_cache ) > 2000 ) {
+                self::$uploaded_db_cache = array_slice( self::$uploaded_db_cache, -1500, null, true );
+            }
+
+            update_option( 'uwb_cdn_uploaded_assets', self::$uploaded_db_cache, false );
         }
 
-        if ( ! empty( $s3_key ) ) {
-            $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
-            return $s3_client->put_object( $file_path, $s3_key, '', $cache_control );
-        }
-
-        return false;
+        return $upload_ok;
     }
 
     public static function purge_cache_files_from_cdn() {
