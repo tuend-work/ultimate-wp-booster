@@ -942,15 +942,14 @@ class CDNSubscriber implements Subscriber_Interface {
                         injectUwbCloudBadge: function() {
                             var model = this.model.toJSON();
                             var $el   = this.$el;
-                            if ($el.find('.uwb-cloud-icon-badge').length) return;
+                            if ($el.find('.uwb-cloud-icon-btn').length) return;
 
                             var isOffloaded = model.uwb_offloaded;
-                            var badgeClass  = isOffloaded ? 'is-offloaded' : 'not-offloaded';
-                            var iconColor   = isOffloaded ? '#0284c7' : '#64748b';
+                            var iconColor   = isOffloaded ? '#0284c7' : '#94a3b8';
                             var fillColor   = isOffloaded ? '#0284c7' : 'none';
 
-                            var $badge = $('<div class="uwb-cloud-icon-badge ' + badgeClass + '" title="' + (isOffloaded ? '☁️ Synced to S3 CDN' : '☁️ Not Synced') + '">' +
-                                '<svg width="14" height="14" viewBox="0 0 24 24" fill="' + fillColor + '" stroke="' + iconColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>' +
+                            var $badge = $('<div class="uwb-cloud-icon-btn ' + (isOffloaded ? 'is-offloaded' : 'not-offloaded') + '" title="' + (isOffloaded ? '☁️ Synced to S3 CDN' : '☁️ Not Synced') + '">' +
+                                '<svg width="18" height="18" viewBox="0 0 24 24" fill="' + fillColor + '" stroke="' + iconColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>' +
                             '</div>');
 
                             $badge.data('att-data', model);
@@ -962,7 +961,7 @@ class CDNSubscriber implements Subscriber_Interface {
 
             var hideTimer = null;
 
-            $(document).on('mouseenter', '.uwb-cloud-icon-badge, .uwb-cloud-list-icon', function(e) {
+            $(document).on('mouseenter', '.uwb-cloud-icon-btn, .uwb-cloud-list-icon', function(e) {
                 clearTimeout(hideTimer);
                 var $icon = $(this);
                 var rawData = $icon.data('att-data');
@@ -975,11 +974,11 @@ class CDNSubscriber implements Subscriber_Interface {
                 var provider    = data.uwb_provider || 'cloudflare';
                 var bucket      = data.uwb_bucket || 'cdn-bucket';
                 var path        = data.uwb_s3_key || '';
-                var cacheCtrl   = data.uwb_cache_control || 'public, max-age=31536000';
+                var cacheCtrl   = data.uwb_cache_control || 'public,max-age=2592000';
                 var isOffloaded = data.uwb_offloaded;
                 var id          = data.id || data.ID;
                 var cdnDomain   = data.uwb_cdn_domain ? data.uwb_cdn_domain.replace(/\/$/, '') : '';
-                var storageUrl  = isOffloaded && cdnDomain && path ? (cdnDomain + '/' + path) : '';
+                var storageUrl  = isOffloaded && cdnDomain && path ? (cdnDomain + '/' + path) : (data.url || '');
                 var publicUrl   = data.url || data.link || '';
 
                 var badgesHtml = '';
@@ -993,57 +992,69 @@ class CDNSubscriber implements Subscriber_Interface {
                     badgesHtml += '<span class="uwb-pop-badge bg-slate">📁 Local Kept</span> ';
                 }
 
-                var actionsHtml = '<button type="button" class="button button-small btn-uwb-opt-single" data-id="' + id + '" style="font-size:11px; font-weight:600; color:#0284c7; border-color:#0284c7;">⚡ Optimize</button> ' +
-                                  '<button type="button" class="button button-small btn-uwb-upload-s3-single" data-id="' + id + '" style="font-size:11px; font-weight:600; color:#16a34a; border-color:#16a34a;">☁️ Sync S3</button> ';
+                var actionsHtml = '<button type="button" class="button button-small btn-uwb-opt-single" data-id="' + id + '" style="font-size:11px; font-weight:700; color:#0284c7; border-color:#0284c7;">⚡ Optimize</button> ' +
+                                  '<button type="button" class="button button-small btn-uwb-upload-s3-single" data-id="' + id + '" style="font-size:11px; font-weight:700; color:#16a34a; border-color:#16a34a;">☁️ Sync S3</button> ';
 
                 if (data.uwb_local_deleted && isOffloaded) {
-                    actionsHtml += '<button type="button" class="button button-small btn-uwb-download-local-single" data-id="' + id + '" style="font-size:11px; font-weight:600; color:#d97706; border-color:#d97706;">📥 Get Local</button> ';
+                    actionsHtml += '<button type="button" class="button button-small btn-uwb-download-local-single" data-id="' + id + '" style="font-size:11px; font-weight:700; color:#d97706; border-color:#d97706;">📥 Get Local</button> ';
                 }
                 if (data.uwb_has_bak) {
-                    actionsHtml += '<button type="button" class="button button-small btn-uwb-restore-single" data-id="' + id + '" style="font-size:11px; font-weight:600; color:#dc2626; border-color:#dc2626;">↺ Restore</button> ';
-                }
-
-                var linkButtons = '';
-                if (storageUrl) {
-                    linkButtons += '<a href="' + storageUrl + '" target="_blank" class="button button-small" style="font-size:10.5px; margin-right:4px; font-weight:600;"><span class="dashicons dashicons-external" style="font-size:12px; vertical-align:middle;"></span> STORAGE URL</a>';
-                }
-                if (publicUrl) {
-                    linkButtons += '<a href="' + publicUrl + '" target="_blank" class="button button-small" style="font-size:10.5px; font-weight:600;"><span class="dashicons dashicons-external" style="font-size:12px; vertical-align:middle;"></span> PUBLIC URL</a>';
+                    actionsHtml += '<button type="button" class="button button-small btn-uwb-restore-single" data-id="' + id + '" style="font-size:11px; font-weight:700; color:#dc2626; border-color:#dc2626;">↺ Restore</button> ';
                 }
 
                 var popoverHtml = '<div class="uwb-storage-info-popover">' +
-                    '<div style="font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:10px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">STORAGE INFO</div>' +
-                    '<div style="display:grid; grid-template-columns:105px 1fr; gap:6px 10px; margin-bottom:10px; font-size:11px;">' +
-                        '<div style="font-weight:700; color:#64748b;">TYPE</div><div style="font-weight:600; word-break:break-all;">' + type + '</div>' +
-                        '<div style="font-weight:700; color:#64748b;">STORAGE SERVICE</div><div style="font-weight:600;">' + provider + '</div>' +
-                        '<div style="font-weight:700; color:#64748b;">BUCKET</div><div style="font-weight:600; word-break:break-all;">' + bucket + '</div>' +
-                        '<div style="font-weight:700; color:#64748b;">PATH</div><div style="font-weight:600; word-break:break-all; font-family:monospace; font-size:10px; color:#334155;">' + path + '</div>' +
-                        '<div style="font-weight:700; color:#64748b;">CACHE-CONTROL</div><div style="font-weight:600; font-family:monospace; font-size:10px;">' + cacheCtrl + '</div>' +
+                    '<div class="uwb-pop-arrow"></div>' +
+                    '<div class="uwb-pop-header">STORAGE INFO</div>' +
+                    '<div class="uwb-pop-body">' +
+                        '<div class="uwb-pop-field"><div class="uwb-pop-label">TYPE</div><div class="uwb-pop-val">' + type + '</div></div>' +
+                        '<div class="uwb-pop-field"><div class="uwb-pop-label">STORAGE SERVICE</div><div class="uwb-pop-val">' + provider + '</div></div>' +
+                        '<div class="uwb-pop-field"><div class="uwb-pop-label">BUCKET</div><div class="uwb-pop-val">' + bucket + '</div></div>' +
+                        '<div class="uwb-pop-field"><div class="uwb-pop-label">PATH</div><div class="uwb-pop-val">' + path + '</div></div>' +
+                        '<div class="uwb-pop-field"><div class="uwb-pop-label">ACCESS</div><div class="uwb-pop-val">public-read</div></div>' +
+                        '<div class="uwb-pop-field"><div class="uwb-pop-label">CACHE-CONTROL</div><div class="uwb-pop-val">' + cacheCtrl + '</div></div>' +
+                        '<div class="uwb-pop-field"><div class="uwb-pop-label">EXPIRES</div><div class="uwb-pop-val">None</div></div>' +
+                        '<div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:4px;">' + badgesHtml + '</div>' +
+                        '<div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;">' + actionsHtml + '</div>' +
+                        '<div class="uwb-pop-footer-links">' +
+                            '<a href="' + storageUrl + '" target="_blank"><span class="dashicons dashicons-external" style="font-size:13px; line-height:16px;"></span> STORAGE URL</a>' +
+                            '<a href="' + publicUrl + '" target="_blank"><span class="dashicons dashicons-external" style="font-size:13px; line-height:16px;"></span> PUBLIC URL</a>' +
+                        '</div>' +
                     '</div>' +
-                    '<div style="margin-bottom:10px; display:flex; flex-wrap:wrap; gap:4px;">' + badgesHtml + '</div>' +
-                    '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; border-top:1px solid #f1f5f9; padding-top:8px;">' + actionsHtml + '</div>' +
-                    (linkButtons ? '<div style="margin-top:8px; border-top:1px dashed #e2e8f0; padding-top:8px;">' + linkButtons + '</div>' : '') +
                 '</div>';
 
                 var $popover = $(popoverHtml);
                 $('body').append($popover);
 
-                var offset = $icon.offset();
-                var top    = offset.top - $popover.outerHeight() - 8;
-                var left   = offset.left - 140;
+                var iconOffset = $icon.offset();
+                var iconWidth  = $icon.outerWidth();
+                var iconHeight = $icon.outerHeight();
+                var popWidth   = $popover.outerWidth();
+                var popHeight  = $popover.outerHeight();
+                var winWidth   = $(window).width();
+                var winScrollT = $(window).scrollTop();
 
-                if (top < $(window).scrollTop() + 10) {
-                    top = offset.top + $icon.outerHeight() + 8;
+                var top  = iconOffset.top - 18;
+                var left = iconOffset.left + iconWidth + 12;
+                var arrowClass = 'arrow-left';
+
+                if (left + popWidth > winWidth - 10) {
+                    left = iconOffset.left - popWidth - 12;
+                    arrowClass = 'arrow-right';
                 }
-                if (left < 10) left = 10;
-                if (left + 340 > $(window).width()) left = $(window).width() - 350;
+                if (top + popHeight > winScrollT + $(window).height() - 10) {
+                    top = winScrollT + $(window).height() - popHeight - 10;
+                }
+                if (top < winScrollT + 10) {
+                    top = winScrollT + 10;
+                }
 
+                $popover.find('.uwb-pop-arrow').addClass(arrowClass);
                 $popover.css({ top: top + 'px', left: left + 'px' });
             });
 
-            $(document).on('mouseleave', '.uwb-cloud-icon-badge, .uwb-cloud-list-icon, .uwb-storage-info-popover', function() {
+            $(document).on('mouseleave', '.uwb-cloud-icon-btn, .uwb-cloud-list-icon, .uwb-storage-info-popover', function() {
                 hideTimer = setTimeout(function() {
-                    if (!$('.uwb-storage-info-popover:hover').length && !$('.uwb-cloud-icon-badge:hover').length && !$('.uwb-cloud-list-icon:hover').length) {
+                    if (!$('.uwb-storage-info-popover:hover').length && !$('.uwb-cloud-icon-btn:hover').length && !$('.uwb-cloud-list-icon:hover').length) {
                         $('.uwb-storage-info-popover').remove();
                     }
                 }, 200);
@@ -1054,52 +1065,120 @@ class CDNSubscriber implements Subscriber_Interface {
         });
         </script>
         <style id="uwb-cloud-badge-css">
-        .uwb-cloud-icon-badge {
+        .uwb-cloud-icon-btn {
             position: absolute;
             bottom: 6px;
             right: 6px;
-            z-index: 10;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
+            z-index: 20;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+            padding: 2px;
+            border-radius: 4px;
+            transition: transform 0.15s ease;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(2px);
         }
-        .uwb-cloud-icon-badge.is-offloaded {
-            background: #e0f2fe;
-            border: 1.5px solid #0284c7;
-            color: #0284c7;
-        }
-        .uwb-cloud-icon-badge.not-offloaded {
+        .uwb-cloud-icon-btn:hover {
+            transform: scale(1.2);
             background: #ffffff;
-            border: 1.5px solid #94a3b8;
-            color: #94a3b8;
-        }
-        .uwb-cloud-icon-badge:hover {
-            transform: scale(1.15);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.25);
         }
         .uwb-storage-info-popover {
             position: absolute;
             z-index: 999999;
             background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25), 0 8px 10px -6px rgba(0,0,0,0.12);
-            width: 330px;
-            padding: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+            width: 320px;
+            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-size: 12px;
-            color: #1e293b;
-            animation: uwbFadeIn 0.15s ease-out;
+            color: #111827;
+            animation: uwbPopIn 0.15s ease-out;
         }
-        @keyframes uwbFadeIn {
-            from { opacity: 0; transform: translateY(-4px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes uwbPopIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .uwb-pop-header {
+            background: #e5e7eb;
+            color: #374151;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            padding: 8px 14px;
+            border-top-left-radius: 7px;
+            border-top-right-radius: 7px;
+            border-bottom: 1px solid #d1d5db;
+        }
+        .uwb-pop-body {
+            padding: 12px 14px 14px 14px;
+        }
+        .uwb-pop-field {
+            margin-bottom: 8px;
+        }
+        .uwb-pop-label {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+        .uwb-pop-val {
+            font-size: 12px;
+            color: #4b5563;
+            word-break: break-all;
+            line-height: 1.3;
+        }
+        .uwb-pop-footer-links {
+            background: #ececec;
+            border-radius: 8px;
+            padding: 8px;
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+        }
+        .uwb-pop-footer-links a {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #1f2937;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition: background 0.15s ease;
+        }
+        .uwb-pop-footer-links a:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+            color: #000000;
+        }
+        .uwb-pop-arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        .uwb-pop-arrow.arrow-left {
+            top: 16px;
+            left: -8px;
+            border-width: 7px 8px 7px 0;
+            border-color: transparent #e5e7eb transparent transparent;
+        }
+        .uwb-pop-arrow.arrow-right {
+            top: 16px;
+            right: -8px;
+            border-width: 7px 0 7px 8px;
+            border-color: transparent transparent transparent #e5e7eb;
         }
         .uwb-pop-badge {
             padding: 2px 7px;
