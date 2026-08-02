@@ -609,6 +609,16 @@ function uwb_advanced_cache_shutdown() {
         }
     }
 
+    if ( function_exists( 'current_user_can' ) && current_user_can( 'manage_options' ) ) {
+        $should_cache = false;
+        if ( empty( $shutdown_bypass_reason ) ) {
+            $shutdown_bypass_reason = 'Logged-in Administrator (manage_options)';
+        }
+        if ( $debug ) {
+            error_log( "UWB: Caching bypassed: Logged-in Administrator detected." );
+        }
+    }
+
     $cache_file = isset( $GLOBALS['uwb_cache_file'] ) ? $GLOBALS['uwb_cache_file'] : '';
     $cache_dir  = isset( $GLOBALS['uwb_cache_dir'] ) ? $GLOBALS['uwb_cache_dir'] : '';
 
