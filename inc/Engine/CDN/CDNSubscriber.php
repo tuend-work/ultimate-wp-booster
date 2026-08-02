@@ -26,6 +26,7 @@ class CDNSubscriber implements Subscriber_Interface {
             'admin_footer'                    => 'print_attachment_modal_script',
             'manage_media_columns'            => 'add_media_columns',
             'manage_media_custom_column'      => array( 'render_media_column', 10, 2 ),
+            'wp_prepare_attachment_for_js'    => array( 'prepare_attachment_for_js', 10, 3 ),
         );
     }
 
@@ -348,13 +349,73 @@ class CDNSubscriber implements Subscriber_Interface {
         return $columns;
     }
 
+    public function prepare_attachment_data( $post_id ) {
+        $post          = get_post( $post_id );
+        $offloaded     = CDNManager::is_attachment_offloaded( $post_id );
+        $local_deleted = CDNManager::is_local_deleted( $post_id );
+        $s3_key        = CDNManager::get_attachment_s3_key( $post_id );
+        $file          = get_attached_file( $post_id );
+
+        return array(
+            'id'                 => $post_id,
+            'ID'                 => $post_id,
+            'mime'               => $post ? $post->post_mime_type : 'image',
+            'url'                => wp_get_attachment_url( $post_id ),
+            'link'               => get_attachment_link( $post_id ),
+            'uwb_offloaded'      => $offloaded,
+            'uwb_local_deleted'  => $local_deleted,
+            'uwb_s3_key'         => $s3_key ? $s3_key : ( $file ? 'wp-content/uploads/' . _wp_relative_upload_path( $file ) : '' ),
+            'uwb_compressed'     => ( 'compressed' === get_post_meta( $post_id, '_uwb_img_compress_status', true ) ),
+            'uwb_webp'           => ( 'converted' === get_post_meta( $post_id, '_uwb_img_convert_webp_status', true ) ),
+            'uwb_avif'           => ( 'converted' === get_post_meta( $post_id, '_uwb_img_convert_avif_status', true ) ),
+            'uwb_has_bak'        => ( $file && file_exists( $file . '.bak' ) ),
+            'uwb_bucket'         => get_option( 'uwb_cdn_bucket', '' ),
+            'uwb_provider'       => get_option( 'uwb_cdn_provider', 'cloudflare_r2' ),
+            'uwb_cdn_domain'     => get_option( 'uwb_cdn_custom_domain', '' ),
+            'uwb_cache_control'  => get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' ),
+        );
+    }
+
+    public function prepare_attachment_for_js( $response, $attachment, $meta ) {
+        if ( ! is_object( $attachment ) ) {
+            return $response;
+        }
+
+        $data = $this->prepare_attachment_data( $attachment->ID );
+        foreach ( $data as $k => $v ) {
+            $response[ $k ] = $v;
+        }
+
+        return $response;
+    }
+
     public function render_media_column( $column_name, $post_id ) {
         if ( $column_name !== 'uwb_cdn' ) {
             return;
         }
-        $output = '<div style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">';
-        $has_badge = false;
 
+        $offloaded   = CDNManager::is_attachment_offloaded( $post_id );
+        $icon_color  = $offloaded ? '#0284c7' : '#64748b';
+        $fill_color  = $offloaded ? '#0284c7' : 'none';
+        $bg_color    = $offloaded ? '#e0f2fe' : '#f1f5f9';
+        $border_col  = $offloaded ? '#7dd3fc' : '#cbd5e1';
+        $data_json   = esc_attr( wp_json_encode( $this->prepare_attachment_data( $post_id ) ) );
+
+        $output  = '<div style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">';
+
+        $output .= sprintf(
+            '<div class="uwb-cloud-list-icon" data-att-data="%s" style="cursor:pointer; background:%s; border:1px solid %s; border-radius:50%%; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; margin-right:4px;" title="%s">' .
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="%s" stroke="%s" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>' .
+            '</div>',
+            $data_json,
+            $bg_color,
+            $border_col,
+            $offloaded ? '☁️ Synced to S3 CDN' : '☁️ Not Synced',
+            $fill_color,
+            $icon_color
+        );
+
+        $has_badge = false;
         $comp_status = get_post_meta( $post_id, '_uwb_img_compress_status', true );
         $webp_status = get_post_meta( $post_id, '_uwb_img_convert_webp_status', true );
         $avif_status = get_post_meta( $post_id, '_uwb_img_convert_avif_status', true );
@@ -370,7 +431,7 @@ class CDNSubscriber implements Subscriber_Interface {
             $has_badge = true;
         }
 
-        if ( CDNManager::is_attachment_offloaded( $post_id ) ) {
+        if ( $offloaded ) {
             $s3_key        = get_post_meta( $post_id, '_uwb_s3_key', true );
             $timestamp     = get_post_meta( $post_id, '_uwb_s3_uploaded', true );
             $date          = $timestamp ? date_i18n( 'd/m/Y H:i', $timestamp ) : '';
@@ -393,11 +454,7 @@ class CDNSubscriber implements Subscriber_Interface {
 
         $output .= '</div>';
 
-        if ( $has_badge ) {
-            echo $output;
-        } else {
-            echo '<span style="color:#94a3b8; font-size:12px;">—</span>';
-        }
+        echo $output;
     }
 
     // -------------------------------------------------------------------------
@@ -872,13 +929,192 @@ class CDNSubscriber implements Subscriber_Interface {
                             $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Restore failed'));
                         }
                     }
-                }).fail(function() {
-                    alert('AJAX error occurred.');
-                    $btn.css('pointer-events', 'auto').text(oldText);
-                });
+            // 5. Backbone Grid View Cloud Badge Decoration & Hover Popover
+            if (typeof wp !== 'undefined' && wp.media && wp.media.view && wp.media.view.Attachment) {
+                var OldLibrary = wp.media.view.Attachment.Library;
+                if (OldLibrary) {
+                    wp.media.view.Attachment.Library = OldLibrary.extend({
+                        render: function() {
+                            OldLibrary.prototype.render.apply(this, arguments);
+                            this.injectUwbCloudBadge();
+                            return this;
+                        },
+                        injectUwbCloudBadge: function() {
+                            var model = this.model.toJSON();
+                            var $el   = this.$el;
+                            if ($el.find('.uwb-cloud-icon-badge').length) return;
+
+                            var isOffloaded = model.uwb_offloaded;
+                            var badgeClass  = isOffloaded ? 'is-offloaded' : 'not-offloaded';
+                            var iconColor   = isOffloaded ? '#0284c7' : '#64748b';
+                            var fillColor   = isOffloaded ? '#0284c7' : 'none';
+
+                            var $badge = $('<div class="uwb-cloud-icon-badge ' + badgeClass + '" title="' + (isOffloaded ? '☁️ Synced to S3 CDN' : '☁️ Not Synced') + '">' +
+                                '<svg width="14" height="14" viewBox="0 0 24 24" fill="' + fillColor + '" stroke="' + iconColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>' +
+                            '</div>');
+
+                            $badge.data('att-data', model);
+                            $el.css('position', 'relative').find('.attachment-preview').append($badge);
+                        }
+                    });
+                }
+            }
+
+            var hideTimer = null;
+
+            $(document).on('mouseenter', '.uwb-cloud-icon-badge, .uwb-cloud-list-icon', function(e) {
+                clearTimeout(hideTimer);
+                var $icon = $(this);
+                var rawData = $icon.data('att-data');
+                var data = (typeof rawData === 'string') ? JSON.parse(rawData) : rawData;
+                if (!data) return;
+
+                $('.uwb-storage-info-popover').remove();
+
+                var type        = data.mime || data.subtype || 'image';
+                var provider    = data.uwb_provider || 'cloudflare';
+                var bucket      = data.uwb_bucket || 'cdn-bucket';
+                var path        = data.uwb_s3_key || '';
+                var cacheCtrl   = data.uwb_cache_control || 'public, max-age=31536000';
+                var isOffloaded = data.uwb_offloaded;
+                var id          = data.id || data.ID;
+                var cdnDomain   = data.uwb_cdn_domain ? data.uwb_cdn_domain.replace(/\/$/, '') : '';
+                var storageUrl  = isOffloaded && cdnDomain && path ? (cdnDomain + '/' + path) : '';
+                var publicUrl   = data.url || data.link || '';
+
+                var badgesHtml = '';
+                if (data.uwb_webp)       badgesHtml += '<span class="uwb-pop-badge bg-amber">⚡ WEBP</span> ';
+                if (data.uwb_avif)       badgesHtml += '<span class="uwb-pop-badge bg-purple">⚡ AVIF</span> ';
+                if (data.uwb_compressed) badgesHtml += '<span class="uwb-pop-badge bg-blue">⚡ COMPRESSED</span> ';
+                if (isOffloaded)         badgesHtml += '<span class="uwb-pop-badge bg-green">☁️ S3 CDN</span> ';
+                if (data.uwb_local_deleted) {
+                    badgesHtml += '<span class="uwb-pop-badge bg-red">🗑️ Local Removed</span> ';
+                } else {
+                    badgesHtml += '<span class="uwb-pop-badge bg-slate">📁 Local Kept</span> ';
+                }
+
+                var actionsHtml = '<button type="button" class="button button-small btn-uwb-opt-single" data-id="' + id + '" style="font-size:11px; font-weight:600; color:#0284c7; border-color:#0284c7;">⚡ Optimize</button> ' +
+                                  '<button type="button" class="button button-small btn-uwb-upload-s3-single" data-id="' + id + '" style="font-size:11px; font-weight:600; color:#16a34a; border-color:#16a34a;">☁️ Sync S3</button> ';
+
+                if (data.uwb_local_deleted && isOffloaded) {
+                    actionsHtml += '<button type="button" class="button button-small btn-uwb-download-local-single" data-id="' + id + '" style="font-size:11px; font-weight:600; color:#d97706; border-color:#d97706;">📥 Get Local</button> ';
+                }
+                if (data.uwb_has_bak) {
+                    actionsHtml += '<button type="button" class="button button-small btn-uwb-restore-single" data-id="' + id + '" style="font-size:11px; font-weight:600; color:#dc2626; border-color:#dc2626;">↺ Restore</button> ';
+                }
+
+                var linkButtons = '';
+                if (storageUrl) {
+                    linkButtons += '<a href="' + storageUrl + '" target="_blank" class="button button-small" style="font-size:10.5px; margin-right:4px; font-weight:600;"><span class="dashicons dashicons-external" style="font-size:12px; vertical-align:middle;"></span> STORAGE URL</a>';
+                }
+                if (publicUrl) {
+                    linkButtons += '<a href="' + publicUrl + '" target="_blank" class="button button-small" style="font-size:10.5px; font-weight:600;"><span class="dashicons dashicons-external" style="font-size:12px; vertical-align:middle;"></span> PUBLIC URL</a>';
+                }
+
+                var popoverHtml = '<div class="uwb-storage-info-popover">' +
+                    '<div style="font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:10px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">STORAGE INFO</div>' +
+                    '<div style="display:grid; grid-template-columns:105px 1fr; gap:6px 10px; margin-bottom:10px; font-size:11px;">' +
+                        '<div style="font-weight:700; color:#64748b;">TYPE</div><div style="font-weight:600; word-break:break-all;">' + type + '</div>' +
+                        '<div style="font-weight:700; color:#64748b;">STORAGE SERVICE</div><div style="font-weight:600;">' + provider + '</div>' +
+                        '<div style="font-weight:700; color:#64748b;">BUCKET</div><div style="font-weight:600; word-break:break-all;">' + bucket + '</div>' +
+                        '<div style="font-weight:700; color:#64748b;">PATH</div><div style="font-weight:600; word-break:break-all; font-family:monospace; font-size:10px; color:#334155;">' + path + '</div>' +
+                        '<div style="font-weight:700; color:#64748b;">CACHE-CONTROL</div><div style="font-weight:600; font-family:monospace; font-size:10px;">' + cacheCtrl + '</div>' +
+                    '</div>' +
+                    '<div style="margin-bottom:10px; display:flex; flex-wrap:wrap; gap:4px;">' + badgesHtml + '</div>' +
+                    '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; border-top:1px solid #f1f5f9; padding-top:8px;">' + actionsHtml + '</div>' +
+                    (linkButtons ? '<div style="margin-top:8px; border-top:1px dashed #e2e8f0; padding-top:8px;">' + linkButtons + '</div>' : '') +
+                '</div>';
+
+                var $popover = $(popoverHtml);
+                $('body').append($popover);
+
+                var offset = $icon.offset();
+                var top    = offset.top - $popover.outerHeight() - 8;
+                var left   = offset.left - 140;
+
+                if (top < $(window).scrollTop() + 10) {
+                    top = offset.top + $icon.outerHeight() + 8;
+                }
+                if (left < 10) left = 10;
+                if (left + 340 > $(window).width()) left = $(window).width() - 350;
+
+                $popover.css({ top: top + 'px', left: left + 'px' });
+            });
+
+            $(document).on('mouseleave', '.uwb-cloud-icon-badge, .uwb-cloud-list-icon, .uwb-storage-info-popover', function() {
+                hideTimer = setTimeout(function() {
+                    if (!$('.uwb-storage-info-popover:hover').length && !$('.uwb-cloud-icon-badge:hover').length && !$('.uwb-cloud-list-icon:hover').length) {
+                        $('.uwb-storage-info-popover').remove();
+                    }
+                }, 200);
+            });
+            $(document).on('mouseenter', '.uwb-storage-info-popover', function() {
+                clearTimeout(hideTimer);
             });
         });
         </script>
+        <style id="uwb-cloud-badge-css">
+        .uwb-cloud-icon-badge {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            z-index: 10;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+        }
+        .uwb-cloud-icon-badge.is-offloaded {
+            background: #e0f2fe;
+            border: 1.5px solid #0284c7;
+            color: #0284c7;
+        }
+        .uwb-cloud-icon-badge.not-offloaded {
+            background: #ffffff;
+            border: 1.5px solid #94a3b8;
+            color: #94a3b8;
+        }
+        .uwb-cloud-icon-badge:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+        }
+        .uwb-storage-info-popover {
+            position: absolute;
+            z-index: 999999;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25), 0 8px 10px -6px rgba(0,0,0,0.12);
+            width: 330px;
+            padding: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 12px;
+            color: #1e293b;
+            animation: uwbFadeIn 0.15s ease-out;
+        }
+        @keyframes uwbFadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .uwb-pop-badge {
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 10.5px;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .uwb-pop-badge.bg-blue { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+        .uwb-pop-badge.bg-amber { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .uwb-pop-badge.bg-purple { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+        .uwb-pop-badge.bg-green { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .uwb-pop-badge.bg-red { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .uwb-pop-badge.bg-slate { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        </style>
         <?php
     }
 }
