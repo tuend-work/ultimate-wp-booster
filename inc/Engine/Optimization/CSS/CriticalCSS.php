@@ -173,34 +173,82 @@ class CriticalCSS {
      * Handle AJAX endpoint to save Client-Side Extractor payload and update Static HTML cache file
      */
     public static function ajax_save_critical_css() {
-        $url_hash = isset( $_POST['url_hash'] ) ? sanitize_text_field( $_POST['url_hash'] ) : '';
-        $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
-        $css_raw = isset( $_POST['critical_css'] ) ? (string) $_POST['critical_css'] : '';
+        $url_hash = isset( $_POST['url_hash'] ) ? (string) $_POST['url_hash'] : '';
+        $nonce    = isset( $_POST['nonce'] ) ? (string) $_POST['nonce'] : '';
+        $css_raw  = isset( $_POST['critical_css'] ) ? (string) $_POST['critical_css'] : '';
 
-        if ( empty( $url_hash ) || empty( $css_raw ) ) {
-            wp_send_json_error( array( 'message' => 'Invalid parameters' ) );
+        // 1. Strict MD5 Hex Validation (Prevents Path Traversal)
+        if ( empty( $url_hash ) || ! preg_match( '/^[a-f0-9]{32}$/i', $url_hash ) ) {
+            wp_send_json_error( array( 'message' => 'Invalid url_hash format' ) );
         }
 
+        // 2. Strict Nonce Verification
         if ( ! wp_verify_nonce( $nonce, 'uwb_crit_nonce_' . $url_hash ) ) {
             wp_send_json_error( array( 'message' => 'Nonce verification failed' ) );
         }
 
-        // Minify CSS payload
-        $minified_css = self::minify_css( $css_raw );
+        if ( empty( trim( $css_raw ) ) ) {
+            wp_send_json_error( array( 'message' => 'Empty CSS payload' ) );
+        }
 
-        // Save to cache dir
+        // 3. Payload Size Limit (Max 300KB)
+        if ( strlen( $css_raw ) > 307200 ) {
+            $css_raw = substr( $css_raw, 0, 307200 );
+        }
+
+        // 4. Strict CSS Sanitization & Anti-XSS / Anti-PHP Injection
+        $sanitized_css = self::sanitize_critical_css( $css_raw );
+        if ( empty( $sanitized_css ) ) {
+            wp_send_json_error( array( 'message' => 'Invalid CSS content' ) );
+        }
+
+        // 5. Minify CSS payload
+        $minified_css = self::minify_css( $sanitized_css );
+
+        // 6. Save to cache directory securely
         $cache_dir = self::get_cache_dir();
         if ( ! is_dir( $cache_dir ) ) {
             @wp_mkdir_p( $cache_dir );
         }
 
-        $cache_file = $cache_dir . $url_hash . '.css';
-        @file_put_contents( $cache_file, $minified_css );
+        $target_file = $cache_dir . $url_hash . '.css';
+        @file_put_contents( $target_file, $minified_css );
 
-        // Update static HTML cache files if present in wp-content/cache/wp-rocket/
+        // 7. Update static HTML cache files safely
         self::update_static_html_cache_files( $minified_css );
 
-        wp_send_json_success( array( 'message' => 'Critical CSS saved successfully', 'bytes' => strlen( $minified_css ) ) );
+        wp_send_json_success( array( 'message' => 'Critical CSS saved securely', 'bytes' => strlen( $minified_css ) ) );
+    }
+
+    /**
+     * Sanitize Critical CSS payload to prevent Stored XSS, HTML Injection, or PHP execution
+     *
+     * @param string $css
+     * @return string
+     */
+    public static function sanitize_critical_css( $css ) {
+        if ( empty( $css ) ) {
+            return '';
+        }
+
+        // Strip any HTML tags (<script>, <iframe>, <style>, etc.)
+        $css = wp_strip_all_tags( $css );
+
+        // Remove PHP tags
+        $css = preg_replace( '/<\?php|<\?|\?>/i', '', $css );
+
+        // Disallow dangerous CSS functions & expressions
+        $dangerous_patterns = array(
+            '/javascript\s*:/i',
+            '/expression\s*\(/i',
+            '/behavior\s*:/i',
+            '/-moz-binding\s*:/i',
+            '/@import\b/i',
+            '/url\s*\(\s*["\']?\s*data\s*:\s*text\/html/i',
+        );
+        $css = preg_replace( $dangerous_patterns, '', $css );
+
+        return trim( $css );
     }
 
     /**
