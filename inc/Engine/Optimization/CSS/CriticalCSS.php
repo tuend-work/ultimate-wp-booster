@@ -269,8 +269,30 @@ class CriticalCSS {
         $style_replacement = '<style id="uwb-critical-css">' . trim( $critical_css ) . '</style>';
         $empty_placeholder = '<style id="uwb-critical-css"></style>';
 
-        $html_files = glob( $wp_rocket_dir . '/*/*/index*.html' );
-        if ( is_array( $html_files ) ) {
+        try {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator( $wp_rocket_dir, \RecursiveDirectoryIterator::SKIP_DOTS ),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+
+            foreach ( $iterator as $item ) {
+                if ( $item->isFile() && ( strpos( $item->getFilename(), 'index' ) === 0 && strpos( $item->getFilename(), '.html' ) !== false ) ) {
+                    $f = $item->getPathname();
+                    if ( filesize( $f ) > 100 ) {
+                        $content = @file_get_contents( $f );
+                        if ( strpos( $content, $empty_placeholder ) !== false ) {
+                            $content = str_replace( $empty_placeholder, $style_replacement, $content );
+                            @file_put_contents( $f, $content );
+                        }
+                    }
+                }
+            }
+        } catch ( \Exception $e ) {
+            $html_files = array_merge(
+                glob( $wp_rocket_dir . '/*/index*.html' ) ?: array(),
+                glob( $wp_rocket_dir . '/*/*/index*.html' ) ?: array(),
+                glob( $wp_rocket_dir . '/*/*/*/index*.html' ) ?: array()
+            );
             foreach ( $html_files as $f ) {
                 if ( file_exists( $f ) && filesize( $f ) > 100 ) {
                     $content = @file_get_contents( $f );
