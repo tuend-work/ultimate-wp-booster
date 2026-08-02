@@ -324,9 +324,7 @@ class JS {
                 if ( $chunk !== false ) {
                     if ( strpos( $chunk, 'webpackChunk' ) !== false ||
                          strpos( $chunk, '__webpack_require__' ) !== false ||
-                         strpos( $chunk, 'document.currentScript.src' ) !== false ||
-                         strpos( $chunk, 'flatsomeChunks' ) !== false ||
-                         strpos( $chunk, 'flatsomeVars' ) !== false ) {
+                         strpos( $chunk, 'document.currentScript.src' ) !== false ) {
                         return true;
                     }
                 }
