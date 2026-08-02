@@ -2918,7 +2918,7 @@ js-(before|after)
                                 $this->render_toggle_switch( 'uwb_media_image_placeholder', 'Use Image Placeholders', 'Use responsive placeholders for lazy loaded images.', true );
                                 $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
                                 $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
-                                $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', 'skip-lazy', 'CSS class names of images or containers to exclude from lazy loading (one per line).' );
+                                $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', "skip-lazy\n.hero-section\nsection.banner-wrap", 'Specify CSS class names or parent container selectors (e.g. <code>skip-lazy</code>, <code>.hero-section</code>, <code>section.banner-wrap</code>, <code>div.no-lazy-container</code>) to exclude all nested images/iframes/videos inside those parent blocks from lazy loading (one per line).' );
                                 ?>
 
                                 <!-- Section: Optimize Image (Compress & Convert WebP/AVIF) -->

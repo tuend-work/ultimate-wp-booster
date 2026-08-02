@@ -19,6 +19,64 @@ class Lazyload {
         return str_get_html( $html );
     }
 
+    private static function get_excluded_parent_hashes( $dom, $class_excludes ) {
+        $excluded_parent_hashes = array();
+        if ( empty( $class_excludes ) || ! is_array( $class_excludes ) ) {
+            return $excluded_parent_hashes;
+        }
+
+        foreach ( $class_excludes as $cx ) {
+            $cx = trim( $cx );
+            if ( empty( $cx ) ) continue;
+
+            $selectors_to_check = array();
+            if ( strpos( $cx, '.' ) !== 0 && strpos( $cx, '#' ) !== 0 && strpos( $cx, '[' ) === false && strpos( $cx, '>' ) === false && preg_match( '/^[a-zA-Z0-9_\-]+$/', $cx ) ) {
+                $selectors_to_check[] = '.' . $cx;
+                $selectors_to_check[] = $cx;
+            } else {
+                $selectors_to_check[] = $cx;
+            }
+
+            foreach ( $selectors_to_check as $sel ) {
+                $found_nodes = $dom->find( $sel );
+                if ( ! empty( $found_nodes ) ) {
+                    foreach ( $found_nodes as $fnode ) {
+                        $excluded_parent_hashes[spl_object_hash( $fnode )] = true;
+                    }
+                }
+            }
+        }
+
+        return $excluded_parent_hashes;
+    }
+
+    private static function is_element_excluded( $node, $class_excludes, $excluded_parent_hashes ) {
+        $class = (string) $node->getAttribute( 'class' );
+
+        // 1. Direct class match on element's own class attribute
+        if ( ! empty( $class ) && ! empty( $class_excludes ) ) {
+            foreach ( $class_excludes as $cx ) {
+                $clean_cx = ltrim( trim( $cx ), '.' );
+                if ( ! empty( $clean_cx ) && stripos( $class, $clean_cx ) !== false ) {
+                    return true;
+                }
+            }
+        }
+
+        // 2. Parent container hierarchy match (section, div, header, container, etc.)
+        if ( ! empty( $excluded_parent_hashes ) ) {
+            $curr = $node->parent;
+            while ( $curr ) {
+                if ( isset( $excluded_parent_hashes[spl_object_hash( $curr )] ) ) {
+                    return true;
+                }
+                $curr = $curr->parent;
+            }
+        }
+
+        return false;
+    }
+
     public static function process_images( $html, $excludes_str = '', $class_excludes_str = '', &$logs = null ) {
         $dom = self::get_dom( $html );
         if ( ! $dom ) {
@@ -27,6 +85,7 @@ class Lazyload {
 
         $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         $class_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $class_excludes_str ) ) ) );
+        $excluded_parent_hashes = self::get_excluded_parent_hashes( $dom, $class_excludes );
 
         $placeholder = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201%201'%3E%3C/svg%3E";
         $lazy_count = 0;
@@ -68,16 +127,8 @@ class Lazyload {
                     continue;
                 }
 
-                // 4. Class Exclusions
-                if ( ! empty( $class ) ) {
-                    foreach ( $class_excludes as $cx ) {
-                        if ( ! empty( $cx ) && stripos( $class, $cx ) !== false ) {
-                            $is_excluded = true;
-                            break;
-                        }
-                    }
-                }
-                if ( $is_excluded ) {
+                // 4. Class & Parent Container Exclusions
+                if ( self::is_element_excluded( $img, $class_excludes, $excluded_parent_hashes ) ) {
                     $skipped_count++;
                     continue;
                 }
@@ -217,17 +268,23 @@ class Lazyload {
         return $processed;
     }
 
-    public static function process_iframes( $html, &$logs = null ) {
+    public static function process_iframes( $html, $class_excludes_str = '', &$logs = null ) {
         $dom = self::get_dom( $html );
         if ( ! $dom ) {
             return $html;
         }
+
+        $class_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $class_excludes_str ) ) ) );
+        $excluded_parent_hashes = self::get_excluded_parent_hashes( $dom, $class_excludes );
 
         $iframe_count = 0;
         $iframes = $dom->find( 'iframe' );
         if ( ! empty( $iframes ) ) {
             foreach ( $iframes as $iframe ) {
                 if ( $iframe->hasAttribute( 'data-src' ) ) {
+                    continue;
+                }
+                if ( self::is_element_excluded( $iframe, $class_excludes, $excluded_parent_hashes ) ) {
                     continue;
                 }
                 $src = (string) $iframe->getAttribute( 'src' );
@@ -297,11 +354,14 @@ class Lazyload {
         return $processed;
     }
 
-    public static function process_videos( $html, &$logs = null ) {
+    public static function process_videos( $html, $class_excludes_str = '', &$logs = null ) {
         $dom = self::get_dom( $html );
         if ( ! $dom ) {
             return $html;
         }
+
+        $class_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $class_excludes_str ) ) ) );
+        $excluded_parent_hashes = self::get_excluded_parent_hashes( $dom, $class_excludes );
 
         $video_count = 0;
         $skipped_count = 0;
@@ -315,7 +375,8 @@ class Lazyload {
                      strpos( $class, 'video-bg' ) !== false ||
                      strpos( $class, 'no-lazy' ) !== false ||
                      strpos( $class, 'skip-lazy' ) !== false ||
-                     $video->hasAttribute( 'data-no-lazy' ) ) {
+                     $video->hasAttribute( 'data-no-lazy' ) ||
+                     self::is_element_excluded( $video, $class_excludes, $excluded_parent_hashes ) ) {
                     $skipped_count++;
                     continue;
                 }

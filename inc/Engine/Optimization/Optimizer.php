@@ -115,8 +115,9 @@ class Optimizer {
 
         // 7. Lazy Load Iframes & HTML5 Videos
         if ( ! empty( $config['media_lazy_load_iframes'] ) ) {
-            $html = Lazyload::process_iframes( $html, $debug_logs );
-            $html = Lazyload::process_videos( $html, $debug_logs );
+            $class_excludes = isset( $config['media_lazy_load_class_excludes'] ) ? $config['media_lazy_load_class_excludes'] : '';
+            $html = Lazyload::process_iframes( $html, $class_excludes, $debug_logs );
+            $html = Lazyload::process_videos( $html, $class_excludes, $debug_logs );
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "Lazy Load Iframes & Videos: Disabled in settings";
         }
