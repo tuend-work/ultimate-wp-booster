@@ -80,6 +80,10 @@ class CriticalCSS {
     window.__uwb_crit_ran = true;
     function extractCritical() {
         try {
+            var styleEl = document.getElementById('uwb-critical-css');
+            if (styleEl && styleEl.textContent && styleEl.textContent.trim().length > 10) {
+                return;
+            }
             var maxVh = window.innerHeight || 900;
             var elements = document.querySelectorAll('header, nav, section, div, h1, h2, h3, a, img, form, p, span, ul, li');
             var topSelectors = new Set(['html', 'body', '*', 'header', 'nav', 'h1', 'h2', 'h3', 'a', 'img', 'p', 'div', 'section', 'ul', 'li']);
@@ -135,7 +139,6 @@ class CriticalCSS {
             }
             var finalCss = rulesExtracted.join('\n');
             if (!finalCss || finalCss.length < 20) return;
-            var styleEl = document.getElementById('uwb-critical-css');
             if (styleEl) styleEl.textContent = finalCss;
             var payload = new FormData();
             payload.append('action', 'uwb_save_critical_css');
@@ -248,9 +251,9 @@ class CriticalCSS {
             return 0;
         }
 
-        $style_replacement = '<style id="uwb-critical-css">' . trim( $critical_css ) . '</style>';
-        $empty_placeholder = '<style id="uwb-critical-css"></style>';
-        $updated_count     = 0;
+        $style_replacement   = '<style id="uwb-critical-css">' . trim( $critical_css ) . '</style>';
+        $placeholder_pattern = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>\s*</style>#is';
+        $updated_count       = 0;
 
         try {
             $iterator = new \RecursiveIteratorIterator(
@@ -263,9 +266,9 @@ class CriticalCSS {
                     $f = $item->getPathname();
                     if ( filesize( $f ) > 100 ) {
                         $content = @file_get_contents( $f );
-                        if ( strpos( $content, $empty_placeholder ) !== false ) {
+                        if ( preg_match( $placeholder_pattern, $content ) || strpos( $content, 'uwb-critical-extractor' ) !== false ) {
                             // 1. Fill Critical CSS into placeholder
-                            $content = str_replace( $empty_placeholder, $style_replacement, $content );
+                            $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
 
                             // 2. Completely REMOVE extractor script tag from static HTML cache
                             $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
@@ -291,8 +294,8 @@ class CriticalCSS {
             foreach ( $html_files as $f ) {
                 if ( file_exists( $f ) && filesize( $f ) > 100 ) {
                     $content = @file_get_contents( $f );
-                    if ( strpos( $content, $empty_placeholder ) !== false ) {
-                        $content = str_replace( $empty_placeholder, $style_replacement, $content );
+                    if ( preg_match( $placeholder_pattern, $content ) || strpos( $content, 'uwb-critical-extractor' ) !== false ) {
+                        $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
                         $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
                         @file_put_contents( $f, $content );
                         $updated_count++;
