@@ -3704,6 +3704,16 @@ js-(before|after)
                 $('.uwb-opt-disabled').toggle(!enabled);
             });
 
+            // Show/hide Lazy Load Elements textareas based on toggle
+            $('input[name="uwb_html_lazy_load_elements_enabled"]').on('change', function() {
+                var val = $('input[name="uwb_html_lazy_load_elements_enabled"]:checked').val();
+                if (val === '1') {
+                    $('#uwb-lazy-elements-textarea-wrap').slideDown();
+                } else {
+                    $('#uwb-lazy-elements-textarea-wrap').slideUp();
+                }
+            });
+
             // CDN Provider switch toggle (Cloudflare R2 vs Other S3)
             $('#uwb_cdn_provider').on('change', function() {
                 var val = $(this).val();
