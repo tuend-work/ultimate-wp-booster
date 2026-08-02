@@ -3,6 +3,8 @@ namespace Ultimate_WP_Booster\Engine\CDN;
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
+class CDNManager {
+
     public static function is_asset_uploaded_to_cdn( $s3_key ) {
         $s3_key = ltrim( str_replace( '\\', '/', $s3_key ), '/' );
         if ( empty( $s3_key ) ) {
