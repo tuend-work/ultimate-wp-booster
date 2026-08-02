@@ -19,59 +19,69 @@ class Lazyload {
         return str_get_html( $html );
     }
 
-    private static function get_excluded_parent_hashes( $dom, $class_excludes ) {
-        $excluded_parent_hashes = array();
+    private static function is_element_excluded( $node, $class_excludes ) {
         if ( empty( $class_excludes ) || ! is_array( $class_excludes ) ) {
-            return $excluded_parent_hashes;
+            return false;
         }
 
-        foreach ( $class_excludes as $cx ) {
-            $cx = trim( $cx );
-            if ( empty( $cx ) ) continue;
-
-            $selectors_to_check = array();
-            if ( strpos( $cx, '.' ) !== 0 && strpos( $cx, '#' ) !== 0 && strpos( $cx, '[' ) === false && strpos( $cx, '>' ) === false && preg_match( '/^[a-zA-Z0-9_\-]+$/', $cx ) ) {
-                $selectors_to_check[] = '.' . $cx;
-                $selectors_to_check[] = $cx;
-            } else {
-                $selectors_to_check[] = $cx;
+        $curr = $node;
+        while ( $curr ) {
+            if ( isset( $curr->nodetype ) && $curr->nodetype !== 1 && $curr->nodetype !== 5 ) {
+                $curr = isset( $curr->parent ) ? $curr->parent : null;
+                continue;
             }
 
-            foreach ( $selectors_to_check as $sel ) {
-                $found_nodes = $dom->find( $sel );
-                if ( ! empty( $found_nodes ) ) {
-                    foreach ( $found_nodes as $fnode ) {
-                        $excluded_parent_hashes[spl_object_hash( $fnode )] = true;
+            $curr_class = (string) $curr->getAttribute( 'class' );
+            $curr_id    = (string) $curr->getAttribute( 'id' );
+            $curr_tag   = strtolower( (string) $curr->tag );
+
+            $curr_classes = ! empty( $curr_class ) ? preg_split( '/\s+/', trim( $curr_class ) ) : array();
+
+            foreach ( $class_excludes as $rule ) {
+                $rule = trim( $rule );
+                if ( empty( $rule ) ) continue;
+
+                // ID rule: #section_531219969
+                if ( strpos( $rule, '#' ) === 0 ) {
+                    $target_id = substr( $rule, 1 );
+                    if ( ! empty( $curr_id ) && $curr_id === $target_id ) {
+                        return true;
+                    }
+                }
+                // Class rule starting with dot: .slider-section
+                elseif ( strpos( $rule, '.' ) === 0 ) {
+                    $target_class = substr( $rule, 1 );
+                    if ( ! empty( $curr_classes ) && in_array( $target_class, $curr_classes, true ) ) {
+                        return true;
+                    }
+                    if ( ! empty( $curr_class ) && stripos( $curr_class, $target_class ) !== false ) {
+                        return true;
+                    }
+                }
+                // Plain rule: slider-section or section or section.slider-section
+                else {
+                    if ( strtolower( $rule ) === $curr_tag ) {
+                        return true;
+                    }
+                    if ( ! empty( $curr_classes ) && in_array( $rule, $curr_classes, true ) ) {
+                        return true;
+                    }
+                    if ( strpos( $rule, '.' ) !== false ) {
+                        $parts = explode( '.', $rule, 2 );
+                        $r_tag = $parts[0];
+                        $r_class = isset($parts[1]) ? $parts[1] : '';
+                        if ( ( empty( $r_tag ) || strtolower( $r_tag ) === $curr_tag ) &&
+                             ( ! empty( $curr_classes ) && in_array( $r_class, $curr_classes, true ) ) ) {
+                            return true;
+                        }
+                    }
+                    if ( ! empty( $curr_class ) && stripos( $curr_class, $rule ) !== false ) {
+                        return true;
                     }
                 }
             }
-        }
 
-        return $excluded_parent_hashes;
-    }
-
-    private static function is_element_excluded( $node, $class_excludes, $excluded_parent_hashes ) {
-        $class = (string) $node->getAttribute( 'class' );
-
-        // 1. Direct class match on element's own class attribute
-        if ( ! empty( $class ) && ! empty( $class_excludes ) ) {
-            foreach ( $class_excludes as $cx ) {
-                $clean_cx = ltrim( trim( $cx ), '.' );
-                if ( ! empty( $clean_cx ) && stripos( $class, $clean_cx ) !== false ) {
-                    return true;
-                }
-            }
-        }
-
-        // 2. Parent container hierarchy match (section, div, header, container, etc.)
-        if ( ! empty( $excluded_parent_hashes ) ) {
-            $curr = $node->parent;
-            while ( $curr ) {
-                if ( isset( $excluded_parent_hashes[spl_object_hash( $curr )] ) ) {
-                    return true;
-                }
-                $curr = $curr->parent;
-            }
+            $curr = isset( $curr->parent ) ? $curr->parent : null;
         }
 
         return false;
@@ -85,7 +95,6 @@ class Lazyload {
 
         $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         $class_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $class_excludes_str ) ) ) );
-        $excluded_parent_hashes = self::get_excluded_parent_hashes( $dom, $class_excludes );
 
         $placeholder = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201%201'%3E%3C/svg%3E";
         $lazy_count = 0;
@@ -128,7 +137,7 @@ class Lazyload {
                 }
 
                 // 4. Class & Parent Container Exclusions
-                if ( self::is_element_excluded( $img, $class_excludes, $excluded_parent_hashes ) ) {
+                if ( self::is_element_excluded( $img, $class_excludes ) ) {
                     $skipped_count++;
                     continue;
                 }
@@ -275,7 +284,6 @@ class Lazyload {
         }
 
         $class_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $class_excludes_str ) ) ) );
-        $excluded_parent_hashes = self::get_excluded_parent_hashes( $dom, $class_excludes );
 
         $iframe_count = 0;
         $iframes = $dom->find( 'iframe' );
@@ -284,7 +292,7 @@ class Lazyload {
                 if ( $iframe->hasAttribute( 'data-src' ) ) {
                     continue;
                 }
-                if ( self::is_element_excluded( $iframe, $class_excludes, $excluded_parent_hashes ) ) {
+                if ( self::is_element_excluded( $iframe, $class_excludes ) ) {
                     continue;
                 }
                 $src = (string) $iframe->getAttribute( 'src' );
@@ -361,7 +369,6 @@ class Lazyload {
         }
 
         $class_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $class_excludes_str ) ) ) );
-        $excluded_parent_hashes = self::get_excluded_parent_hashes( $dom, $class_excludes );
 
         $video_count = 0;
         $skipped_count = 0;
@@ -376,7 +383,7 @@ class Lazyload {
                      strpos( $class, 'no-lazy' ) !== false ||
                      strpos( $class, 'skip-lazy' ) !== false ||
                      $video->hasAttribute( 'data-no-lazy' ) ||
-                     self::is_element_excluded( $video, $class_excludes, $excluded_parent_hashes ) ) {
+                     self::is_element_excluded( $video, $class_excludes ) ) {
                     $skipped_count++;
                     continue;
                 }
