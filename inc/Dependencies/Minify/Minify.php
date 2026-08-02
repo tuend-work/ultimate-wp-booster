@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 /**
  * Abstract minifier class.

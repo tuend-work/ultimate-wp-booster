@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * IO Exception
  *
