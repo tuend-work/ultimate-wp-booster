@@ -35,6 +35,7 @@ if ( ! function_exists( 'str_get_html' ) ) {
         public $parent = null;
         public $_ = array();
         public $tag_start = 0;
+        public $is_attr_modified = false;
         private $dom = null;
 
         public function __construct( $dom ) {
@@ -68,7 +69,7 @@ if ( ! function_exists( 'str_get_html' ) ) {
 
             $ret = '';
             if ( isset( $this->_[HDOM_INFO_BEGIN] ) ) {
-                if ( ! empty( $this->attr ) ) {
+                if ( $this->is_attr_modified && ! empty( $this->attr ) ) {
                     $attr_str = '';
                     foreach ( $this->attr as $k => $v ) {
                         if ( $v === true ) {
@@ -137,6 +138,7 @@ if ( ! function_exists( 'str_get_html' ) ) {
 
             if ( ! isset( $this->attr[$name] ) || $this->attr[$name] !== $value ) {
                 $this->attr[$name] = $value;
+                $this->is_attr_modified = true;
             }
         }
 
@@ -176,7 +178,10 @@ if ( ! function_exists( 'str_get_html' ) ) {
         }
 
         public function removeAttribute( $name ) {
-            unset( $this->attr[$name] );
+            if ( isset( $this->attr[$name] ) ) {
+                unset( $this->attr[$name] );
+                $this->is_attr_modified = true;
+            }
         }
 
         public function find( $selector, $idx = null, $lowercase = false ) {
@@ -446,7 +451,7 @@ if ( ! function_exists( 'str_get_html' ) ) {
 
                     // Parse attributes
                     if ( ! empty( $attr_str ) ) {
-                        preg_match_all( '#([a-z0-9_:-]+)(?:\s*=\s*(?:(["\'])(.*?)\2|([^\s>]+)))?#i', $attr_str, $attr_matches, PREG_SET_ORDER );
+                        preg_match_all( '#([a-z0-9_:-]+)(?:\s*=\s*(?:(["\'])(.*?)\2|([^\s>]+)))?#is', $attr_str, $attr_matches, PREG_SET_ORDER );
                         foreach ( $attr_matches as $am ) {
                             $attr_name = strtolower( $am[1] );
                             $attr_val  = isset( $am[3] ) && $am[3] !== '' ? $am[3] : ( isset( $am[4] ) ? $am[4] : true );
