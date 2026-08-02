@@ -21,6 +21,7 @@ class Admin {
         add_action( 'wp_ajax_uwb_test_cf_connection', array( $this, 'ajax_test_cf_connection' ) );
         add_action( 'wp_ajax_uwb_purge_cf_cache', array( $this, 'ajax_purge_cf_cache' ) );
         add_action( 'wp_ajax_uwb_sync_media_to_cdn', array( $this, 'ajax_sync_media_to_cdn' ) );
+        add_action( 'wp_ajax_uwb_clear_critical_css_cache', array( $this, 'ajax_clear_critical_css_cache' ) );
 
         $options_to_sync = array(
             'uwb_cache_page_enabled',
@@ -78,6 +79,7 @@ class Admin {
             'uwb_tuning_js_excludes',
             'uwb_tuning_js_defer_excludes',
             'uwb_tuning_critical_css',
+            'uwb_auto_critical_css',
             'uwb_ignore_all_query_strings',
             'uwb_auto_collect_params',
             'uwb_collected_params',
@@ -332,6 +334,7 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_tuning_js_defer_excludes', 'sanitize_textarea_field' );
 
         register_setting( 'uwb_settings_group', 'uwb_tuning_critical_css', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_auto_critical_css', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_ignore_all_query_strings', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_auto_collect_params', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_collected_params', 'sanitize_textarea_field' );
@@ -637,6 +640,19 @@ class Admin {
         \Ultimate_WP_Booster\Engine\CDN\CDNManager::clear_cdn_cache();
 
         wp_send_json_success( array( 'message' => '☁️ Đã xóa CDN Cache thành công!' ) );
+    }
+
+    public function ajax_clear_critical_css_cache() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ) );
+        }
+
+        if ( class_exists( 'Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS' ) ) {
+            \Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS::purge_cache();
+        }
+
+        wp_send_json_success( array( 'message' => '⚡ Đã xóa Critical CSS Cache thành công!' ) );
     }
 
     public function handle_import_export() {
@@ -2798,7 +2814,25 @@ class Admin {
                                 $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS files and inline CSS code in the combined CSS bundle.' );
                                 $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
                                 $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Load CSS files asynchronously to eliminate render-blocking CSS and speed up page rendering.' );
-                                $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Critical CSS', '', 'Custom Critical CSS to inject into &lt;head&gt;.' );
+                                $this->render_toggle_switch( 'uwb_auto_critical_css', 'Automatic Server-Side Critical CSS Generation', 'Tự động trích xuất các quy tắc CSS hiển thị ở màn hình đầu tiên (Above-The-Fold) ngay khi tạo Cache trang lần đầu tiên và nhúng trực tiếp vào &lt;head&gt;.' );
+                                ?>
+
+                                <!-- Critical CSS Management Card -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:20px; margin-top:16px; margin-bottom:24px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                                        <h4 style="margin:0; font-size:14px; font-weight:700; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
+                                            ⚡ Critical CSS (Above-The-Fold) Storage &amp; Manual Override
+                                        </h4>
+                                        <button type="button" id="btn-clear-critical-css" class="button button-secondary button-small" style="font-weight:600; padding:4px 12px; border-radius:6px; cursor:pointer;">
+                                            Clear Critical CSS Cache
+                                        </button>
+                                    </div>
+                                    <?php
+                                    $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Custom Manual Critical CSS Override', '', 'Bổ sung các quy tắc CSS tùy chỉnh thủ công nếu muốn đè thêm vào &lt;head&gt;.' );
+                                    ?>
+                                </div>
+
+                                <?php
 
                                 $this->render_cdn_distribution_card(
                                     'Cloudflare R2 / S3 CDN Distribution for CSS',
@@ -4172,6 +4206,33 @@ js-(before|after)
             }
             $('#uwb_cache_page_enabled').on('change', togglePageCacheFields);
             togglePageCacheFields();
+
+            // Clear Critical CSS Cache via AJAX
+            $('#btn-clear-critical-css').on('click', function(e) {
+                e.preventDefault();
+                var btn = $(this);
+                btn.prop('disabled', true).text('Clearing...');
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'uwb_clear_critical_css_cache',
+                        nonce: '<?php echo wp_create_nonce("uwb_admin_nonce"); ?>'
+                    },
+                    success: function(res) {
+                        btn.prop('disabled', false).text('Clear Critical CSS Cache');
+                        if (res.success) {
+                            alert(res.data.message || '⚡ Đã xóa Critical CSS Cache thành công!');
+                        } else {
+                            alert('Có lỗi xảy ra: ' + (res.data ? res.data.message : 'Unknown error'));
+                        }
+                    },
+                    error: function() {
+                        btn.prop('disabled', false).text('Clear Critical CSS Cache');
+                        alert('Lỗi kết nối máy chủ!');
+                    }
+                });
+            });
 
             // Toggle individual category lifespan fields
             $('.uwb-bc-cat-toggle').on('change', function() {

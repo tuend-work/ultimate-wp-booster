@@ -53,12 +53,26 @@ class Optimizer {
             $debug_logs[] = "Optimization Engine Started (Config version: " . ( defined( 'UWB_VERSION' ) ? UWB_VERSION : '2.2.3' ) . ")";
         }
 
-        // 1. Critical CSS Injection
+        // 1. Critical CSS Injection (Auto-generated Above-The-Fold + Custom Override)
+        $auto_critical_on = isset( $config['auto_critical_css'] ) ? (bool) $config['auto_critical_css'] : true;
+        $critical_css_content = '';
+
         if ( ! empty( $config['tuning_critical_css'] ) ) {
-            $html = self::inject_critical_css( $html, $config['tuning_critical_css'] );
-            if ( $debug_enabled ) $debug_logs[] = "Critical CSS: Injected inline critical stylesheet";
+            $critical_css_content .= "\n" . $config['tuning_critical_css'];
+        }
+
+        if ( $auto_critical_on && class_exists( 'Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS' ) ) {
+            $generated_css = \Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS::generate( $html );
+            if ( ! empty( $generated_css ) ) {
+                $critical_css_content .= "\n" . $generated_css;
+            }
+        }
+
+        if ( ! empty( trim( $critical_css_content ) ) ) {
+            $html = self::inject_critical_css( $html, $critical_css_content );
+            if ( $debug_enabled ) $debug_logs[] = "Critical CSS: Injected Above-The-Fold inline stylesheet (" . strlen( $critical_css_content ) . " bytes)";
         } elseif ( $debug_enabled ) {
-            $debug_logs[] = "Critical CSS: Disabled (no Critical CSS defined)";
+            $debug_logs[] = "Critical CSS: Disabled or no Critical CSS generated";
         }
 
         // 2. Remove Google Fonts

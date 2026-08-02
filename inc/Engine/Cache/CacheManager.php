@@ -84,6 +84,10 @@ class CacheManager {
         if ( file_exists( $combine_dir ) ) {
             $this->recursive_delete( $combine_dir, true );
         }
+
+        if ( class_exists( 'Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS' ) ) {
+            \Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS::purge_cache();
+        }
     }
 
     public function purge_url( $url ) {
@@ -375,6 +379,7 @@ class CacheManager {
             'js_combine_ext_inline'       => intval( get_option( 'uwb_js_combine_ext_inline', 0 ) ),
             'js_load_defer'               => intval( get_option( 'uwb_js_load_defer', 0 ) ),
             'tuning_critical_css'         => get_option( 'uwb_tuning_critical_css', '' ),
+            'auto_critical_css'           => intval( get_option( 'uwb_auto_critical_css', 1 ) ),
             'tuning_css_excludes'         => get_option( 'uwb_tuning_css_excludes', '' ),
             'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', "jquery.js\njquery.min.js\njquery-migrate\nflatsomeVars\nwp-i18n\nwp-hooks\nwp-polyfill" ),
             'tuning_js_defer_excludes'    => get_option( 'uwb_tuning_js_defer_excludes', "jquery.js\njquery.min.js\njquery-migrate\nflatsomeVars\nwp-i18n\nwp-hooks\nwp-polyfill" ),
