@@ -148,10 +148,17 @@ class CriticalCSS {
             for (var j = 0; j < imgs.length; j++) {
                 var img = imgs[j];
                 var imgRect = img.getBoundingClientRect();
-                if (imgRect.top <= maxVh + 100 && imgRect.bottom >= 0 && imgRect.left <= (window.innerWidth || 1200) && imgRect.right >= 0) {
-                    var src = img.getAttribute('data-src') || img.src;
-                    if (src && src.indexOf('data:image') !== 0) {
-                        firstViewImages.push(src);
+                if (imgRect.width > 2 && imgRect.height > 2) {
+                    var style = window.getComputedStyle(img);
+                    if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+                        var inVertical = imgRect.top <= maxVh && imgRect.bottom >= 0;
+                        var inHorizontal = imgRect.left < (window.innerWidth || 1200) && imgRect.right > 0;
+                        if (inVertical && inHorizontal) {
+                            var src = img.getAttribute('data-src') || img.src;
+                            if (src && src.indexOf('data:image') !== 0) {
+                                firstViewImages.push(src);
+                            }
+                        }
                     }
                 }
             }
