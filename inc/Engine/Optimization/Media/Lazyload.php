@@ -41,41 +41,50 @@ class Lazyload {
                 $rule = trim( $rule );
                 if ( empty( $rule ) ) continue;
 
-                // ID rule: #section_531219969
-                if ( strpos( $rule, '#' ) === 0 ) {
-                    $target_id = substr( $rule, 1 );
-                    if ( ! empty( $curr_id ) && $curr_id === $target_id ) {
-                        return true;
-                    }
-                }
-                // Class rule starting with dot: .slider-section
-                elseif ( strpos( $rule, '.' ) === 0 ) {
-                    $target_class = substr( $rule, 1 );
-                    if ( ! empty( $curr_classes ) && in_array( $target_class, $curr_classes, true ) ) {
-                        return true;
-                    }
-                    if ( ! empty( $curr_class ) && stripos( $curr_class, $target_class ) !== false ) {
-                        return true;
-                    }
-                }
-                // Plain rule: slider-section or section or section.slider-section
-                else {
-                    if ( strtolower( $rule ) === $curr_tag ) {
-                        return true;
-                    }
-                    if ( ! empty( $curr_classes ) && in_array( $rule, $curr_classes, true ) ) {
-                        return true;
-                    }
-                    if ( strpos( $rule, '.' ) !== false ) {
-                        $parts = explode( '.', $rule, 2 );
-                        $r_tag = $parts[0];
-                        $r_class = isset($parts[1]) ? $parts[1] : '';
-                        if ( ( empty( $r_tag ) || strtolower( $r_tag ) === $curr_tag ) &&
-                             ( ! empty( $curr_classes ) && in_array( $r_class, $curr_classes, true ) ) ) {
+                $tokens = preg_split( '/\s+/', $rule );
+                foreach ( $tokens as $token ) {
+                    $token = trim( $token );
+                    if ( empty( $token ) ) continue;
+
+                    // ID rule: #section_531219969 or #header
+                    if ( strpos( $token, '#' ) === 0 ) {
+                        $target_id = substr( $token, 1 );
+                        if ( ! empty( $curr_id ) && $curr_id === $target_id ) {
                             return true;
                         }
                     }
-                    if ( ! empty( $curr_class ) && stripos( $curr_class, $rule ) !== false ) {
+
+                    // Class rule starting with dot or plain: .slider-section or section.slider-section
+                    $target_class = $token;
+                    if ( strpos( $target_class, '#' ) !== false ) {
+                        $parts = explode( '#', $target_class, 2 );
+                        $target_id = $parts[1];
+                        if ( ! empty( $curr_id ) && $curr_id === $target_id ) {
+                            return true;
+                        }
+                        $target_class = $parts[0];
+                    }
+
+                    if ( strpos( $target_class, '.' ) !== false ) {
+                        $parts = explode( '.', $target_class );
+                        foreach ( $parts as $p ) {
+                            $p = trim( $p );
+                            if ( ! empty( $p ) && ! empty( $curr_classes ) && in_array( $p, $curr_classes, true ) ) {
+                                return true;
+                            }
+                        }
+                    } else {
+                        $clean_token = ltrim( $token, '.' );
+                        if ( ! empty( $clean_token ) && ! empty( $curr_classes ) && in_array( $clean_token, $curr_classes, true ) ) {
+                            return true;
+                        }
+                    }
+
+                    if ( ! empty( $curr_class ) && stripos( $curr_class, ltrim( $token, '.' ) ) !== false ) {
+                        return true;
+                    }
+
+                    if ( strtolower( $token ) === $curr_tag ) {
                         return true;
                     }
                 }
@@ -108,41 +117,58 @@ class Lazyload {
                 $data_src = (string) $img->getAttribute( 'data-src' );
                 $loading  = (string) $img->getAttribute( 'loading' );
 
-                // 1. Skip if already lazyloaded or marked no-lazy / eager
-                if ( strpos( $class, 'no-lazy' ) !== false ||
-                     strpos( $class, 'skip-lazy' ) !== false ||
-                     $img->hasAttribute( 'data-no-lazy' ) ||
-                     $loading === 'eager' ) {
+                $real_src = ! empty( $src ) ? $src : $data_src;
+
+                // 1. URL Exclusions
+                $is_excluded = false;
+                if ( ! empty( $real_src ) ) {
+                    foreach ( $excludes as $ex ) {
+                        if ( ! empty( $ex ) && stripos( $real_src, $ex ) !== false ) {
+                            $is_excluded = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 2. Class & Parent Container Exclusions
+                if ( ! $is_excluded && self::is_element_excluded( $img, $class_excludes ) ) {
+                    $is_excluded = true;
+                }
+
+                // 3. Markings Exclusion (no-lazy, skip-lazy, data-no-lazy, loading=eager)
+                if ( ! $is_excluded ) {
+                    if ( strpos( $class, 'no-lazy' ) !== false ||
+                         strpos( $class, 'skip-lazy' ) !== false ||
+                         $img->hasAttribute( 'data-no-lazy' ) ||
+                         $loading === 'eager' ) {
+                        $is_excluded = true;
+                    }
+                }
+
+                if ( $is_excluded ) {
+                    // Stripping browser native loading="lazy" attribute so excluded images load eagerly!
+                    if ( $img->hasAttribute( 'loading' ) && $img->getAttribute( 'loading' ) === 'lazy' ) {
+                        $img->removeAttribute( 'loading' );
+                    }
+                    if ( $img->hasAttribute( 'data-src' ) ) {
+                        $img->setAttribute( 'src', $img->getAttribute( 'data-src' ) );
+                        $img->removeAttribute( 'data-src' );
+                    }
+                    if ( $img->hasAttribute( 'data-srcset' ) ) {
+                        $img->setAttribute( 'srcset', $img->getAttribute( 'data-srcset' ) );
+                        $img->removeAttribute( 'data-srcset' );
+                    }
+
                     $skipped_count++;
                     continue;
                 }
 
-                $real_src = ! empty( $src ) ? $src : $data_src;
                 if ( empty( $real_src ) || strpos( $real_src, 'data:image/svg+xml' ) === 0 ) {
                     $skipped_count++;
                     continue;
                 }
 
-                // 3. URL Exclusions
-                $is_excluded = false;
-                foreach ( $excludes as $ex ) {
-                    if ( ! empty( $ex ) && stripos( $real_src, $ex ) !== false ) {
-                        $is_excluded = true;
-                        break;
-                    }
-                }
-                if ( $is_excluded ) {
-                    $skipped_count++;
-                    continue;
-                }
-
-                // 4. Class & Parent Container Exclusions
-                if ( self::is_element_excluded( $img, $class_excludes ) ) {
-                    $skipped_count++;
-                    continue;
-                }
-
-                // Set attributes
+                // Set attributes for non-excluded images
                 if ( ! $img->hasAttribute( 'data-src' ) && ! empty( $src ) ) {
                     $img->setAttribute( 'data-src', $src );
                     $img->setAttribute( 'src', $placeholder );
