@@ -79,7 +79,8 @@ class CriticalCSS {
      */
     private static function render_extractor_script( $url_hash ) {
         $ajax_url = function_exists( 'admin_url' ) ? admin_url( 'admin-ajax.php' ) : '/wp-admin/admin-ajax.php';
-        $nonce = function_exists( 'wp_create_nonce' ) ? wp_create_nonce( 'uwb_crit_nonce_' . $url_hash ) : '';
+        $salt = function_exists( 'wp_salt' ) ? wp_salt( 'auth' ) : 'uwb_secret_key';
+        $token = hash_hmac( 'sha256', 'uwb_crit_' . $url_hash, $salt );
 
         ob_start();
         ?>
@@ -149,7 +150,7 @@ class CriticalCSS {
             var payload = new FormData();
             payload.append('action', 'uwb_save_critical_css');
             payload.append('url_hash', '<?php echo esc_js( $url_hash ); ?>');
-            payload.append('nonce', '<?php echo esc_js( $nonce ); ?>');
+            payload.append('token', '<?php echo esc_js( $token ); ?>');
             payload.append('critical_css', finalCss);
             if (navigator.sendBeacon) {
                 navigator.sendBeacon('<?php echo esc_url( $ajax_url ); ?>', payload);
@@ -174,7 +175,7 @@ class CriticalCSS {
      */
     public static function ajax_save_critical_css() {
         $url_hash = isset( $_POST['url_hash'] ) ? (string) $_POST['url_hash'] : '';
-        $nonce    = isset( $_POST['nonce'] ) ? (string) $_POST['nonce'] : '';
+        $token    = isset( $_POST['token'] ) ? (string) $_POST['token'] : ( isset( $_POST['nonce'] ) ? (string) $_POST['nonce'] : '' );
         $css_raw  = isset( $_POST['critical_css'] ) ? (string) $_POST['critical_css'] : '';
 
         // 1. Strict MD5 Hex Validation (Prevents Path Traversal)
@@ -182,9 +183,12 @@ class CriticalCSS {
             wp_send_json_error( array( 'message' => 'Invalid url_hash format' ) );
         }
 
-        // 2. Strict Nonce Verification
-        if ( ! wp_verify_nonce( $nonce, 'uwb_crit_nonce_' . $url_hash ) ) {
-            wp_send_json_error( array( 'message' => 'Nonce verification failed' ) );
+        // 2. Strict HMAC Token / Nonce Verification (Works for logged-in & guest users, static cache friendly)
+        $salt = function_exists( 'wp_salt' ) ? wp_salt( 'auth' ) : 'uwb_secret_key';
+        $expected_token = hash_hmac( 'sha256', 'uwb_crit_' . $url_hash, $salt );
+
+        if ( ! hash_equals( $expected_token, $token ) && ! wp_verify_nonce( $token, 'uwb_crit_nonce_' . $url_hash ) ) {
+            wp_send_json_error( array( 'message' => 'Security token verification failed' ) );
         }
 
         if ( empty( trim( $css_raw ) ) ) {
