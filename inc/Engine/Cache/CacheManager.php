@@ -308,6 +308,8 @@ class CacheManager {
             'html_remove_gfonts'          => intval( get_option( 'uwb_html_remove_gfonts', 0 ) ),
             'html_remove_emoji'           => intval( get_option( 'uwb_html_remove_emoji', 0 ) ),
             'html_remove_noscript'        => intval( get_option( 'uwb_html_remove_noscript', 0 ) ),
+            'html_lazy_load_elements_enabled' => intval( get_option( 'uwb_html_lazy_load_elements_enabled', 0 ) ),
+            'html_lazy_load_elements'     => get_option( 'uwb_html_lazy_load_elements', '' ),
             'media_lazy_load_images'      => intval( get_option( 'uwb_media_lazy_load_images', 0 ) ),
             'media_lazy_load_iframes'     => intval( get_option( 'uwb_media_lazy_load_iframes', 0 ) ),
             'media_lazy_load_excludes'    => get_option( 'uwb_media_lazy_load_excludes', '' ),
@@ -365,6 +367,10 @@ class CacheManager {
         }
 
         self::write_valid_post_ids_json();
+
+        // Flush static page cache whenever settings are saved
+        $cm = new self();
+        $cm->purge_all();
     }
 
     public static function write_valid_post_ids_json() {

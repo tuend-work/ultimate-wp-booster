@@ -12,6 +12,33 @@ use Ultimate_WP_Booster\Engine\CDN\CDNManager;
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
+// Ensure all Optimization submodules & dependencies are required for early execution in advanced-cache.php
+$uwb_opt_dir = __DIR__;
+if ( file_exists( $uwb_opt_dir . '/../../Dependencies/simple_html_dom.php' ) ) {
+    require_once $uwb_opt_dir . '/../../Dependencies/simple_html_dom.php';
+}
+if ( file_exists( $uwb_opt_dir . '/HTML/LazyElements.php' ) ) {
+    require_once $uwb_opt_dir . '/HTML/LazyElements.php';
+}
+if ( file_exists( $uwb_opt_dir . '/Media/Lazyload.php' ) ) {
+    require_once $uwb_opt_dir . '/Media/Lazyload.php';
+}
+if ( file_exists( $uwb_opt_dir . '/Minify/CSS.php' ) ) {
+    require_once $uwb_opt_dir . '/Minify/CSS.php';
+}
+if ( file_exists( $uwb_opt_dir . '/Minify/JS.php' ) ) {
+    require_once $uwb_opt_dir . '/Minify/JS.php';
+}
+if ( file_exists( $uwb_opt_dir . '/JS/DelayJS.php' ) ) {
+    require_once $uwb_opt_dir . '/JS/DelayJS.php';
+}
+if ( file_exists( $uwb_opt_dir . '/JS/DeferJS.php' ) ) {
+    require_once $uwb_opt_dir . '/JS/DeferJS.php';
+}
+if ( file_exists( $uwb_opt_dir . '/HTML/Minify.php' ) ) {
+    require_once $uwb_opt_dir . '/HTML/Minify.php';
+}
+
 class Optimizer {
 
     public static function process( $html, $config ) {
@@ -67,8 +94,11 @@ class Optimizer {
         }
 
         // 5.5. Lazy Load HTML Elements
-        if ( ! empty( $config['html_lazy_load_elements_enabled'] ) && ! empty( $config['html_lazy_load_elements'] ) ) {
-            $html = LazyElements::process( $html, $config['html_lazy_load_elements'], $debug_logs );
+        $lazy_elem_enabled = isset( $config['html_lazy_load_elements_enabled'] ) ? $config['html_lazy_load_elements_enabled'] : get_option( 'uwb_html_lazy_load_elements_enabled', 0 );
+        $lazy_elem_selectors = isset( $config['html_lazy_load_elements'] ) ? $config['html_lazy_load_elements'] : get_option( 'uwb_html_lazy_load_elements', '' );
+
+        if ( ! empty( $lazy_elem_enabled ) && ! empty( $lazy_elem_selectors ) ) {
+            $html = LazyElements::process( $html, $lazy_elem_selectors, $debug_logs );
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "Lazy Load Elements: Disabled in settings";
         }

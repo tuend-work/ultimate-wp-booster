@@ -5,7 +5,26 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class Lazyload {
 
+    private static function get_dom( $html ) {
+        if ( empty( $html ) ) return false;
+        if ( ! function_exists( 'str_get_html' ) ) {
+            $dep_path = defined( 'UWB_PLUGIN_DIR' ) ? UWB_PLUGIN_DIR . 'inc/Dependencies/simple_html_dom.php' : dirname( __DIR__, 3 ) . '/Dependencies/simple_html_dom.php';
+            if ( file_exists( $dep_path ) ) {
+                require_once $dep_path;
+            }
+        }
+        if ( ! function_exists( 'str_get_html' ) ) {
+            return false;
+        }
+        return str_get_html( $html );
+    }
+
     public static function process_images( $html, $excludes_str = '', $class_excludes_str = '', &$logs = null ) {
+        $dom = self::get_dom( $html );
+        if ( ! $dom ) {
+            return $html;
+        }
+
         $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $excludes_str ) ) ) );
         $class_excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $class_excludes_str ) ) ) );
 
@@ -13,79 +32,84 @@ class Lazyload {
         $lazy_count = 0;
         $skipped_count = 0;
 
-        $processed = preg_replace_callback('/<img\s+([^>]+)>/i', function( $matches ) use ( $excludes, $class_excludes, $placeholder, &$lazy_count, &$skipped_count ) {
-            $attrs = $matches[1];
+        $images = $dom->find( 'img' );
+        if ( ! empty( $images ) ) {
+            foreach ( $images as $img ) {
+                $class = (string) $img->getAttribute( 'class' );
+                $src   = (string) $img->getAttribute( 'src' );
+                $data_src = (string) $img->getAttribute( 'data-src' );
+                $loading  = (string) $img->getAttribute( 'loading' );
 
-            // 1. Skip if already lazyloaded or marked no-lazy / eager
-            if ( stripos( $attrs, 'no-lazy' ) !== false ||
-                 stripos( $attrs, 'skip-lazy' ) !== false ||
-                 stripos( $attrs, 'data-no-lazy' ) !== false ||
-                 stripos( $attrs, 'loading="eager"' ) !== false ||
-                 stripos( $attrs, "loading='eager'" ) !== false ) {
-                $skipped_count++;
-                return $matches[0];
-            }
-
-            // 2. Check src or data-src
-            $src = '';
-            if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
-                $src = $src_match[2];
-            } elseif ( preg_match('/data-src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
-                $src = $src_match[2];
-            }
-
-            if ( empty( $src ) || strpos( $src, 'data:image/svg+xml' ) === 0 ) {
-                $skipped_count++;
-                return $matches[0];
-            }
-
-            // 3. URL Exclusions
-            foreach ( $excludes as $ex ) {
-                if ( ! empty( $ex ) && stripos( $src, $ex ) !== false ) {
+                // 1. Skip if already lazyloaded or marked no-lazy / eager
+                if ( strpos( $class, 'no-lazy' ) !== false ||
+                     strpos( $class, 'skip-lazy' ) !== false ||
+                     $img->hasAttribute( 'data-no-lazy' ) ||
+                     $loading === 'eager' ) {
                     $skipped_count++;
-                    return $matches[0];
+                    continue;
                 }
-            }
 
-            // 4. Class Exclusions
-            if ( preg_match('/class=([\'"])(.*?)\1/i', $attrs, $class_match) ) {
-                $class = $class_match[2];
-                foreach ( $class_excludes as $cx ) {
-                    if ( ! empty( $cx ) && stripos( $class, $cx ) !== false ) {
-                        $skipped_count++;
-                        return $matches[0];
+                $real_src = ! empty( $src ) ? $src : $data_src;
+                if ( empty( $real_src ) || strpos( $real_src, 'data:image/svg+xml' ) === 0 ) {
+                    $skipped_count++;
+                    continue;
+                }
+
+                // 3. URL Exclusions
+                $is_excluded = false;
+                foreach ( $excludes as $ex ) {
+                    if ( ! empty( $ex ) && stripos( $real_src, $ex ) !== false ) {
+                        $is_excluded = true;
+                        break;
                     }
                 }
+                if ( $is_excluded ) {
+                    $skipped_count++;
+                    continue;
+                }
+
+                // 4. Class Exclusions
+                if ( ! empty( $class ) ) {
+                    foreach ( $class_excludes as $cx ) {
+                        if ( ! empty( $cx ) && stripos( $class, $cx ) !== false ) {
+                            $is_excluded = true;
+                            break;
+                        }
+                    }
+                }
+                if ( $is_excluded ) {
+                    $skipped_count++;
+                    continue;
+                }
+
+                // Set attributes
+                if ( ! $img->hasAttribute( 'data-src' ) && ! empty( $src ) ) {
+                    $img->setAttribute( 'data-src', $src );
+                    $img->setAttribute( 'src', $placeholder );
+                }
+
+                $srcset = (string) $img->getAttribute( 'srcset' );
+                if ( ! empty( $srcset ) && ! $img->hasAttribute( 'data-srcset' ) ) {
+                    $img->setAttribute( 'data-srcset', $srcset );
+                    $img->removeAttribute( 'srcset' );
+                }
+
+                if ( ! $img->hasAttribute( 'loading' ) ) {
+                    $img->setAttribute( 'loading', 'lazy' );
+                }
+
+                $lazy_count++;
             }
-
-            $new_attrs = $attrs;
-
-            // If image doesn't have data-src yet, convert src to data-src and replace src with SVG placeholder
-            if ( stripos( $new_attrs, 'data-src=' ) === false && preg_match('/src=([\'"])(.*?)\1/i', $new_attrs, $sm) ) {
-                $real_src = $sm[2];
-                $new_attrs = preg_replace('/src=([\'"])(.*?)\1/i', 'src="' . $placeholder . '" data-src="' . $real_src . '"', $new_attrs);
-            }
-
-            // Convert srcset to data-srcset
-            if ( stripos( $new_attrs, 'data-srcset=' ) === false && preg_match('/srcset=([\'"])(.*?)\1/i', $new_attrs, $ssm) ) {
-                $real_srcset = $ssm[2];
-                $new_attrs = preg_replace('/srcset=([\'"])(.*?)\1/i', 'data-srcset="' . $real_srcset . '"', $new_attrs);
-            }
-
-            // Ensure loading="lazy" is present
-            if ( stripos( $new_attrs, 'loading=' ) === false ) {
-                $new_attrs .= ' loading="lazy"';
-            }
-
-            $lazy_count++;
-            return '<img ' . $new_attrs . '>';
-        }, $html);
+        }
 
         if ( is_array( $logs ) ) {
             $logs[] = "Lazy Load Images: Applied to {$lazy_count} image(s), Skipped {$skipped_count} image(s)";
         }
 
-        if ( $processed !== $html ) {
+        $processed = $dom->save();
+        $dom->clear();
+
+        if ( $lazy_count > 0 ) {
             $lazy_js = "\n<script id=\"uwb-lazy-load-js\">
 (function() {
     var lazyObserver = null;
@@ -194,30 +218,38 @@ class Lazyload {
     }
 
     public static function process_iframes( $html, &$logs = null ) {
+        $dom = self::get_dom( $html );
+        if ( ! $dom ) {
+            return $html;
+        }
+
         $iframe_count = 0;
-        $processed = preg_replace_callback('/<iframe\s+([^>]+)>/i', function( $matches ) use ( &$iframe_count ) {
-            $attrs = $matches[1];
-            if ( stripos( $attrs, 'data-src' ) !== false ) {
-                return $matches[0];
-            }
-            if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
-                $new_attrs = preg_replace_callback('/src=([\'"])(.*?)\1/i', function( $m ) {
-                    return 'src="about:blank" data-src="' . $m[2] . '"';
-                }, $attrs);
-                if ( stripos( $new_attrs, 'loading=' ) === false ) {
-                    $new_attrs .= ' loading="lazy"';
+        $iframes = $dom->find( 'iframe' );
+        if ( ! empty( $iframes ) ) {
+            foreach ( $iframes as $iframe ) {
+                if ( $iframe->hasAttribute( 'data-src' ) ) {
+                    continue;
                 }
-                $iframe_count++;
-                return '<iframe ' . $new_attrs . '>';
+                $src = (string) $iframe->getAttribute( 'src' );
+                if ( ! empty( $src ) && $src !== 'about:blank' ) {
+                    $iframe->setAttribute( 'data-src', $src );
+                    $iframe->setAttribute( 'src', 'about:blank' );
+                    if ( ! $iframe->hasAttribute( 'loading' ) ) {
+                        $iframe->setAttribute( 'loading', 'lazy' );
+                    }
+                    $iframe_count++;
+                }
             }
-            return $matches[0];
-        }, $html);
+        }
 
         if ( is_array( $logs ) ) {
             $logs[] = "Lazy Load Iframes: Applied to {$iframe_count} iframe(s)";
         }
 
-        if ( $processed !== $html ) {
+        $processed = $dom->save();
+        $dom->clear();
+
+        if ( $iframe_count > 0 ) {
             $lazy_js = "\n<script id=\"uwb-lazy-iframe-js\">
 (function() {
     function uwbInitLazyIframes() {
@@ -261,57 +293,64 @@ class Lazyload {
                 $processed .= $lazy_js;
             }
         }
+
         return $processed;
     }
 
     public static function process_videos( $html, &$logs = null ) {
+        $dom = self::get_dom( $html );
+        if ( ! $dom ) {
+            return $html;
+        }
+
         $video_count = 0;
         $skipped_count = 0;
 
-        $processed = preg_replace_callback('#<video\b([^>]*?)>(.*?)</video>#is', function( $matches ) use ( &$video_count, &$skipped_count ) {
-            $attrs   = $matches[1];
-            $content = $matches[2];
+        $videos = $dom->find( 'video' );
+        if ( ! empty( $videos ) ) {
+            foreach ( $videos as $video ) {
+                $class = (string) $video->getAttribute( 'class' );
 
-            // Automatic Safety Rule: Skip background videos, autoplay videos, or explicit no-lazy videos
-            if ( stripos( $attrs, 'autoplay' ) !== false ||
-                 stripos( $attrs, 'video-bg' ) !== false ||
-                 stripos( $attrs, 'no-lazy' ) !== false ||
-                 stripos( $attrs, 'skip-lazy' ) !== false ||
-                 stripos( $attrs, 'data-no-lazy' ) !== false ) {
-                $skipped_count++;
-                return $matches[0];
+                if ( $video->hasAttribute( 'autoplay' ) ||
+                     strpos( $class, 'video-bg' ) !== false ||
+                     strpos( $class, 'no-lazy' ) !== false ||
+                     strpos( $class, 'skip-lazy' ) !== false ||
+                     $video->hasAttribute( 'data-no-lazy' ) ) {
+                    $skipped_count++;
+                    continue;
+                }
+
+                $video->setAttribute( 'preload', 'none' );
+
+                $src = (string) $video->getAttribute( 'src' );
+                if ( ! empty( $src ) && ! $video->hasAttribute( 'data-src' ) ) {
+                    $video->setAttribute( 'data-src', $src );
+                    $video->removeAttribute( 'src' );
+                }
+
+                $sources = $video->find( 'source' );
+                if ( ! empty( $sources ) ) {
+                    foreach ( $sources as $source ) {
+                        $s_src = (string) $source->getAttribute( 'src' );
+                        if ( ! empty( $s_src ) && ! $source->hasAttribute( 'data-src' ) ) {
+                            $source->setAttribute( 'data-src', $s_src );
+                            $source->removeAttribute( 'src' );
+                        }
+                    }
+                }
+
+                $video_count++;
             }
-
-            $new_attrs = $attrs;
-            if ( stripos( $new_attrs, 'preload=' ) === false ) {
-                $new_attrs .= ' preload="none"';
-            } else {
-                $new_attrs = preg_replace( '/preload=(["\'])(.*?)\1/i', 'preload="none"', $new_attrs );
-            }
-
-            // If video has src attribute directly
-            if ( preg_match('/src=([\'"])(.*?)\1/i', $new_attrs, $sm) && stripos( $new_attrs, 'data-src=' ) === false ) {
-                $real_src = $sm[2];
-                $new_attrs = preg_replace('/src=([\'"])(.*?)\1/i', 'data-src="' . $real_src . '"', $new_attrs);
-            }
-
-            // If video contains <source src="..."> tags
-            $new_content = preg_replace_callback('/<source\b([^>]*?)src=([\'"])(.*?)\2([^>]*?)>/i', function( $sub ) {
-                $s_before = $sub[1];
-                $s_url    = $sub[3];
-                $s_after  = $sub[4];
-                return '<source' . $s_before . 'data-src="' . $s_url . '"' . $s_after . '>';
-            }, $content);
-
-            $video_count++;
-            return '<video' . $new_attrs . '>' . $new_content . '</video>';
-        }, $html);
+        }
 
         if ( is_array( $logs ) ) {
             $logs[] = "Lazy Load Videos: Applied to {$video_count} video(s), Skipped {$skipped_count} autoplay/background video(s)";
         }
 
-        if ( $processed !== $html ) {
+        $processed = $dom->save();
+        $dom->clear();
+
+        if ( $video_count > 0 ) {
             $lazy_js = "\n<script id=\"uwb-lazy-video-js\">
 (function() {
     function uwbInitLazyVideos() {
@@ -383,45 +422,49 @@ class Lazyload {
     }
 
     public static function add_missing_sizes( $html ) {
-        return preg_replace_callback('/<img\s+([^>]+)>/i', function( $matches ) {
-            $attrs = $matches[1];
-            if ( stripos( $attrs, 'width=' ) !== false && stripos( $attrs, 'height=' ) !== false ) {
-                return $matches[0];
-            }
-            
-            if ( preg_match('/src=([\'"])(.*?)\1/i', $attrs, $src_match) ) {
-                $src = $src_match[2];
-                $home_url = function_exists( 'home_url' ) ? home_url() : '';
-                if ( empty( $home_url ) ) {
-                    return $matches[0];
+        $dom = self::get_dom( $html );
+        if ( ! $dom ) {
+            return $html;
+        }
+
+        $home_url = function_exists( 'home_url' ) ? home_url() : '';
+        $images = $dom->find( 'img' );
+        if ( ! empty( $images ) ) {
+            foreach ( $images as $img ) {
+                if ( $img->hasAttribute( 'width' ) && $img->hasAttribute( 'height' ) ) {
+                    continue;
+                }
+                $src = (string) $img->getAttribute( 'src' );
+                if ( empty( $src ) || strpos( $src, 'data:' ) === 0 ) {
+                    $src = (string) $img->getAttribute( 'data-src' );
+                }
+                if ( empty( $src ) || strpos( $src, 'data:' ) === 0 ) {
+                    continue;
                 }
 
-                if ( stripos( $src, $home_url ) === 0 || strpos( $src, '/' ) === 0 ) {
-                    $path = '';
-                    if ( strpos( $src, '/' ) === 0 ) {
-                        $path = ABSPATH . ltrim( $src, '/' );
-                    } else {
-                        $path = ABSPATH . ltrim( str_ireplace( $home_url, '', $src ), '/' );
-                    }
-                    
+                if ( ( ! empty( $home_url ) && stripos( $src, $home_url ) === 0 ) || strpos( $src, '/' ) === 0 ) {
+                    $path = ( strpos( $src, '/' ) === 0 )
+                        ? ABSPATH . ltrim( $src, '/' )
+                        : ABSPATH . ltrim( str_ireplace( $home_url, '', $src ), '/' );
+
                     if ( file_exists( $path ) ) {
                         $size = @getimagesize( $path );
                         if ( $size ) {
-                            $w = $size[0];
-                            $h = $size[1];
-                            $add = '';
-                            if ( stripos( $attrs, 'width=' ) === false ) {
-                                $add .= ' width="' . $w . '"';
+                            if ( ! $img->hasAttribute( 'width' ) ) {
+                                $img->setAttribute( 'width', $size[0] );
                             }
-                            if ( stripos( $attrs, 'height=' ) === false ) {
-                                $add .= ' height="' . $h . '"';
+                            if ( ! $img->hasAttribute( 'height' ) ) {
+                                $img->setAttribute( 'height', $size[1] );
                             }
-                            return '<img ' . $attrs . $add . '>';
                         }
                     }
                 }
             }
-            return $matches[0];
-        }, $html);
+        }
+
+        $processed = $dom->save();
+        $dom->clear();
+        return $processed;
     }
 }
+
