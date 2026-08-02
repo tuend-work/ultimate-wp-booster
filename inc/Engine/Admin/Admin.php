@@ -3338,7 +3338,7 @@ js-(before|after)
                                         </div>
                                         <div class="node-action-right" style="display:flex; gap:6px;">
                                             <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" class="uwb-btn-mini">Settings</button>
-                                            <button type="button" class="uwb-btn-mini uwb-btn-mini-danger btn-trigger-clear-cdn-cache">☁️ Clear CDN Cache</button>
+                                            <button type="button" class="uwb-btn-mini uwb-btn-mini-danger btn-trigger-clear-cdn-cache">Clear CDN Cache</button>
                                         </div>
                                     </div>
                                     
@@ -4541,6 +4541,8 @@ js-(before|after)
                         }).html('✕ Server error purging Cloudflare cache.');
                     }
                 });
+            });
+
             // Toggle Lazy Load Elements Textarea visibility
             $('input[name="uwb_html_lazy_load_elements_enabled"]').on('change', function() {
                 var val = $(this).val();
