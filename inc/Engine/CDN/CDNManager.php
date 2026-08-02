@@ -253,6 +253,29 @@ class CDNManager {
         update_post_meta( $attachment_id, '_uwb_s3_local_deleted', $local_deleted ? 1 : 0 );
     }
 
+    public static function get_attachment_s3_key( $attachment_id ) {
+        $s3_key = get_post_meta( $attachment_id, '_uwb_s3_key', true );
+        if ( ! empty( $s3_key ) ) {
+            return $s3_key;
+        }
+
+        $file = get_attached_file( $attachment_id );
+        if ( ! $file ) {
+            return '';
+        }
+
+        $uploads   = wp_upload_dir();
+        $base_dir  = rtrim( str_replace( '\\', '/', $uploads['basedir'] ), '/' );
+        $file_norm = str_replace( '\\', '/', $file );
+
+        if ( strpos( $file_norm, $base_dir ) === 0 ) {
+            $relative_path = ltrim( substr( $file_norm, strlen( $base_dir ) ), '/' );
+            return 'wp-content/uploads/' . $relative_path;
+        }
+
+        return '';
+    }
+
     public static function mark_local_deleted( $attachment_id, $is_deleted = true ) {
         $status = $is_deleted ? 'removed' : 'kept';
         update_post_meta( $attachment_id, '_uwb_s3_local_status', $status );
