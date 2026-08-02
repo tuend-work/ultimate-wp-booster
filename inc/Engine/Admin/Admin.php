@@ -1601,6 +1601,22 @@ class Admin {
                 </div>
 
                 <div class="uwb-content-panel">
+                    <?php
+                    if ( isset( $_GET['uwb_msg'] ) ) {
+                        $msg = sanitize_text_field( $_GET['uwb_msg'] );
+                        $cnt = isset( $_GET['count'] ) ? intval( $_GET['count'] ) : 0;
+                        if ( $msg === 's3_asset_cleared' ) {
+                            echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#f0fdf4; border-left:4px solid #22c55e; color:#15803d; border-radius:8px;"><p style="margin:0; font-size:13.5px;">☁️ <strong>S3 Asset Cache &amp; Index Cleared!</strong> Successfully cleared <code>cdn_uploaded_assets.json</code> index and removed <strong>' . $cnt . '</strong> asset file(s) from S3/R2 storage.</p></div>';
+                        } elseif ( $msg === 'cdn_zone_cleared' ) {
+                            echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#fefce8; border-left:4px solid #eab308; color:#a16207; border-radius:8px;"><p style="margin:0; font-size:13.5px;">🌐 <strong>Cloudflare CDN Zone Cache Purged!</strong> Successfully executed Purge Everything on Cloudflare Edge Cache.</p></div>';
+                        } elseif ( $msg === 'cdn_zone_error' ) {
+                            $err = isset( $_GET['err'] ) ? esc_html( urldecode( $_GET['err'] ) ) : 'Missing API Credentials';
+                            echo '<div class="notice notice-error is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#fef2f2; border-left:4px solid #ef4444; color:#b91c1c; border-radius:8px;"><p style="margin:0; font-size:13.5px;">❌ <strong>Cloudflare CDN Zone Purge Error:</strong> ' . $err . '</p></div>';
+                        } elseif ( $msg === 'cache_cleared' ) {
+                            echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#eff6ff; border-left:4px solid #3b82f6; color:#1d4ed8; border-radius:8px;"><p style="margin:0; font-size:13.5px;">⚡ <strong>Static Page Cache Cleared!</strong> All HTML page cache files purged successfully.</p></div>';
+                        }
+                    }
+                    ?>
                     <?php settings_errors(); ?>
                     <form method="post" action="options.php" novalidate>
                         <?php settings_fields( 'uwb_settings_group' ); ?>

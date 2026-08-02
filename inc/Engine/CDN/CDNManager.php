@@ -286,13 +286,21 @@ class CDNManager {
     }
 
     public static function purge_cache_files_from_cdn() {
-        $s3_client = self::get_s3_client();
-        if ( ! $s3_client->is_configured() ) {
-            return false;
+        $res = self::clear_cdn_cache();
+        return ! empty( $res['success'] );
+    }
+
+    public static function clear_cdn_cache() {
+        $file_cache = self::load_uploaded_file_cache();
+        $keys_to_delete = array();
+
+        if ( is_array( $file_cache ) ) {
+            foreach ( array_keys( $file_cache ) as $key ) {
+                $keys_to_delete[ $key ] = true;
+            }
         }
 
         $content_dir = str_replace( '\\', '/', WP_CONTENT_DIR );
-
         $dirs = array(
             WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify',
             WP_CONTENT_DIR . '/cache/ultimate-wp-booster/combine',
@@ -307,17 +315,25 @@ class CDNManager {
                         if ( strpos( $file_norm, $content_dir ) === 0 ) {
                             $rel = ltrim( substr( $file_norm, strlen( $content_dir ) ), '/' );
                             $s3_key = 'wp-content/' . $rel;
-                            $s3_client->delete_object( $s3_key );
+                            $keys_to_delete[ $s3_key ] = true;
                         }
+                        @unlink( $file );
                     }
                 }
             }
         }
 
-        return true;
-    }
+        $deleted_count = 0;
+        $s3_client = self::get_s3_client();
+        if ( $s3_client->is_configured() && ! empty( $keys_to_delete ) ) {
+            foreach ( array_keys( $keys_to_delete ) as $s3_key ) {
+                $del_ok = $s3_client->delete_object( $s3_key );
+                if ( $del_ok ) {
+                    $deleted_count++;
+                }
+            }
+        }
 
-    public static function clear_cdn_cache() {
         self::$uploaded_runtime_cache = array();
         self::$uploaded_file_cache    = array();
 
@@ -327,9 +343,12 @@ class CDNManager {
         }
 
         delete_option( 'uwb_cdn_uploaded_assets' );
-        self::purge_cache_files_from_cdn();
 
-        return true;
+        return array(
+            'success'       => true,
+            'deleted_count' => $deleted_count,
+            'total_keys'    => count( $keys_to_delete ),
+        );
     }
 
     public static function is_attachment_offloaded( $attachment_id ) {

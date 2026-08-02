@@ -305,13 +305,14 @@ class AdminBarSubscriber implements Subscriber_Interface {
 
         check_admin_referer( 'uwb_clear_s3_asset_cache_action' );
 
-        \Ultimate_WP_Booster\Engine\CDN\CDNManager::clear_cdn_cache();
+        $res = \Ultimate_WP_Booster\Engine\CDN\CDNManager::clear_cdn_cache();
+        $count = isset( $res['deleted_count'] ) ? intval( $res['deleted_count'] ) : 0;
 
         $referer = wp_get_referer();
         if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
-            wp_safe_redirect( add_query_arg( 'uwb_msg', 's3_asset_cleared', $referer ) );
+            wp_safe_redirect( add_query_arg( array( 'uwb_msg' => 's3_asset_cleared', 'count' => $count ), $referer ) );
         } else {
-            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=s3_asset_cleared' ) );
+            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=s3_asset_cleared&count=' . $count ) );
         }
         exit;
     }
