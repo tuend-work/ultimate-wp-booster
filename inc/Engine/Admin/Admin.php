@@ -111,7 +111,31 @@ class Admin {
             'uwb_cdn_auto_delete_attachment',
             'uwb_cdn_distribute_font',
             'uwb_cdn_auto_upload_fonts',
-            'uwb_cdn_auto_rewrite_font_urls'
+            'uwb_cdn_auto_rewrite_font_urls',
+            'uwb_general_disable_emojis',
+            'uwb_general_disable_dashicons',
+            'uwb_general_disable_embeds',
+            'uwb_general_disable_xmlrpc',
+            'uwb_general_remove_jquery_migrate',
+            'uwb_general_hide_wp_version',
+            'uwb_general_remove_wlwmanifest',
+            'uwb_general_remove_rsd',
+            'uwb_general_remove_shortlink',
+            'uwb_general_disable_rss_feeds',
+            'uwb_general_remove_rss_feed_links',
+            'uwb_general_disable_self_pingbacks',
+            'uwb_general_disable_rest_api',
+            'uwb_general_remove_rest_api_links',
+            'uwb_general_disable_google_maps',
+            'uwb_general_disable_password_strength_meter',
+            'uwb_general_disable_comments',
+            'uwb_general_remove_comment_urls',
+            'uwb_general_add_blank_favicon',
+            'uwb_general_remove_global_styles',
+            'uwb_general_disable_heartbeat',
+            'uwb_general_heartbeat_frequency',
+            'uwb_general_limit_post_revisions',
+            'uwb_general_autosave_interval',
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( $this, 'write_config_file_and_purge' ) );
@@ -352,6 +376,32 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_delay_js', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_delay_js_exclusions', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_debug_mode', 'intval' );
+
+        // General Tab Settings
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_emojis', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_dashicons', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_embeds', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_xmlrpc', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_remove_jquery_migrate', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_hide_wp_version', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_remove_wlwmanifest', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_remove_rsd', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_remove_shortlink', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_rss_feeds', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_remove_rss_feed_links', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_self_pingbacks', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_rest_api', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_general_remove_rest_api_links', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_google_maps', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_password_strength_meter', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_comments', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_remove_comment_urls', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_add_blank_favicon', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_remove_global_styles', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_general_disable_heartbeat', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_general_heartbeat_frequency', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_general_limit_post_revisions', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_general_autosave_interval', 'sanitize_text_field' );
     }
 
     public function sanitize_object_cache_enabled( $val ) {
@@ -898,6 +948,29 @@ class Admin {
             <?php if ( ! empty( $detailed_desc ) ) : ?>
                 <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block; margin-top: 6px;"><?php echo wp_kses_post( $detailed_desc ); ?></span>
             <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    private function render_select_setting( $option_name, $label_desc, $options, $detailed_desc = '' ) {
+        $val = get_option( $option_name, 'default' );
+        ?>
+        <div class="uwb-opt-row" style="display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 20px; margin-bottom: 16px; gap: 20px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px;">
+                <strong style="font-size: 14px; color: var(--uwb-text); display: block; margin-bottom: 4px;">
+                    <?php echo esc_html( $label_desc ); ?>
+                </strong>
+                <?php if ( ! empty( $detailed_desc ) ) : ?>
+                    <span class="description" style="font-size: 12.5px; color: var(--uwb-text-muted); line-height: 1.4; display: block;"><?php echo wp_kses_post( $detailed_desc ); ?></span>
+                <?php endif; ?>
+            </div>
+            <div style="flex-shrink: 0;">
+                <select name="<?php echo esc_attr( $option_name ); ?>" style="min-width: 200px; border: 1px solid var(--uwb-border); border-radius: 8px; padding: 8px; font-size: 13px;">
+                    <?php foreach ( $options as $k => $v ) : ?>
+                        <option value="<?php echo esc_attr( $k ); ?>" <?php selected( $val, $k ); ?>><?php echo esc_html( $v ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
         <?php
     }
@@ -2799,16 +2872,82 @@ class Admin {
 
                             <!-- Horizontal Sub-tabs Nav -->
                             <div class="uwb-sub-tabs-nav">
-                                <div class="uwb-sub-tab-item active" data-subtab="opt_css">[1] CSS</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_js">[2] JS</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_html">[3] HTML</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_media">[4] Media</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_font">[5] Font</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">[6] CDN Offload Media</div>
+                                <div class="uwb-sub-tab-item active" data-subtab="opt_general">[1] General</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_css">[2] CSS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_js">[3] JS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_html">[4] HTML</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_media">[5] Media</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_font">[6] Font</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">[7] CDN Offload Media</div>
                             </div>
 
-                            <!-- SUB-TAB 1: CSS Settings & Excludes -->
-                            <div id="subtab-opt_css" class="uwb-subtab-content active">
+                            <!-- SUB-TAB 1: General Settings -->
+                            <div id="subtab-opt_general" class="uwb-subtab-content active">
+                                <?php
+                                $this->render_select_setting( 'uwb_general_autosave_interval', 'Autosave Interval', array(
+                                    'default' => 'Default',
+                                    '60'      => '1 Minute',
+                                    '120'     => '2 Minutes',
+                                    '300'     => '5 Minutes',
+                                    '600'     => '10 Minutes',
+                                ), 'Select the interval for WordPress autosave feature.' );
+
+                                $this->render_select_setting( 'uwb_general_limit_post_revisions', 'Limit Post Revisions', array(
+                                    'default' => 'Default',
+                                    'disable' => 'Disable Revisions',
+                                    '1'       => '1',
+                                    '2'       => '2',
+                                    '3'       => '3',
+                                    '4'       => '4',
+                                    '5'       => '5',
+                                    '10'      => '10',
+                                ), 'Limit the number of post revisions stored in the database.' );
+
+                                $this->render_select_setting( 'uwb_general_heartbeat_frequency', 'Heartbeat Frequency', array(
+                                    'default' => 'Default',
+                                    '15'      => '15 Seconds',
+                                    '30'      => '30 Seconds',
+                                    '60'      => '60 Seconds',
+                                    '120'     => '120 Seconds',
+                                ), 'Set the heartbeat API communication frequency.' );
+
+                                $this->render_select_setting( 'uwb_general_disable_heartbeat', 'Disable Heartbeat', array(
+                                    'default'     => 'Default',
+                                    'disable_all' => 'Disable Everywhere',
+                                    'only_edit'   => 'Only Allow When Editing Posts/Pages',
+                                ), 'Control or disable the WordPress Heartbeat API.' );
+
+                                $this->render_toggle_switch( 'uwb_general_remove_global_styles', 'Remove Global Styles', 'Remove default global inline styles and Gutenberg block library CSS.' );
+                                $this->render_toggle_switch( 'uwb_general_add_blank_favicon', 'Add Blank Favicon', 'Inject a blank base64 favicon to stop browsers requesting a favicon if not set.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_comment_urls', 'Remove Comment URLs', 'Remove the website URL field from the default comment form.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_comments', 'Disable Comments', 'Close comments, pings, and hide comments on the front-end completely.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_password_strength_meter', 'Disable Password Strength Meter', 'Disable password strength meter scripts in WooCommerce or checkout pages.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_google_maps', 'Disable Google Maps', 'De-enqueue Google Maps API scripts and styles from the front-end.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rest_api_links', 'Remove REST API Links', 'Remove REST API discovery links from page headers and headers responses.' );
+
+                                $this->render_select_setting( 'uwb_general_disable_rest_api', 'Disable REST API', array(
+                                    'default'           => 'Default',
+                                    'disable_non_admin' => 'Disable for Non-Admins',
+                                    'disable_all'       => 'Disable Completely',
+                                ), 'Block REST API requests to secure your site\'s endpoints.' );
+
+                                $this->render_toggle_switch( 'uwb_general_disable_self_pingbacks', 'Disable Self Pingbacks', 'Stop WordPress from pingbacking your own posts when you link to them.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rss_feed_links', 'Remove RSS Feed Links', 'Remove RSS feed and comment feed links from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_rss_feeds', 'Disable RSS Feeds', 'Disable RSS feed generation and redirect feed URLs to display error page.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_shortlink', 'Remove Shortlink', 'Remove shortlinks from page head and HTTP headers response.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rsd', 'Remove RSD Link', 'Remove Real Simple Discovery (RSD) link tag from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_wlwmanifest', 'Remove wlwmanifest Link', 'Remove Windows Live Writer manifest XML link tag from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_hide_wp_version', 'Hide WP Version', 'Hide WordPress version generator meta tag and query args from scripts/styles.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_jquery_migrate', 'Remove jQuery Migrate', 'Remove jQuery Migrate script dependency from frontend scripts.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_xmlrpc', 'Disable XML-RPC', 'Disable XML-RPC requests and remove RSD links to block brute-force attacks.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_embeds', 'Disable Embeds', 'De-enqueue oEmbed javascript and disable oEmbed-related discovery links.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_dashicons', 'Disable Dashicons', 'De-enqueue Dashicons stylesheet on frontend for non-logged-in users.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_emojis', 'Disable Emojis', 'Remove default WordPress emoji styling and detection script.' );
+                                ?>
+                            </div>
+
+                            <!-- SUB-TAB 2: CSS Settings & Excludes -->
+                            <div id="subtab-opt_css" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_css_minify', 'CSS Minify', 'Minify CSS files and inline CSS code.' );
                                 $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS stylesheets into a single cached file to reduce HTTP requests.' );

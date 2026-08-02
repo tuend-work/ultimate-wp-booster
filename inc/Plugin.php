@@ -68,6 +68,7 @@ class Plugin {
             new \Ultimate_WP_Booster\Engine\Cache\CacheSubscriber(),
             new \Ultimate_WP_Booster\Engine\Preload\PreloadSubscriber(),
             new \Ultimate_WP_Booster\Engine\CDN\CDNSubscriber(),
+            new \Ultimate_WP_Booster\Engine\Optimization\GeneralOptimizationSubscriber(),
         );
 
         if ( is_admin() ) {
