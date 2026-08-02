@@ -19,7 +19,7 @@ class ViewportScreen {
     public static function ajax_save_viewport_data() {
         $url_hash = isset( $_POST['url_hash'] ) ? (string) $_POST['url_hash'] : '';
         $token    = isset( $_POST['token'] ) ? (string) $_POST['token'] : '';
-        $viewport_json = isset( $_POST['viewport_data'] ) ? (string) $_POST['viewport_data'] : '';
+        $viewport_json = isset( $_POST['viewport_data'] ) ? wp_unslash( (string) $_POST['viewport_data'] ) : '';
 
         // 1. Strict MD5 Hex Validation (Prevents Path Traversal)
         if ( empty( $url_hash ) || ! preg_match( '/^[a-f0-9]{32}$/i', $url_hash ) ) {
