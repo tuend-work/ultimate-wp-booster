@@ -41,7 +41,7 @@ class CriticalCSS {
         $url_hash = md5( $url_clean );
 
         // Inject Placeholder in <head> if not already present
-        $placeholder_tag = '<style id="uwb-critical-css"></style>';
+        $placeholder_tag = '<style id="uwb-critical-css" data-hash="' . $url_hash . '"></style>';
         if ( strpos( $html, 'id="uwb-critical-css"' ) === false ) {
             if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
                 $html = str_replace( $matches[0], $matches[0] . "\n" . $placeholder_tag, $html );
@@ -205,7 +205,7 @@ class CriticalCSS {
         $minified_css = self::minify_css( $sanitized_css );
 
         // 6. Directly update static HTML cache files and strip extractor script
-        $updated_count = self::update_static_html_cache_files( $minified_css );
+        $updated_count = self::update_static_html_cache_files( $url_hash, $minified_css );
 
         wp_send_json_success( array(
             'message' => 'Critical CSS embedded directly into static HTML cache files, extractor script stripped.',
@@ -242,19 +242,21 @@ class CriticalCSS {
     }
 
     /**
-     * Directly update static HTML cache files on disk to fill Critical CSS and strip extractor script
+     * Directly update static HTML cache files on disk to fill Critical CSS and strip extractor script for specific URL hash
      *
+     * @param string $url_hash
      * @param string $critical_css
      * @return int Number of updated cache files
      */
-    private static function update_static_html_cache_files( $critical_css ) {
+    private static function update_static_html_cache_files( $url_hash, $critical_css ) {
         $wp_rocket_dir = WP_CONTENT_DIR . '/cache/wp-rocket';
         if ( ! is_dir( $wp_rocket_dir ) ) {
             return 0;
         }
 
-        $style_replacement   = '<style id="uwb-critical-css">' . trim( $critical_css ) . '</style>';
-        $placeholder_pattern = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>\s*</style>#is';
+        $style_replacement   = '<style id="uwb-critical-css" data-hash="' . $url_hash . '">' . trim( $critical_css ) . '</style>';
+        $placeholder_pattern = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?data-hash=[\'"]' . preg_quote( $url_hash, '#' ) . '[\'"][^>]*?>\s*</style>#is';
+        $fallback_pattern    = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>\s*</style>#is';
         $updated_count       = 0;
 
         try {
@@ -268,9 +270,10 @@ class CriticalCSS {
                     $f = $item->getPathname();
                     if ( filesize( $f ) > 100 ) {
                         $content = @file_get_contents( $f );
-                        if ( preg_match( $placeholder_pattern, $content ) || strpos( $content, 'uwb-critical-extractor' ) !== false || strpos( $content, 'UWB_CRIT_START' ) !== false ) {
-                            // 1. Fill Critical CSS into placeholder
+                        if ( preg_match( $placeholder_pattern, $content ) || ( strpos( $content, 'data-hash="' . $url_hash . '"' ) !== false && strpos( $content, 'uwb-critical-extractor' ) !== false ) ) {
+                            // 1. Fill Critical CSS into matching placeholder
                             $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
+                            $content = preg_replace( $fallback_pattern, $style_replacement, $content );
 
                             // 2. Multi-layer REMOVAL of extractor script tag from static HTML cache
                             $content = preg_replace( '#<!--UWB_CRIT_START-->.*?<!--UWB_CRIT_END-->#is', '', $content );
@@ -303,10 +306,11 @@ class CriticalCSS {
             foreach ( $html_files as $f ) {
                 if ( file_exists( $f ) && filesize( $f ) > 100 ) {
                     $content = @file_get_contents( $f );
-                    if ( preg_match( $placeholder_pattern, $content ) || strpos( $content, 'uwb-critical-extractor' ) !== false || strpos( $content, 'UWB_CRIT_START' ) !== false ) {
+                    if ( preg_match( $placeholder_pattern, $content ) || ( strpos( $content, 'data-hash="' . $url_hash . '"' ) !== false && strpos( $content, 'uwb-critical-extractor' ) !== false ) ) {
                         $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
+                        $content = preg_replace( $fallback_pattern, $style_replacement, $content );
                         $content = preg_replace( '#<!--UWB_CRIT_START-->.*?<!--UWB_CRIT_END-->#is', '', $content );
-                        $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
+                        $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*.*?<\/script>#is', '', $content );
                         $start_pos = strpos( $content, '<!--UWB_CRIT_START-->' );
                         $end_pos   = strpos( $content, '<!--UWB_CRIT_END-->' );
                         if ( $start_pos !== false && $end_pos !== false && $end_pos > $start_pos ) {
