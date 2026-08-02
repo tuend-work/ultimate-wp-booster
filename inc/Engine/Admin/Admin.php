@@ -1549,9 +1549,15 @@ class Admin {
                     <p>Optimize website loading speed with ultra-fast Static Page Caching.</p>
                 </div>
                 <div class="uwb-header-actions" style="display: flex; align-items: center; gap: 12px;">
-                    <?php $clear_cdn_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_cache' ), 'uwb_clear_cdn_cache_action' ); ?>
-                    <a href="<?php echo esc_url( $clear_cdn_url ); ?>" class="uwb-btn-purge" style="text-decoration:none; background:#0284c7; border-color:#0284c7; cursor:pointer;" title="Clear CDN R2/S3 cache & tracker file">
-                        Clear CDN Cache
+                    <?php 
+                    $clear_zone_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_zone_cache' ), 'uwb_clear_cdn_zone_cache_action' );
+                    $clear_s3_url   = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_s3_asset_cache' ), 'uwb_clear_s3_asset_cache_action' );
+                    ?>
+                    <a href="<?php echo esc_url( $clear_zone_url ); ?>" class="uwb-btn-purge" style="text-decoration:none; background:#d97706; border-color:#b45309; cursor:pointer;" title="Xóa CDN Edge Cache (Cloudflare Zone Purge)">
+                        🌐 Clear CDN Zone Cache
+                    </a>
+                    <a href="<?php echo esc_url( $clear_s3_url ); ?>" class="uwb-btn-purge" style="text-decoration:none; background:#0284c7; border-color:#0369a1; cursor:pointer;" title="Xóa chỉ mục cdn_uploaded_assets.json & tệp gộp S3/R2">
+                        ☁️ Clear S3 Asset Cache
                     </a>
                     <span id="uwb-github-update-status" style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.9);"></span>
                     <button type="button" id="uwb-github-update-btn" class="uwb-btn-purge" style="cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.3); outline: none;">
@@ -2790,7 +2796,8 @@ class Admin {
                                             'uwb_cdn_auto_purge_css_cdn' => 'Delete file (xả cache CSS)',
                                         ),
                                     )
-                                );
+                                 );
+                                $this->render_page_optimizer_tools_section( 'CSS Tools' );
                                 ?>
                             </div>
 
@@ -2851,6 +2858,7 @@ js-(before|after)
                                         ),
                                     )
                                 );
+                                $this->render_page_optimizer_tools_section( 'JS Tools' );
                                 ?>
                             </div>
 
@@ -2907,6 +2915,7 @@ js-(before|after)
                                         ),
                                     )
                                 );
+                                $this->render_page_optimizer_tools_section( 'HTML Tools' );
                                 ?>
                             </div>
 
@@ -3067,6 +3076,7 @@ js-(before|after)
                                         ),
                                     )
                                 );
+                                $this->render_page_optimizer_tools_section( 'Media Tools' );
                                 ?>
                             </div>
 
@@ -3218,6 +3228,7 @@ js-(before|after)
                                         <div id="uwb-sync-cdn-status-text" style="font-size:12.5px; font-weight:600; color:var(--uwb-text);">Initializing batch sync...</div>
                                     </div>
                                 </div>
+                                <?php $this->render_page_optimizer_tools_section( 'CDN Offload Tools' ); ?>
                             </div>
                         </div>
 
@@ -5458,6 +5469,41 @@ js-(before|after)
         } else {
             wp_send_json_error( array( 'message' => 'Download failed or file not found on S3.' ) );
         }
+    }
+
+    private function render_page_optimizer_tools_section( $subtab_title = '' ) {
+        $zone_url     = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_zone_cache' ), 'uwb_clear_cdn_zone_cache_action' );
+        $s3_asset_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_s3_asset_cache' ), 'uwb_clear_s3_asset_cache_action' );
+        $page_cache_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cache_page' ), 'uwb_clear_cache_page_action' );
+        $opcache_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_opcache' ), 'uwb_flush_opcache_action' );
+        $oc_url      = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_object_cache' ), 'uwb_flush_object_cache_action' );
+        ?>
+        <div class="uwb-tools-card" style="margin-top:28px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:20px 24px;">
+            <h4 style="margin:0 0 14px 0; font-size:14px; font-weight:700; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                Section Tools &amp; Quick Clear Actions <?php echo $subtab_title ? ' - ' . esc_html( $subtab_title ) : ''; ?>
+            </h4>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                <a href="<?php echo esc_url( $page_cache_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; background:#fff; display:inline-flex; align-items:center; gap:6px;">
+                    ⚡ Clear Page Cache
+                </a>
+                <a href="<?php echo esc_url( $zone_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; color:#b45309; border-color:#fcd34d; background:#fffbeb; display:inline-flex; align-items:center; gap:6px;" title="Thực hiện Purge Everything xóa Edge Cache trên Cloudflare CDN Zone">
+                    🌐 Clear CDN Zone Cache (Cloudflare)
+                </a>
+                <a href="<?php echo esc_url( $s3_asset_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; color:#1d4ed8; border-color:#93c5fd; background:#eff6ff; display:inline-flex; align-items:center; gap:6px;" title="Xóa bộ đệm cdn_uploaded_assets.json & tệp gộp CSS/JS trên đĩa CDN S3/R2">
+                    ☁️ Clear S3 Asset Cache &amp; Index
+                </a>
+                <a href="<?php echo esc_url( $opcache_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; background:#fff; display:inline-flex; align-items:center; gap:6px;">
+                    🧹 Clear OPCache
+                </a>
+                <?php if ( wp_using_ext_object_cache() ) : ?>
+                    <a href="<?php echo esc_url( $oc_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; color:#047857; border-color:#6ee7b7; background:#ecfdf5; display:inline-flex; align-items:center; gap:6px;">
+                        💾 Clear Object Cache
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
     }
 
     private function render_cdn_distribution_card( $title, $toggle_key, $toggle_label, $toggle_desc, $events = array() ) {

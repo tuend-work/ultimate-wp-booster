@@ -14,8 +14,10 @@ class AdminBarSubscriber implements Subscriber_Interface {
             'admin_post_uwb_clear_cache_page'   => 'handle_clear_cache_page',
             'admin_post_uwb_flush_all_preload'  => 'handle_flush_all_preload',
             'admin_post_uwb_flush_object_cache' => 'handle_flush_object_cache',
-            'admin_post_uwb_flush_opcache'      => 'handle_flush_opcache',
-            'admin_post_uwb_clear_cdn_cache'    => 'handle_clear_cdn_cache',
+            'admin_post_uwb_flush_opcache'         => 'handle_flush_opcache',
+            'admin_post_uwb_clear_cdn_zone_cache'  => 'handle_clear_cdn_zone_cache',
+            'admin_post_uwb_clear_s3_asset_cache'  => 'handle_clear_s3_asset_cache',
+            'admin_post_uwb_clear_cdn_cache'       => 'handle_clear_s3_asset_cache',
         );
     }
 
@@ -129,13 +131,22 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 'href'   => '#',
             ) );
         }
-        // Add sub-node: Clear CDN Cache
-        $clear_cdn_cache_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_cache' ), 'uwb_clear_cdn_cache_action' );
+        // Add sub-node: Clear CDN Zone Cache (Cloudflare)
+        $clear_zone_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_zone_cache' ), 'uwb_clear_cdn_zone_cache_action' );
         $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-clear-cdn-cache',
+            'id'     => 'uwb-clear-cdn-zone-cache',
             'parent' => 'uwb-admin-bar',
-            'title'  => 'Clear CDN Cache',
-            'href'   => $clear_cdn_cache_url,
+            'title'  => '🌐 Clear CDN Zone Cache (Cloudflare)',
+            'href'   => $clear_zone_url,
+        ) );
+
+        // Add sub-node: Clear S3 Asset Cache (Cloud Storage)
+        $clear_s3_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_s3_asset_cache' ), 'uwb_clear_s3_asset_cache_action' );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-clear-s3-asset-cache',
+            'parent' => 'uwb-admin-bar',
+            'title'  => '☁️ Clear S3 Asset Cache & Index',
+            'href'   => $clear_s3_url,
         ) );
         // Add sub-node: Flush All & Preload Cache
         $flush_all_preload_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_all_preload' ), 'uwb_flush_all_preload_action' );
@@ -267,22 +278,46 @@ class AdminBarSubscriber implements Subscriber_Interface {
         exit;
     }
 
-    public function handle_clear_cdn_cache() {
+    public function handle_clear_cdn_zone_cache() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( 'Permission denied.' );
         }
 
-        check_admin_referer( 'uwb_clear_cdn_cache_action' );
+        check_admin_referer( 'uwb_clear_cdn_zone_cache_action' );
+
+        $res = \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::purge_everything();
+
+        $referer = wp_get_referer();
+        $msg = is_wp_error( $res ) ? ( 'cdn_zone_error&err=' . urlencode( $res->get_error_message() ) ) : 'cdn_zone_cleared';
+
+        if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
+            wp_safe_redirect( add_query_arg( 'uwb_msg', $msg, $referer ) );
+        } else {
+            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=' . $msg ) );
+        }
+        exit;
+    }
+
+    public function handle_clear_s3_asset_cache() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Permission denied.' );
+        }
+
+        check_admin_referer( 'uwb_clear_s3_asset_cache_action' );
 
         \Ultimate_WP_Booster\Engine\CDN\CDNManager::clear_cdn_cache();
 
         $referer = wp_get_referer();
         if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
-            wp_safe_redirect( add_query_arg( 'uwb_msg', 'cdn_cache_cleared', $referer ) );
+            wp_safe_redirect( add_query_arg( 'uwb_msg', 's3_asset_cleared', $referer ) );
         } else {
-            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=cdn_cache_cleared' ) );
+            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=s3_asset_cleared' ) );
         }
         exit;
+    }
+
+    public function handle_clear_cdn_cache() {
+        $this->handle_clear_s3_asset_cache();
     }
 
     private function flush_object_cache_internal() {
