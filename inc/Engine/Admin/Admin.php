@@ -108,15 +108,15 @@ class Admin {
             'uwb_cdn_auto_rewrite_font_urls'
         );
         foreach ( $options_to_sync as $opt ) {
-            add_action( "update_option_{$opt}", array( CacheManager::class, 'write_config_file' ) );
-            add_action( "add_option_{$opt}", array( CacheManager::class, 'write_config_file' ) );
+            add_action( "update_option_{$opt}", array( $this, 'write_config_file_and_purge' ) );
+            add_action( "add_option_{$opt}", array( $this, 'write_config_file_and_purge' ) );
         }
 
         // Also sync config when WordPress timezone settings change
-        add_action( 'update_option_timezone_string', array( CacheManager::class, 'write_config_file' ) );
-        add_action( 'add_option_timezone_string', array( CacheManager::class, 'write_config_file' ) );
-        add_action( 'update_option_gmt_offset', array( CacheManager::class, 'write_config_file' ) );
-        add_action( 'add_option_gmt_offset', array( CacheManager::class, 'write_config_file' ) );
+        add_action( 'update_option_timezone_string', array( $this, 'write_config_file_and_purge' ) );
+        add_action( 'add_option_timezone_string', array( $this, 'write_config_file_and_purge' ) );
+        add_action( 'update_option_gmt_offset', array( $this, 'write_config_file_and_purge' ) );
+        add_action( 'add_option_gmt_offset', array( $this, 'write_config_file_and_purge' ) );
 
         // Redis AJAX hooks
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
@@ -129,6 +129,10 @@ class Admin {
         add_action( 'wp_ajax_uwb_restore_single_attachment', array( $this, 'ajax_restore_single_attachment' ) );
         add_action( 'wp_ajax_uwb_clear_cdn_cache', array( $this, 'ajax_clear_cdn_cache' ) );
         add_action( 'admin_init', array( $this, 'handle_import_export' ) );
+    }
+
+    public function write_config_file_and_purge() {
+        CacheManager::write_config_file( true );
     }
 
     public function add_plugin_menu() {

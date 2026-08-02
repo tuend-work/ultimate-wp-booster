@@ -216,9 +216,27 @@ class Optimizer {
 
         // Append Debug Log Comment if enabled
         if ( $debug_enabled && ! empty( $debug_logs ) ) {
+            $purge_log_lines = array();
+            $purge_log_file = defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR . '/cache/uwb-cache-purge.log' : dirname(__DIR__, 3) . '/cache/uwb-cache-purge.log';
+            if ( file_exists( $purge_log_file ) ) {
+                $raw_lines = @file( $purge_log_file );
+                if ( is_array( $raw_lines ) && ! empty( $raw_lines ) ) {
+                    $recent = array_slice( $raw_lines, -5 );
+                    foreach ( $recent as $rline ) {
+                        $purge_log_lines[] = " " . trim( $rline );
+                    }
+                }
+            }
+
             $log_lines = implode( "\n", array_map( function( $line ) {
                 return " - " . $line;
             }, $debug_logs ) );
+
+            if ( ! empty( $purge_log_lines ) ) {
+                $log_lines .= "\n-------------------------------------------------------------------\n" .
+                              " Recent Cache Purge Log (stored in wp-content/cache/uwb-cache-purge.log):\n" .
+                              implode( "\n", $purge_log_lines );
+            }
 
             $debug_block = "\n<!--\n" .
                            "===================================================================\n" .

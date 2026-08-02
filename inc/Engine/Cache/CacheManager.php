@@ -5,11 +5,56 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class CacheManager {
 
+    public static function log_cache_purge( $action, $details = '' ) {
+        $debug_mode = intval( get_option( 'uwb_debug_mode', 0 ) ) === 1 || ( defined( 'WP_DEBUG' ) && WP_DEBUG );
+        if ( ! $debug_mode ) {
+            $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
+            if ( file_exists( $config_path ) ) {
+                $config = @include $config_path;
+                if ( is_array( $config ) && ! empty( $config['debug_mode'] ) ) {
+                    $debug_mode = true;
+                }
+            }
+        }
+
+        if ( ! $debug_mode ) {
+            return;
+        }
+
+        $timestamp = date( 'Y-m-d H:i:s' );
+        $bt = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 3 );
+        $caller = isset( $bt[1]['function'] ) ? $bt[1]['function'] : 'unknown';
+        if ( isset( $bt[2]['function'] ) ) {
+            $caller = $bt[2]['function'] . ' -> ' . $caller;
+        }
+
+        $uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'CLI/Cron';
+        $log_line = "[{$timestamp}] [UWB Cache Purge] Action: {$action} | Details: {$details} | Called by: {$caller} | URI: {$uri}";
+
+        error_log( $log_line );
+
+        $log_dir = WP_CONTENT_DIR . '/cache';
+        if ( ! file_exists( $log_dir ) ) {
+            @mkdir( $log_dir, 0755, true );
+        }
+        $log_file = $log_dir . '/uwb-cache-purge.log';
+        @file_put_contents( $log_file, $log_line . "\n", FILE_APPEND );
+
+        if ( file_exists( $log_file ) && filesize( $log_file ) > 200000 ) {
+            $lines = @file( $log_file );
+            if ( is_array( $lines ) && count( $lines ) > 500 ) {
+                $trimmed = array_slice( $lines, -500 );
+                @file_put_contents( $log_file, implode( '', $trimmed ) );
+            }
+        }
+    }
+
     public static function get_cache_dir() {
         return WP_CONTENT_DIR . '/cache/wp-rocket';
     }
 
     public function purge_all() {
+        self::log_cache_purge( 'PURGE ALL', 'Purged all static page cache & minified assets' );
         $cache_dir = self::get_cache_dir();
         if ( file_exists( $cache_dir ) ) {
             $this->recursive_delete( $cache_dir, false );
@@ -42,6 +87,7 @@ class CacheManager {
     }
 
     public function purge_url( $url ) {
+        self::log_cache_purge( 'PURGE URL', 'URL: ' . $url );
         if ( get_option( 'uwb_cf_enabled', 0 ) && \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::is_configured() ) {
             \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::purge_urls( array( $url ) );
         }
@@ -102,6 +148,8 @@ class CacheManager {
         if ( ! $post || $post->post_status !== 'publish' ) {
             return;
         }
+
+        self::log_cache_purge( 'PURGE POST', "Post ID: {$post_id} (" . get_the_title( $post_id ) . ")" );
 
         $permalink = get_permalink( $post_id );
         if ( $permalink ) {
@@ -222,7 +270,7 @@ class CacheManager {
         $this->remove_empty_dirs( $dir );
     }
 
-    public static function write_config_file() {
+    public static function write_config_file( $purge_cache = false ) {
         $cache_dir = WP_CONTENT_DIR . '/cache';
         if ( ! file_exists( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
@@ -368,9 +416,10 @@ class CacheManager {
 
         self::write_valid_post_ids_json();
 
-        // Flush static page cache whenever settings are saved
-        $cm = new self();
-        $cm->purge_all();
+        if ( $purge_cache ) {
+            $cm = new self();
+            $cm->purge_all();
+        }
     }
 
     public static function write_valid_post_ids_json() {
