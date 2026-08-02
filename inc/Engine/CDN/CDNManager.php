@@ -143,7 +143,52 @@ class CDNManager {
     }
 
     private static $uploaded_runtime_cache = array();
-    private static $uploaded_db_cache      = null;
+    private static $uploaded_file_cache    = null;
+
+    private static function get_cache_file_path() {
+        $dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster';
+        if ( ! is_dir( $dir ) ) {
+            @mkdir( $dir, 0755, true );
+        }
+        return $dir . '/cdn_uploaded_assets.json';
+    }
+
+    private static function load_uploaded_file_cache() {
+        if ( null !== self::$uploaded_file_cache ) {
+            return self::$uploaded_file_cache;
+        }
+
+        // Clean up legacy DB option if present
+        delete_option( 'uwb_cdn_uploaded_assets' );
+
+        $cache_file = self::get_cache_file_path();
+        if ( file_exists( $cache_file ) ) {
+            $content = @file_get_contents( $cache_file );
+            if ( ! empty( $content ) ) {
+                $decoded = json_decode( $content, true );
+                if ( is_array( $decoded ) ) {
+                    self::$uploaded_file_cache = $decoded;
+                    return self::$uploaded_file_cache;
+                }
+            }
+        }
+
+        self::$uploaded_file_cache = array();
+        return self::$uploaded_file_cache;
+    }
+
+    private static function save_uploaded_file_cache() {
+        if ( ! is_array( self::$uploaded_file_cache ) ) {
+            return;
+        }
+
+        if ( count( self::$uploaded_file_cache ) > 5000 ) {
+            self::$uploaded_file_cache = array_slice( self::$uploaded_file_cache, -4000, null, true );
+        }
+
+        $cache_file = self::get_cache_file_path();
+        @file_put_contents( $cache_file, json_encode( self::$uploaded_file_cache ) );
+    }
 
     public static function upload_asset_to_cdn( $file_path ) {
         if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
@@ -173,16 +218,11 @@ class CDNManager {
             return true;
         }
 
-        // 2. Load DB persistent cache once per request
-        if ( null === self::$uploaded_db_cache ) {
-            self::$uploaded_db_cache = get_option( 'uwb_cdn_uploaded_assets', array() );
-            if ( ! is_array( self::$uploaded_db_cache ) ) {
-                self::$uploaded_db_cache = array();
-            }
-        }
+        // 2. Load File persistent cache once per request
+        $file_cache = self::load_uploaded_file_cache();
 
-        // 3. Check DB persistent cache
-        if ( isset( self::$uploaded_db_cache[ $s3_key ] ) && self::$uploaded_db_cache[ $s3_key ] === $mtime ) {
+        // 3. Check File persistent cache
+        if ( isset( $file_cache[ $s3_key ] ) && $file_cache[ $s3_key ] === $mtime ) {
             self::$uploaded_runtime_cache[ $s3_key ] = $mtime;
             return true;
         }
@@ -211,13 +251,8 @@ class CDNManager {
 
         if ( $upload_ok ) {
             self::$uploaded_runtime_cache[ $s3_key ] = $mtime;
-            self::$uploaded_db_cache[ $s3_key ]      = $mtime;
-
-            if ( count( self::$uploaded_db_cache ) > 2000 ) {
-                self::$uploaded_db_cache = array_slice( self::$uploaded_db_cache, -1500, null, true );
-            }
-
-            update_option( 'uwb_cdn_uploaded_assets', self::$uploaded_db_cache, false );
+            self::$uploaded_file_cache[ $s3_key ]    = $mtime;
+            self::save_uploaded_file_cache();
         }
 
         return $upload_ok;
