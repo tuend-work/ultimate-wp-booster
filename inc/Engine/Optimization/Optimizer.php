@@ -184,8 +184,7 @@ class Optimizer {
                 $flatsome_assets_url = str_replace( home_url(), $cdn_domain_clean, $flatsome_assets_url );
             }
 
-            $patch_script = '<script id="uwb-flatsome-assets-fix">if(typeof flatsomeVars!=="undefined"&&!flatsomeVars.assets_url){flatsomeVars.assets_url=' . json_encode( $flatsome_assets_url ) . ';}</script>';
-            $html = preg_replace( '/(<script\b[^>]*?id=["\']flatsome-js-js-extra["\'][^>]*?>.*?<\/script>)/is', '$1' . $patch_script, $html, 1 );
+            $html = preg_replace( '/(var\s+flatsomeVars\s*=\s*\{.*?\};)/is', '$1 flatsomeVars.assets_url=' . json_encode( $flatsome_assets_url ) . ';', $html, 1 );
             if ( $debug_enabled ) $debug_logs[] = "Flatsome Assets URL Fix: Injected assets_url into flatsomeVars";
         }
 
