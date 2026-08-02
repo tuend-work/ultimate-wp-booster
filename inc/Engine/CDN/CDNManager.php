@@ -285,7 +285,20 @@ class CDNManager {
                     }
                 }
             }
+        return true;
+    }
+
+    public static function clear_cdn_cache() {
+        self::$uploaded_runtime_cache = array();
+        self::$uploaded_file_cache    = array();
+
+        $cache_file = self::get_cache_file_path();
+        if ( file_exists( $cache_file ) ) {
+            @unlink( $cache_file );
         }
+
+        delete_option( 'uwb_cdn_uploaded_assets' );
+        self::purge_cache_files_from_cdn();
 
         return true;
     }

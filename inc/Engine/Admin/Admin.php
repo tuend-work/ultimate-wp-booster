@@ -125,6 +125,7 @@ class Admin {
         add_action( 'wp_ajax_uwb_upload_single_attachment', array( $this, 'ajax_upload_single_attachment' ) );
         add_action( 'wp_ajax_uwb_download_single_attachment', array( $this, 'ajax_download_single_attachment' ) );
         add_action( 'wp_ajax_uwb_restore_single_attachment', array( $this, 'ajax_restore_single_attachment' ) );
+        add_action( 'wp_ajax_uwb_clear_cdn_cache', array( $this, 'ajax_clear_cdn_cache' ) );
         add_action( 'admin_init', array( $this, 'handle_import_export' ) );
     }
 
@@ -610,9 +611,22 @@ class Admin {
                     echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Cache cleared successfully! Preload queue populating in the background.</p></div>';
                 } elseif ( $msg === 'cache_cleared' ) {
                     echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Page cache cleared successfully!</p></div>';
+                } elseif ( $msg === 'cdn_cache_cleared' ) {
+                    echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> ☁️ CDN Cache cleared successfully!</p></div>';
                 }
             } );
         }
+    }
+
+    public function ajax_clear_cdn_cache() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ) );
+        }
+
+        \Ultimate_WP_Booster\Engine\CDN\CDNManager::clear_cdn_cache();
+
+        wp_send_json_success( array( 'message' => '☁️ Đã xóa CDN Cache thành công!' ) );
     }
 
     public function handle_import_export() {
@@ -1525,6 +1539,10 @@ class Admin {
                     <p>Optimize website loading speed with ultra-fast Static Page Caching.</p>
                 </div>
                 <div class="uwb-header-actions" style="display: flex; align-items: center; gap: 12px;">
+                    <?php $clear_cdn_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_cache' ), 'uwb_clear_cdn_cache_action' ); ?>
+                    <a href="<?php echo esc_url( $clear_cdn_url ); ?>" class="uwb-btn-purge" style="text-decoration:none; background:#0284c7; border-color:#0284c7; cursor:pointer;" title="Clear CDN R2/S3 cache & tracker file">
+                        ☁️ Clear CDN Cache
+                    </a>
                     <span id="uwb-github-update-status" style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.9);"></span>
                     <button type="button" id="uwb-github-update-btn" class="uwb-btn-purge" style="cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.3); outline: none;">
                         <svg class="uwb-git-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" style="color: inherit;"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
@@ -1865,12 +1883,15 @@ class Admin {
                                         </label>
                                     </div>
 
-                                    <div style="display:flex; gap:12px; align-items:center;">
+                                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                                         <button type="button" id="btn-test-cf-connection" class="button button-secondary" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer;">
                                             Test Cloudflare API Connection
                                         </button>
                                         <button type="button" id="btn-purge-cf-cache" class="button button-secondary" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer; color:#dc2626; border-color:#fca5a5;">
                                             Purge Cloudflare Zone Cache Now
+                                        </button>
+                                        <button type="button" class="button button-secondary btn-trigger-clear-cdn-cache" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer; color:#0284c7; border-color:#7dd3fc; background:#f0f9ff;">
+                                            ☁️ Clear CDN Cache
                                         </button>
                                     </div>
                                     <div id="uwb-cf-test-result" style="margin-top:12px; display:none;"></div>
@@ -3285,7 +3306,7 @@ js-(before|after)
                                         </div>
                                         <div class="node-action-right" style="display:flex; gap:6px;">
                                             <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" class="uwb-btn-mini">Settings</button>
-                                            <button type="button" onclick="window.location.reload();" class="uwb-btn-mini">Retest</button>
+                                            <button type="button" class="uwb-btn-mini uwb-btn-mini-danger btn-trigger-clear-cdn-cache">☁️ Clear CDN Cache</button>
                                         </div>
                                     </div>
                                     
@@ -4229,6 +4250,35 @@ js-(before|after)
                         status.css('color', '#fca5a5').text('✗ Server error.');
                         alert('Server error: ' + detail);
                     }
+                });
+            });
+
+            // Clear CDN Cache click handler
+            $(document).on('click', '.btn-trigger-clear-cdn-cache', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var oldHtml = $btn.html();
+                
+                if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ Cache CDN R2/S3 và tập tin vết CDN?')) {
+                    return;
+                }
+
+                $btn.prop('disabled', true).html('☁️ Đang xóa...');
+
+                $.post(ajaxurl, {
+                    action: 'uwb_clear_cdn_cache',
+                    nonce: nonce
+                }, function(res) {
+                    $btn.prop('disabled', false).html(oldHtml);
+                    if (res.success) {
+                        alert(res.data.message || '☁️ Đã xóa CDN Cache thành công!');
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + (res.data ? res.data.message : 'Xóa CDN Cache thất bại'));
+                    }
+                }).fail(function() {
+                    $btn.prop('disabled', false).html(oldHtml);
+                    alert('Có lỗi AJAX xảy ra.');
                 });
             });
 
