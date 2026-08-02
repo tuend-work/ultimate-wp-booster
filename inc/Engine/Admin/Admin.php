@@ -24,6 +24,8 @@ class Admin {
         add_action( 'wp_ajax_uwb_clear_critical_css_cache', array( $this, 'ajax_clear_critical_css_cache' ) );
         add_action( 'wp_ajax_uwb_save_viewport_data', array( 'Ultimate_WP_Booster\Engine\Optimization\ViewportScreen', 'ajax_save_viewport_data' ) );
         add_action( 'wp_ajax_nopriv_uwb_save_viewport_data', array( 'Ultimate_WP_Booster\Engine\Optimization\ViewportScreen', 'ajax_save_viewport_data' ) );
+        add_action( 'wp_ajax_uwb_get_database_stats', array( $this, 'ajax_get_database_stats' ) );
+        add_action( 'wp_ajax_uwb_optimize_database', array( $this, 'ajax_optimize_database' ) );
 
         $options_to_sync = array(
             'uwb_cache_page_enabled',
@@ -707,6 +709,39 @@ class Admin {
         }
 
         wp_send_json_success( array( 'message' => '⚡ Đã xóa Critical CSS Cache thành công!' ) );
+    }
+
+    public function ajax_get_database_stats() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ) );
+        }
+
+        if ( ! class_exists( 'Ultimate_WP_Booster\Engine\Optimization\DatabaseOptimizer' ) ) {
+            require_once dirname( __DIR__ ) . '/Optimization/DatabaseOptimizer.php';
+        }
+
+        $stats = \Ultimate_WP_Booster\Engine\Optimization\DatabaseOptimizer::get_stats();
+        wp_send_json_success( $stats );
+    }
+
+    public function ajax_optimize_database() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ) );
+        }
+
+        if ( ! class_exists( 'Ultimate_WP_Booster\Engine\Optimization\DatabaseOptimizer' ) ) {
+            require_once dirname( __DIR__ ) . '/Optimization/DatabaseOptimizer.php';
+        }
+
+        $options = isset( $_POST['options'] ) ? $_POST['options'] : array();
+        $results = \Ultimate_WP_Booster\Engine\Optimization\DatabaseOptimizer::optimize( $options );
+
+        wp_send_json_success( array(
+            'message' => '🎉 Database optimized successfully!',
+            'details' => $results
+        ) );
     }
 
     public function handle_import_export() {
@@ -2873,12 +2908,13 @@ class Admin {
                             <!-- Horizontal Sub-tabs Nav -->
                             <div class="uwb-sub-tabs-nav">
                                 <div class="uwb-sub-tab-item active" data-subtab="opt_general">[1] General</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_css">[2] CSS</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_js">[3] JS</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_html">[4] HTML</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_media">[5] Media</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_html">[2] HTML</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_css">[3] CSS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_js">[4] JS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_media">[5] Media & File</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_font">[6] Font</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">[7] CDN Offload Media</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_database">[8] Database</div>
                             </div>
 
                             <!-- SUB-TAB 1: General Settings -->
@@ -3405,6 +3441,74 @@ js-(before|after)
                                     </div>
                                 </div>
                                 <?php $this->render_page_optimizer_tools_section( 'CDN Offload Tools' ); ?>
+                            </div>
+
+                            <!-- SUB-TAB 8: Database Settings -->
+                            <div id="subtab-opt_database" class="uwb-subtab-content">
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                        Database Optimization &amp; Cleanup
+                                    </h3>
+                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Clean up database overhead, remove post revisions, trashed posts/comments, and transients to improve database query speeds.</p>
+
+                                    <table class="wp-list-table widefat fixed striped" style="border:none; box-shadow:none; background:transparent; margin-bottom:20px;">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 40px; padding: 10px;">Select</th>
+                                                <th style="padding: 10px;">Optimization Target</th>
+                                                <th style="padding: 10px; text-align: right;">Status / Count</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="uwb-db-stats-tbody">
+                                            <tr>
+                                                <td style="padding: 12px 10px;"><input type="checkbox" class="uwb-db-clean-opt" value="revisions" checked /></td>
+                                                <td style="padding: 12px 10px;"><strong>Post Revisions</strong><br><span class="description">Stored versions of posts/pages. Deleting revisions won't affect current content.</span></td>
+                                                <td style="padding: 12px 10px; text-align: right; font-weight: bold;" id="uwb-db-stat-revisions">Loading...</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 12px 10px;"><input type="checkbox" class="uwb-db-clean-opt" value="auto_drafts" checked /></td>
+                                                <td style="padding: 12px 10px;"><strong>Auto Drafts</strong><br><span class="description">Automatically saved draft posts during editing.</span></td>
+                                                <td style="padding: 12px 10px; text-align: right; font-weight: bold;" id="uwb-db-stat-auto_drafts">Loading...</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 12px 10px;"><input type="checkbox" class="uwb-db-clean-opt" value="trash_posts" /></td>
+                                                <td style="padding: 12px 10px;"><strong>Trashed Posts</strong><br><span class="description">Posts, pages, and custom post types in the trash.</span></td>
+                                                <td style="padding: 12px 10px; text-align: right; font-weight: bold;" id="uwb-db-stat-trash_posts">Loading...</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 12px 10px;"><input type="checkbox" class="uwb-db-clean-opt" value="spam_comments" checked /></td>
+                                                <td style="padding: 12px 10px;"><strong>Spam Comments</strong><br><span class="description">Comments marked as spam by moderators or antispam plugins.</span></td>
+                                                <td style="padding: 12px 10px; text-align: right; font-weight: bold;" id="uwb-db-stat-spam_comments">Loading...</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 12px 10px;"><input type="checkbox" class="uwb-db-clean-opt" value="trash_comments" checked /></td>
+                                                <td style="padding: 12px 10px;"><strong>Trashed Comments</strong><br><span class="description">Comments in the trash folder.</span></td>
+                                                <td style="padding: 12px 10px; text-align: right; font-weight: bold;" id="uwb-db-stat-trash_comments">Loading...</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 12px 10px;"><input type="checkbox" class="uwb-db-clean-opt" value="expired_transients" checked /></td>
+                                                <td style="padding: 12px 10px;"><strong>Expired Transients</strong><br><span class="description">Temporary cache options that have already expired.</span></td>
+                                                <td style="padding: 12px 10px; text-align: right; font-weight: bold;" id="uwb-db-stat-expired_transients">Loading...</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 12px 10px;"><input type="checkbox" class="uwb-db-clean-opt" value="optimize_tables" checked /></td>
+                                                <td style="padding: 12px 10px;"><strong>Database Tables Overhead</strong><br><span class="description">Defragment database tables to reclaim unused storage database space.</span></td>
+                                                <td style="padding: 12px 10px; text-align: right; font-weight: bold;" id="uwb-db-stat-tables">Loading...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                    <div style="display: flex; gap: 12px; align-items: center;">
+                                        <button type="button" id="btn-refresh-db-stats" class="button button-secondary" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer;">
+                                            Refresh Stats
+                                        </button>
+                                        <button type="button" id="btn-optimize-db-now" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">
+                                            Optimize Database Now
+                                        </button>
+                                    </div>
+                                    <div id="uwb-db-opt-result" style="margin-top:16px; display:none; padding: 16px; border-radius: 8px;"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -4787,6 +4891,139 @@ js-(before|after)
                 } else {
                     $('#uwb-lazy-elements-textarea-wrap').slideUp(250);
                 }
+            });
+
+            function loadDbStats() {
+                var $tbody = $('#uwb-db-stats-tbody');
+                $tbody.find('td[id^="uwb-db-stat-"]').text('Loading...');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'uwb_get_database_stats',
+                        nonce: nonce
+                    },
+                    success: function(res) {
+                        if (res.success) {
+                            $('#uwb-db-stat-revisions').text(res.data.revisions);
+                            $('#uwb-db-stat-auto_drafts').text(res.data.auto_drafts);
+                            $('#uwb-db-stat-trash_posts').text(res.data.trash_posts);
+                            $('#uwb-db-stat-spam_comments').text(res.data.spam_comments);
+                            $('#uwb-db-stat-trash_comments').text(res.data.trash_comments);
+                            $('#uwb-db-stat-expired_transients').text(res.data.expired_transients);
+                            $('#uwb-db-stat-tables').text(res.data.overhead_formatted + ' (' + res.data.tables_to_optimize + ' tables)');
+                        } else {
+                            $tbody.find('td[id^="uwb-db-stat-"]').text('Error fetching stats');
+                        }
+                    },
+                    error: function() {
+                        $tbody.find('td[id^="uwb-db-stat-"]').text('Network error');
+                    }
+                });
+            }
+
+            // Load on tab click
+            $('.uwb-sub-tab-item[data-subtab="opt_database"]').on('click', function() {
+                loadDbStats();
+            });
+
+            // If active tab is already database
+            if ($('.uwb-sub-tab-item[data-subtab="opt_database"]').hasClass('active')) {
+                loadDbStats();
+            }
+
+            $('#btn-refresh-db-stats').on('click', function(e) {
+                e.preventDefault();
+                loadDbStats();
+            });
+
+            $('#btn-optimize-db-now').on('click', function(e) {
+                e.preventDefault();
+                var selectedOptions = {};
+                var anyChecked = false;
+                $('.uwb-db-clean-opt').each(function() {
+                    var val = $(this).val();
+                    var checked = $(this).is(':checked') ? 1 : 0;
+                    selectedOptions[val] = checked;
+                    if (checked) {
+                        anyChecked = true;
+                    }
+                });
+
+                if (!anyChecked) {
+                    alert('Please select at least one optimization target.');
+                    return;
+                }
+
+                if (!confirm('Are you sure you want to run the selected database optimization and cleanups? This will permanently delete the items.')) {
+                    return;
+                }
+
+                var $btn = $(this);
+                var $result = $('#uwb-db-opt-result');
+                $btn.prop('disabled', true).text('Optimizing...');
+                $result.hide();
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'uwb_optimize_database',
+                        nonce: nonce,
+                        options: selectedOptions
+                    },
+                    success: function(res) {
+                        $btn.prop('disabled', false).text('Optimize Database Now');
+                        $result.show();
+                        if (res.success) {
+                            var detailsHtml = '<ul style="margin: 8px 0 0 16px; padding:0; list-style-type:disc;">';
+                            detailsHtml += '<li>Deleted Revisions: ' + res.data.details.revisions + '</li>';
+                            detailsHtml += '<li>Deleted Auto Drafts: ' + res.data.details.auto_drafts + '</li>';
+                            detailsHtml += '<li>Deleted Trashed Posts: ' + res.data.details.trash_posts + '</li>';
+                            detailsHtml += '<li>Deleted Spam Comments: ' + res.data.details.spam_comments + '</li>';
+                            detailsHtml += '<li>Deleted Trashed Comments: ' + res.data.details.trash_comments + '</li>';
+                            detailsHtml += '<li>Cleared Expired Transients: ' + res.data.details.expired_transients + '</li>';
+                            detailsHtml += '<li>Optimized Tables: ' + res.data.details.optimized_tables + '</li>';
+                            detailsHtml += '</ul>';
+
+                            $result.css({
+                                'background': '#d1fae5',
+                                'color': '#065f46',
+                                'border': '1px solid #6ee7b7',
+                                'padding': '16px',
+                                'border-radius': '8px',
+                                'font-size': '13px',
+                                'font-weight': '600'
+                            }).html('<strong>✓ Optimization Complete!</strong>' + detailsHtml);
+                            
+                            // Refresh stats
+                            loadDbStats();
+                        } else {
+                            $result.css({
+                                'background': '#fee2e2',
+                                'color': '#991b1b',
+                                'border': '1px solid #fca5a5',
+                                'padding': '16px',
+                                'border-radius': '8px',
+                                'font-size': '13px',
+                                'font-weight': '600'
+                            }).html('✕ Error: ' + (res.data.message || 'Optimization failed'));
+                        }
+                    },
+                    error: function() {
+                        $btn.prop('disabled', false).text('Optimize Database Now');
+                        $result.show().css({
+                            'background': '#fee2e2',
+                            'color': '#991b1b',
+                            'border': '1px solid #fca5a5',
+                            'padding': '16px',
+                            'border-radius': '8px',
+                            'font-size': '13px',
+                            'font-weight': '600'
+                        }).html('✕ Server error running database optimization.');
+                    }
+                });
             });
 
             // Flush Redis Cache
