@@ -1614,6 +1614,8 @@ class Admin {
                             echo '<div class="notice notice-error is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#fef2f2; border-left:4px solid #ef4444; color:#b91c1c; border-radius:8px;"><p style="margin:0; font-size:13.5px;">❌ <strong>Cloudflare CDN Zone Purge Error:</strong> ' . $err . '</p></div>';
                         } elseif ( $msg === 'cache_cleared' ) {
                             echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#eff6ff; border-left:4px solid #3b82f6; color:#1d4ed8; border-radius:8px;"><p style="margin:0; font-size:13.5px;">⚡ <strong>Static Page Cache Cleared!</strong> All HTML page cache files purged successfully.</p></div>';
+                        } elseif ( $msg === 'flush_all_preload_started' || $msg === 'preload_started' ) {
+                            echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#f0fdf4; border-left:4px solid #10b981; color:#047857; border-radius:8px;"><p style="margin:0; font-size:13.5px;">🚀 <strong>Flush All &amp; Preload Started!</strong> Successfully purged Page Cache, Cloudflare CDN Zone, S3 Asset Cache, OPCache, and Object Cache! Preload crawler restarted.</p></div>';
                         }
                     }
                     ?>

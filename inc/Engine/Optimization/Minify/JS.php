@@ -156,14 +156,41 @@ class JS {
 
         if ( file_exists( $cache_file ) ) {
             \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $cache_file );
-            $first = true;
-            $new_tag = '<script src="' . esc_url( $cache_url ) . '"></script>';
+
+            $body_pos = stripos( $html, '<body' );
+            $target_item = null;
+
+            if ( $body_pos !== false ) {
+                foreach ( $to_combine as $item ) {
+                    $item_pos = stripos( $html, $item['tag'] );
+                    if ( $item_pos !== false && $item_pos > $body_pos ) {
+                        $target_item = $item;
+                        break;
+                    }
+                }
+            }
+
+            if ( ! $target_item && ! empty( $to_combine ) ) {
+                $target_item = reset( $to_combine );
+            }
+
+            $replaced = false;
+            $new_tag  = '<script src="' . esc_url( $cache_url ) . '"></script>';
+
             foreach ( $to_combine as $item ) {
-                if ( $first ) {
-                    $html = str_replace( $item['tag'], $new_tag, $html );
-                    $first = false;
+                if ( ! $replaced && $target_item && $item['tag'] === $target_item['tag'] ) {
+                    $html     = str_replace( $item['tag'], $new_tag, $html );
+                    $replaced = true;
                 } else {
                     $html = str_replace( $item['tag'], '', $html );
+                }
+            }
+
+            if ( ! $replaced ) {
+                if ( stripos( $html, '</body>' ) !== false ) {
+                    $html = str_ireplace( '</body>', $new_tag . "\n" . '</body>', $html );
+                } else {
+                    $html .= "\n" . $new_tag;
                 }
             }
 

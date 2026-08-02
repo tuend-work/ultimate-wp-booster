@@ -223,28 +223,38 @@ class AdminBarSubscriber implements Subscriber_Interface {
 
         check_admin_referer( 'uwb_flush_all_preload_action' );
 
+        // 1. Clear Static Page Cache
         $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
         $uwb_cache->purge_all();
 
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
-        $wpdb->query( "TRUNCATE TABLE {$table_name}" );
-        update_option( 'uwb_preload_running', 1 );
+        // 2. Clear Cloudflare CDN Zone Cache (Edge Cache)
+        \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::purge_everything();
 
+        // 3. Clear S3 Asset Cache & Index
+        \Ultimate_WP_Booster\Engine\CDN\CDNManager::clear_cdn_cache();
+
+        // 4. Purge OPCache
         if ( function_exists( 'opcache_reset' ) ) {
             @opcache_reset();
         }
 
+        // 5. Purge Object Cache
         $this->flush_object_cache_internal();
+
+        // 6. Reset & Restart Preload Queue
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
+        $wpdb->query( "TRUNCATE TABLE {$table_name}" );
+        update_option( 'uwb_preload_running', 1 );
 
         wp_clear_scheduled_hook( 'uwb_start_preload_async' );
         wp_schedule_single_event( time(), 'uwb_start_preload_async' );
 
         $referer = wp_get_referer();
         if ( $referer && strpos( $referer, 'admin.php?page=ultimate-wp-booster' ) !== false ) {
-            wp_safe_redirect( add_query_arg( 'uwb_msg', 'preload_started', $referer ) );
+            wp_safe_redirect( add_query_arg( 'uwb_msg', 'flush_all_preload_started', $referer ) );
         } else {
-            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=preload_started' ) );
+            wp_safe_redirect( admin_url( 'admin.php?page=ultimate-wp-booster&uwb_msg=flush_all_preload_started' ) );
         }
         exit;
     }
