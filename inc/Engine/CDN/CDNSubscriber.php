@@ -934,13 +934,13 @@ class CDNSubscriber implements Subscriber_Interface {
                         }
                         $btn.text('✔ Đã khôi phục!');
                         setTimeout(function() { location.reload(); }, 600);
-                    } else {
-                        alert('Error: ' + (res.data ? res.data.message : 'Restore failed'));
-                        $btn.css('pointer-events', 'auto').text(oldText);
-                        if ($msg && $msg.length) {
-                            $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Restore failed'));
-                        }
                     }
+                }).fail(function() {
+                    alert('AJAX error occurred.');
+                    $btn.css('pointer-events', 'auto').text(oldText);
+                });
+            });
+
             // 5. Grid View Cloud Badge Scanner & Backbone Listener
             function getCloudSvgSrc(isOffloaded) {
                 return isOffloaded ?
