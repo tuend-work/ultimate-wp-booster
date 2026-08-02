@@ -179,6 +179,7 @@ class CSS {
                 $min_sibling = substr( $local_path, 0, -4 ) . '.min.css';
                 if ( file_exists( $min_sibling ) ) {
                     $sibling_url = substr( $url_clean, 0, -4 ) . '.min.css';
+                    \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $min_sibling );
                     if ( is_array( $logs ) ) {
                         $logs[] = "CSS Minify: Replaced {$url_clean} with pre-minified sibling {$sibling_url}";
                     }
@@ -188,6 +189,9 @@ class CSS {
             }
 
             if ( stripos( $url_clean, '.min.css' ) !== false ) {
+                if ( $local_path && file_exists( $local_path ) ) {
+                    \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $local_path );
+                }
                 $skipped_count++;
                 if ( is_array( $logs ) ) {
                     $logs[] = "CSS Minify: Skipped {$url_clean} (File is already minified .min.css)";

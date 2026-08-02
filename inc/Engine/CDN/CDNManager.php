@@ -166,13 +166,19 @@ class CDNManager {
             return false;
         }
 
-        $file_norm = str_replace( '\\', '/', $file_path );
+        $file_norm   = str_replace( '\\', '/', $file_path );
         $content_dir = str_replace( '\\', '/', WP_CONTENT_DIR );
+        $abs_dir     = defined( 'ABSPATH' ) ? str_replace( '\\', '/', ABSPATH ) : '';
 
+        $s3_key = '';
         if ( strpos( $file_norm, $content_dir ) === 0 ) {
-            $rel = ltrim( substr( $file_norm, strlen( $content_dir ) ), '/' );
+            $rel    = ltrim( substr( $file_norm, strlen( $content_dir ) ), '/' );
             $s3_key = 'wp-content/' . $rel;
+        } elseif ( ! empty( $abs_dir ) && strpos( $file_norm, $abs_dir ) === 0 ) {
+            $s3_key = ltrim( substr( $file_norm, strlen( $abs_dir ) ), '/' );
+        }
 
+        if ( ! empty( $s3_key ) ) {
             $cache_control = get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' );
             return $s3_client->put_object( $file_path, $s3_key, '', $cache_control );
         }
