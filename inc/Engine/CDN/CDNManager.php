@@ -143,7 +143,27 @@ class CDNManager {
     }
 
     public static function upload_asset_to_cdn( $file_path ) {
-        $ext = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
+        if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
+            return false;
+        }
+
+        $file_norm = str_replace( '\\', '/', $file_path );
+        $ext       = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
+
+        // Strict Rule: Minified individual resources (NOT combined) must NOT be uploaded to CDN
+        if ( strpos( $file_norm, '/cache/ultimate-wp-booster/minify/' ) !== false ) {
+            $allow_minified = false;
+            if ( 'css' === $ext && get_option( 'uwb_cdn_auto_upload_minified_css', 0 ) ) {
+                $allow_minified = true;
+            }
+            if ( 'js' === $ext && get_option( 'uwb_cdn_auto_upload_minified_js', 0 ) ) {
+                $allow_minified = true;
+            }
+            if ( ! $allow_minified ) {
+                return false;
+            }
+        }
+
         $can_upload = get_option( 'uwb_cdn_auto_upload_combined', 1 );
         if ( 'css' === $ext && get_option( 'uwb_cdn_distribute_css', 0 ) ) {
             $can_upload = true;
@@ -153,10 +173,6 @@ class CDNManager {
         }
 
         if ( ! get_option( 'uwb_cdn_enabled', 0 ) || ! $can_upload ) {
-            return false;
-        }
-
-        if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
             return false;
         }
 
