@@ -237,7 +237,9 @@ class JS {
                     }
 
                     $write_ok = @file_put_contents( $cache_file, trim( $content ) );
-                    if ( $write_ok === false ) {
+                    if ( $write_ok !== false ) {
+                        \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $cache_file );
+                    } else {
                         if ( is_array( $logs ) ) {
                             $logs[] = "JS Minify: Failed to write minified file for {$url_clean}";
                         }
@@ -249,6 +251,10 @@ class JS {
                     }
                     return $tag;
                 }
+            }
+
+            if ( file_exists( $cache_file ) ) {
+                \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $cache_file );
             }
 
             $minified_count++;
