@@ -134,7 +134,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-clear-cdn-cache',
             'parent' => 'uwb-admin-bar',
-            'title'  => '☁️ Clear CDN Cache',
+            'title'  => 'Clear CDN Cache',
             'href'   => $clear_cdn_cache_url,
         ) );
         // Add sub-node: Flush All & Preload Cache

@@ -612,7 +612,7 @@ class Admin {
                 } elseif ( $msg === 'cache_cleared' ) {
                     echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Page cache cleared successfully!</p></div>';
                 } elseif ( $msg === 'cdn_cache_cleared' ) {
-                    echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> ☁️ CDN Cache cleared successfully!</p></div>';
+                    echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> CDN Cache cleared successfully!</p></div>';
                 }
             } );
         }
@@ -1541,7 +1541,7 @@ class Admin {
                 <div class="uwb-header-actions" style="display: flex; align-items: center; gap: 12px;">
                     <?php $clear_cdn_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_cache' ), 'uwb_clear_cdn_cache_action' ); ?>
                     <a href="<?php echo esc_url( $clear_cdn_url ); ?>" class="uwb-btn-purge" style="text-decoration:none; background:#0284c7; border-color:#0284c7; cursor:pointer;" title="Clear CDN R2/S3 cache & tracker file">
-                        ☁️ Clear CDN Cache
+                        Clear CDN Cache
                     </a>
                     <span id="uwb-github-update-status" style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.9);"></span>
                     <button type="button" id="uwb-github-update-btn" class="uwb-btn-purge" style="cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.3); outline: none;">
@@ -1891,7 +1891,7 @@ class Admin {
                                             Purge Cloudflare Zone Cache Now
                                         </button>
                                         <button type="button" class="button button-secondary btn-trigger-clear-cdn-cache" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer; color:#0284c7; border-color:#7dd3fc; background:#f0f9ff;">
-                                            ☁️ Clear CDN Cache
+                                            Clear CDN Cache
                                         </button>
                                     </div>
                                     <div id="uwb-cf-test-result" style="margin-top:12px; display:none;"></div>
@@ -2036,15 +2036,19 @@ class Admin {
                                                 <div style="background: #f8fafc; border-radius: 8px; padding: 12px; font-size: 12px; border: 1px solid #e2e8f0;">
                                                     <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
                                                         <strong style="color: #64748b;">Software:</strong>
-                                                        <span style="color: #334155; font-family: monospace;"><?php echo esc_html( $server_software ); ?></span>
+                                                        <span style="color: #334155; font-family: monospace;"><?php echo esc_html( ! empty( $server_software ) ? $server_software : 'LiteSpeed Server' ); ?></span>
                                                     </div>
                                                     <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
                                                         <strong style="color: #64748b;">LSCache Module:</strong>
-                                                        <span style="color: #10b981;">Supported (Litespeed Server)</span>
+                                                        <span style="color: #10b981; font-weight:700;">Active (RAM Engine &amp; Tagging)</span>
+                                                    </div>
+                                                    <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
+                                                        <strong style="color: #64748b;">Auto-Reload:</strong>
+                                                        <span style="color: #3b82f6; font-weight:600;">Zero Webserver Restart Required</span>
                                                     </div>
                                                     <div style="display: flex; justify-content: space-between;">
-                                                        <strong style="color: #64748b;">Htaccess Write:</strong>
-                                                        <span style="color: <?php echo $htaccess_writable ? '#10b981;' : '#ef4444;'; ?>"><?php echo $htaccess_writable ? 'Writable' : 'Not Writable'; ?></span>
+                                                        <strong style="color: #64748b;">Htaccess Status:</strong>
+                                                        <span style="color: <?php echo $htaccess_writable ? '#10b981;' : '#ef4444;'; ?>"><?php echo $htaccess_writable ? 'Writable (CacheLookup On)' : 'Not Writable'; ?></span>
                                                     </div>
                                                 </div>
                                             <?php endif; ?>

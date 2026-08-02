@@ -25,7 +25,17 @@ class CacheSubscriber implements Subscriber_Interface {
             'update_option_sidebars_widgets' => 'purge_all',
             'uwb_clean_expired_cache'       => 'clean_expired_cache',
             'init'                          => 'schedule_cleanup_cron',
+            'wp_headers'                    => 'send_litespeed_headers',
         );
+    }
+
+    public function send_litespeed_headers( $headers ) {
+        if ( LiteSpeedEngine::is_litespeed_server() ) {
+            $lifespan = intval( get_option( 'uwb_cache_lifespan', 36000 ) );
+            LiteSpeedEngine::send_cache_control_headers( $lifespan );
+            LiteSpeedEngine::send_tag_headers();
+        }
+        return $headers;
     }
 
     public function purge_post_cache( $post_id, $post = null, $update = null ) {

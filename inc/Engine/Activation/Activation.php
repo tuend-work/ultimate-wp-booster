@@ -132,6 +132,38 @@ class Activation {
                 }
             }
         }
+
+        self::update_litespeed_htaccess();
+    }
+
+    public static function update_litespeed_htaccess() {
+        if ( ! \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_litespeed_server() ) {
+            return;
+        }
+
+        $htaccess_path = ABSPATH . '.htaccess';
+        if ( ! file_exists( $htaccess_path ) || ! is_writable( $htaccess_path ) ) {
+            return;
+        }
+
+        $content = file_get_contents( $htaccess_path );
+        $marker = '# BEGIN Ultimate WP Booster LiteSpeed';
+        
+        $rules = "# BEGIN Ultimate WP Booster LiteSpeed\n";
+        $rules .= "<IfModule LiteSpeed>\n";
+        $rules .= "    CacheLookup public on\n";
+        $rules .= "</IfModule>\n";
+        $rules .= "# END Ultimate WP Booster LiteSpeed";
+
+        if ( strpos( $content, $marker ) !== false ) {
+            $pattern = '/# BEGIN Ultimate WP Booster LiteSpeed.*?# END Ultimate WP Booster LiteSpeed/s';
+            $content = preg_replace( $pattern, $rules, $content );
+        } else {
+            $content = $rules . "\n\n" . $content;
+        }
+
+        file_put_contents( $htaccess_path, $content );
+        \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::touch_htaccess();
     }
 
     public static function toggle_wp_cache( $enable ) {

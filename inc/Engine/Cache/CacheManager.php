@@ -25,6 +25,11 @@ class CacheManager {
             \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::purge_everything();
         }
 
+        if ( LiteSpeedEngine::is_litespeed_server() ) {
+            LiteSpeedEngine::purge_all();
+            LiteSpeedEngine::touch_htaccess();
+        }
+
         $minify_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
         if ( file_exists( $minify_dir ) ) {
             $this->recursive_delete( $minify_dir, true );
@@ -105,6 +110,10 @@ class CacheManager {
 
         $this->purge_url( home_url( '/' ) );
         \Ultimate_WP_Booster\Engine\Preload\Preloader::invalidate_homepage_links_cache();
+
+        if ( LiteSpeedEngine::is_litespeed_server() ) {
+            LiteSpeedEngine::purge_post_tag( $post_id );
+        }
 
         if ( $post->post_parent ) {
             $parent_permalink = get_permalink( $post->post_parent );
