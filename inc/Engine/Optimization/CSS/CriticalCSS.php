@@ -220,8 +220,11 @@ class CriticalCSS {
             return '';
         }
 
-        $css = wp_strip_all_tags( $css );
+        // Remove any PHP code
         $css = preg_replace( '/<\?php|<\?|\?>/i', '', $css );
+
+        // Crucial: Prevent HTML tag breakout by stripping '</style>'
+        $css = preg_replace( '#</style\b[^>]*>#i', '', $css );
 
         $dangerous_patterns = array(
             '/javascript\s*:/i',

@@ -2913,7 +2913,7 @@ class Admin {
                                 <div class="uwb-sub-tab-item" data-subtab="opt_js">[4] JS</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_media">[5] Media & File</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_font">[6] Font</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">[7] CDN Offload Media</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">[7] S3 Storage</div>
                                 <div class="uwb-sub-tab-item" data-subtab="opt_database">[8] Database</div>
                             </div>
 
