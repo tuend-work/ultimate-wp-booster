@@ -129,7 +129,14 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 'href'   => '#',
             ) );
         }
-
+        // Add sub-node: Clear CDN Cache
+        $clear_cdn_cache_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_cache' ), 'uwb_clear_cdn_cache_action' );
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-clear-cdn-cache',
+            'parent' => 'uwb-admin-bar',
+            'title'  => '☁️ Clear CDN Cache',
+            'href'   => $clear_cdn_cache_url,
+        ) );
         // Add sub-node: Flush All & Preload Cache
         $flush_all_preload_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_all_preload' ), 'uwb_flush_all_preload_action' );
         $wp_admin_bar->add_node( array(
@@ -139,14 +146,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
             'href'   => $flush_all_preload_url,
         ) );
 
-        // Add sub-node: Clear CDN Cache
-        $clear_cdn_cache_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_cache' ), 'uwb_clear_cdn_cache_action' );
-        $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-clear-cdn-cache',
-            'parent' => 'uwb-admin-bar',
-            'title'  => '☁️ Clear CDN Cache',
-            'href'   => $clear_cdn_cache_url,
-        ) );
+
 
         // Add sub-node: Settings
         $wp_admin_bar->add_node( array(

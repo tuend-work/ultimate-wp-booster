@@ -285,6 +285,8 @@ class CDNManager {
                     }
                 }
             }
+        }
+
         return true;
     }
 
