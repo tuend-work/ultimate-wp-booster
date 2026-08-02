@@ -4,7 +4,7 @@ namespace Ultimate_WP_Booster\Engine\Optimization\CSS;
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 /**
- * Server-Side Automatic Critical CSS Generator & Extractor for Above-The-Fold Elements
+ * Server-Side Placeholder & Client-Side Passive Auto-Extraction Engine for Critical CSS
  */
 class CriticalCSS {
 
@@ -16,277 +16,223 @@ class CriticalCSS {
     }
 
     /**
-     * Main entry point: Extract or retrieve cached Critical CSS for HTML response
+     * Main Entry Point: Inject Critical CSS if cached, or inject Placeholder + Extractor JS
      *
      * @param string $html
      * @param string $url
-     * @return string Minified Critical CSS
+     * @return string
      */
     public static function generate( $html, $url = '' ) {
         if ( empty( $html ) ) {
-            return '';
+            return $html;
         }
 
-        $enabled = (int) get_option( 'uwb_auto_critical_css', 0 );
+        $enabled = (int) get_option( 'uwb_auto_critical_css', 1 );
         if ( ! $enabled ) {
-            return '';
+            return $html;
         }
 
         if ( empty( $url ) ) {
             $url = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '/';
         }
 
-        $url_hash = md5( strtok( $url, '?' ) );
+        $url_clean = strtok( $url, '?' );
+        $url_hash = md5( $url_clean );
         $cache_dir = self::get_cache_dir();
         $cache_file = $cache_dir . $url_hash . '.css';
 
-        // 1. Return cached Critical CSS if available
-        if ( file_exists( $cache_file ) && filesize( $cache_file ) > 10 ) {
+        // 1. If cached Critical CSS file exists on server: Inject directly into <head>
+        if ( file_exists( $cache_file ) && filesize( $cache_file ) > 20 ) {
             $cached_css = @file_get_contents( $cache_file );
             if ( ! empty( $cached_css ) ) {
-                return $cached_css;
+                $style_tag = '<style id="uwb-critical-css">' . trim( $cached_css ) . '</style>';
+                if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+                    return str_replace( $matches[0], $matches[0] . "\n" . $style_tag, $html );
+                }
+                return $html;
             }
         }
 
-        // 2. Extract Above-The-Fold selectors from DOM
-        $target_selectors = self::extract_above_the_fold_selectors( $html );
-        if ( empty( $target_selectors ) ) {
-            return '';
+        // 2. Fallback for Preloader / First Visit: Inject Placeholder in <head> & Extractor JS in <body>
+        $placeholder_tag = '<style id="uwb-critical-css"></style>';
+
+        if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+            $html = str_replace( $matches[0], $matches[0] . "\n" . $placeholder_tag, $html );
         }
 
-        // 3. Collect CSS content from inline <style> and local <link rel="stylesheet"> files
-        $raw_css = self::collect_css_content( $html );
-        if ( empty( $raw_css ) ) {
-            return '';
+        // Inject background Client-Side Extractor JS before </body>
+        $extractor_script = self::render_extractor_script( $url_hash );
+        if ( stripos( $html, '</body>' ) !== false ) {
+            $html = str_ireplace( '</body>', $extractor_script . "\n" . '</body>', $html );
+        } else {
+            $html .= "\n" . $extractor_script;
         }
 
-        // 4. Extract matching CSS rules for Above-The-Fold elements
-        $critical_css = self::extract_matching_css_rules( $raw_css, $target_selectors );
-        if ( empty( $critical_css ) ) {
-            return '';
+        return $html;
+    }
+
+    /**
+     * Render lightweight Client-Side Extractor JS
+     *
+     * @param string $url_hash
+     * @return string
+     */
+    private static function render_extractor_script( $url_hash ) {
+        $ajax_url = function_exists( 'admin_url' ) ? admin_url( 'admin-ajax.php' ) : '/wp-admin/admin-ajax.php';
+        $nonce = function_exists( 'wp_create_nonce' ) ? wp_create_nonce( 'uwb_crit_nonce_' . $url_hash ) : '';
+
+        ob_start();
+        ?>
+<script id="uwb-critical-extractor">
+(function(){
+    if (window.__uwb_crit_ran) return;
+    window.__uwb_crit_ran = true;
+    function extractCritical() {
+        try {
+            var maxVh = window.innerHeight || 900;
+            var elements = document.querySelectorAll('header, nav, section, div, h1, h2, h3, a, img, form, p, span, ul, li');
+            var topSelectors = new Set(['html', 'body', '*', 'header', 'nav', 'h1', 'h2', 'h3', 'a', 'img', 'p', 'div', 'section', 'ul', 'li']);
+            for (var i = 0; i < elements.length; i++) {
+                var el = elements[i];
+                var rect = el.getBoundingClientRect();
+                if (rect.top <= maxVh + 100) {
+                    if (el.tagName) topSelectors.add(el.tagName.toLowerCase());
+                    if (el.id) topSelectors.add('#' + el.id);
+                    if (el.className && typeof el.className === 'string') {
+                        var classes = el.className.split(/\s+/);
+                        for (var c = 0; c < classes.length; c++) {
+                            if (classes[c]) topSelectors.add('.' + classes[c]);
+                        }
+                    }
+                }
+            }
+            var rulesExtracted = [];
+            var sheets = document.styleSheets;
+            for (var s = 0; s < sheets.length; s++) {
+                try {
+                    var rules = sheets[s].cssRules || sheets[s].rules;
+                    if (!rules) continue;
+                    for (var r = 0; r < rules.length; r++) {
+                        var rule = rules[r];
+                        if (rule.type === CSSRule.STYLE_RULE) {
+                            var sel = rule.selectorText;
+                            if (!sel) continue;
+                            if (sel.indexOf(':root') !== -1 || sel === '*' || sel === 'body' || sel === 'html') {
+                                rulesExtracted.push(rule.cssText);
+                                continue;
+                            }
+                            var parts = sel.split(',');
+                            var matched = false;
+                            for (var p = 0; p < parts.length; p++) {
+                                var part = parts[p].trim();
+                                var matchCls = part.match(/\.([a-z0-9_-]+)/i);
+                                var matchId = part.match(/\#([a-z0-9_-]+)/i);
+                                var matchTag = part.match(/^([a-z0-9]+)/i);
+                                if ((matchCls && topSelectors.has('.' + matchCls[1])) ||
+                                    (matchId && topSelectors.has('#' + matchId[1])) ||
+                                    (matchTag && topSelectors.has(matchTag[1].toLowerCase()))) {
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                            if (matched) rulesExtracted.push(rule.cssText);
+                        } else if (rule.type === CSSRule.MEDIA_RULE || rule.type === 3 || rule.type === 7) {
+                            rulesExtracted.push(rule.cssText);
+                        }
+                    }
+                } catch(e){}
+            }
+            var finalCss = rulesExtracted.join('\n');
+            if (!finalCss || finalCss.length < 20) return;
+            var styleEl = document.getElementById('uwb-critical-css');
+            if (styleEl) styleEl.textContent = finalCss;
+            var payload = new FormData();
+            payload.append('action', 'uwb_save_critical_css');
+            payload.append('url_hash', '<?php echo esc_js( $url_hash ); ?>');
+            payload.append('nonce', '<?php echo esc_js( $nonce ); ?>');
+            payload.append('critical_css', finalCss);
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('<?php echo esc_url( $ajax_url ); ?>', payload);
+            } else if (window.fetch) {
+                fetch('<?php echo esc_url( $ajax_url ); ?>', { method: 'POST', body: payload });
+            }
+        } catch(e){}
+    }
+    if (document.readyState === 'complete') {
+        setTimeout(extractCritical, 600);
+    } else {
+        window.addEventListener('load', function(){ setTimeout(extractCritical, 600); });
+    }
+})();
+</script>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Handle AJAX endpoint to save Client-Side Extractor payload and update Static HTML cache file
+     */
+    public static function ajax_save_critical_css() {
+        $url_hash = isset( $_POST['url_hash'] ) ? sanitize_text_field( $_POST['url_hash'] ) : '';
+        $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
+        $css_raw = isset( $_POST['critical_css'] ) ? (string) $_POST['critical_css'] : '';
+
+        if ( empty( $url_hash ) || empty( $css_raw ) ) {
+            wp_send_json_error( array( 'message' => 'Invalid parameters' ) );
         }
 
-        // 5. Minify Critical CSS
-        $minified_css = self::minify_css( $critical_css );
+        if ( ! wp_verify_nonce( $nonce, 'uwb_crit_nonce_' . $url_hash ) ) {
+            wp_send_json_error( array( 'message' => 'Nonce verification failed' ) );
+        }
 
-        // 6. Save to cache file
+        // Minify CSS payload
+        $minified_css = self::minify_css( $css_raw );
+
+        // Save to cache dir
+        $cache_dir = self::get_cache_dir();
         if ( ! is_dir( $cache_dir ) ) {
             @wp_mkdir_p( $cache_dir );
         }
+
+        $cache_file = $cache_dir . $url_hash . '.css';
         @file_put_contents( $cache_file, $minified_css );
 
-        return $minified_css;
+        // Update static HTML cache files if present in wp-content/cache/wp-rocket/
+        self::update_static_html_cache_files( $minified_css );
+
+        wp_send_json_success( array( 'message' => 'Critical CSS saved successfully', 'bytes' => strlen( $minified_css ) ) );
     }
 
     /**
-     * Scan Above-The-Fold DOM nodes (top ~30 elements) and extract IDs, Classes, and Tag names
+     * Update static HTML cache files on disk to fill placeholder <style id="uwb-critical-css"></style>
      *
-     * @param string $html
-     * @return array
+     * @param string $critical_css
      */
-    private static function extract_above_the_fold_selectors( $html ) {
-        if ( ! function_exists( 'str_get_html' ) ) {
-            $dep_path = defined( 'UWB_PLUGIN_DIR' ) ? UWB_PLUGIN_DIR . 'inc/Dependencies/simple_html_dom.php' : dirname( __DIR__, 3 ) . '/Dependencies/simple_html_dom.php';
-            if ( file_exists( $dep_path ) ) {
-                require_once $dep_path;
-            }
+    private static function update_static_html_cache_files( $critical_css ) {
+        $wp_rocket_dir = WP_CONTENT_DIR . '/cache/wp-rocket';
+        if ( ! is_dir( $wp_rocket_dir ) ) {
+            return;
         }
 
-        if ( ! function_exists( 'str_get_html' ) ) {
-            return array();
-        }
+        $style_replacement = '<style id="uwb-critical-css">' . trim( $critical_css ) . '</style>';
+        $empty_placeholder = '<style id="uwb-critical-css"></style>';
 
-        $dom = str_get_html( $html );
-        if ( ! $dom ) {
-            return array();
-        }
-
-        $classes = array( 'header', 'site-header', 'header-wrapper', 'top-bar', 'nav', 'main-menu', 'hero', 'slider', 'banner', 'section-bg', 'container', 'row', 'col', 'fill', 'relative' );
-        $ids     = array( 'header', 'wrapper', 'main', 'content' );
-        $tags    = array( 'html', 'body', 'header', 'nav', 'h1', 'h2', 'h3', 'a', 'img', 'p', 'section', 'div' );
-
-        $nodes = $dom->find( 'header, nav, section, div, h1, h2, h3, a, img, form, input, button' );
-        if ( ! empty( $nodes ) ) {
-            $max_check = min( count( $nodes ), 35 );
-            for ( $i = 0; $i < $max_check; $i++ ) {
-                $node = $nodes[$i];
-                $tag  = strtolower( (string) $node->tag );
-                if ( ! empty( $tag ) ) {
-                    $tags[] = $tag;
-                }
-
-                $node_id = (string) $node->getAttribute( 'id' );
-                if ( ! empty( $node_id ) ) {
-                    $ids[] = $node_id;
-                }
-
-                $node_class = (string) $node->getAttribute( 'class' );
-                if ( ! empty( $node_class ) ) {
-                    $cls_parts = preg_split( '/\s+/', trim( $node_class ) );
-                    foreach ( $cls_parts as $c ) {
-                        $c = trim( $c );
-                        if ( ! empty( $c ) ) {
-                            $classes[] = $c;
-                        }
+        $html_files = glob( $wp_rocket_dir . '/*/*/index*.html' );
+        if ( is_array( $html_files ) ) {
+            foreach ( $html_files as $f ) {
+                if ( file_exists( $f ) && filesize( $f ) > 100 ) {
+                    $content = @file_get_contents( $f );
+                    if ( strpos( $content, $empty_placeholder ) !== false ) {
+                        $content = str_replace( $empty_placeholder, $style_replacement, $content );
+                        @file_put_contents( $f, $content );
                     }
                 }
             }
         }
-
-        $dom->clear();
-
-        return array(
-            'classes' => array_unique( $classes ),
-            'ids'     => array_unique( $ids ),
-            'tags'    => array_unique( $tags ),
-        );
     }
 
     /**
-     * Collect raw CSS from page HTML (inline <style> and local linked CSS files)
-     *
-     * @param string $html
-     * @return string
-     */
-    private static function collect_css_content( $html ) {
-        $css_buffer = '';
-
-        // 1. Collect inline <style> contents
-        preg_match_all( '#<style\b[^>]*?>(.*?)</style>#is', $html, $style_matches );
-        if ( ! empty( $style_matches[1] ) ) {
-            foreach ( $style_matches[1] as $inline_css ) {
-                if ( stripos( $inline_css, 'uwb-critical-css' ) === false ) {
-                    $css_buffer .= "\n" . $inline_css;
-                }
-            }
-        }
-
-        // 2. Collect local <link rel="stylesheet"> CSS files
-        preg_match_all( '#<link\b[^>]*?href=([\'"])(.*?)\1[^>]*?>#is', $html, $link_matches );
-        if ( ! empty( $link_matches[2] ) ) {
-            $home_url = function_exists( 'home_url' ) ? home_url() : '';
-            foreach ( $link_matches[2] as $href ) {
-                if ( stripos( $href, '.css' ) === false && stripos( $href, 'styles' ) === false ) {
-                    continue;
-                }
-
-                $path = '';
-                if ( ! empty( $home_url ) && stripos( $href, $home_url ) === 0 ) {
-                    $rel_path = ltrim( str_ireplace( $home_url, '', strtok( $href, '?' ) ), '/' );
-                    $path = ABSPATH . $rel_path;
-                } elseif ( strpos( $href, '/' ) === 0 && strpos( $href, '//' ) !== 0 ) {
-                    $path = ABSPATH . ltrim( strtok( $href, '?' ), '/' );
-                }
-
-                if ( ! empty( $path ) && file_exists( $path ) && filesize( $path ) < 1048576 ) {
-                    $file_css = @file_get_contents( $path );
-                    if ( ! empty( $file_css ) ) {
-                        $css_buffer .= "\n" . $file_css;
-                    }
-                }
-            }
-        }
-
-        return $css_buffer;
-    }
-
-    /**
-     * Extract CSS rules matching Above-The-Fold selectors, preserving :root variables and @media
-     *
-     * @param string $css
-     * @param array  $target
-     * @return string
-     */
-    private static function extract_matching_css_rules( $css, $target ) {
-        if ( empty( $css ) || empty( $target ) ) {
-            return '';
-        }
-
-        $classes_map = array_flip( $target['classes'] );
-        $ids_map     = array_flip( $target['ids'] );
-        $tags_map    = array_flip( $target['tags'] );
-
-        // Remove CSS comments
-        $css = preg_replace( '!/\*.*?\*/!s', '', $css );
-
-        $extracted = array();
-
-        // 1. Preserve all :root variables for color & layout definitions
-        preg_match_all( '/:root\s*\{[^{}]+\}/i', $css, $root_matches );
-        if ( ! empty( $root_matches[0] ) ) {
-            foreach ( $root_matches[0] as $r ) {
-                $extracted[] = $r;
-            }
-        }
-
-        // 2. Parse rules via regex matcher
-        preg_match_all( '/([^{}@]+)\{([^{}]+)\}/i', $css, $matches, PREG_SET_ORDER );
-        if ( ! empty( $matches ) ) {
-            foreach ( $matches as $m ) {
-                $selector_str = trim( $m[1] );
-                $rule_body    = trim( $m[2] );
-
-                if ( empty( $selector_str ) || empty( $rule_body ) ) {
-                    continue;
-                }
-
-                if ( strpos( $selector_str, '@' ) === 0 ) {
-                    if ( strpos( $selector_str, '@font-face' ) === 0 || strpos( $selector_str, '@keyframes' ) === 0 ) {
-                        $extracted[] = $selector_str . '{' . $rule_body . '}';
-                    }
-                    continue;
-                }
-
-                $selectors = explode( ',', $selector_str );
-                $is_matched = false;
-
-                foreach ( $selectors as $sel ) {
-                    $sel = trim( $sel );
-                    if ( empty( $sel ) ) continue;
-
-                    if ( $sel === '*' || $sel === 'body' || $sel === 'html' || strpos( $sel, ':root' ) !== false ) {
-                        $is_matched = true;
-                        break;
-                    }
-
-                    preg_match_all( '/\.([a-z0-9_-]+)/i', $sel, $c_matches );
-                    if ( ! empty( $c_matches[1] ) ) {
-                        foreach ( $c_matches[1] as $c_name ) {
-                            if ( isset( $classes_map[$c_name] ) ) {
-                                $is_matched = true;
-                                break 2;
-                            }
-                        }
-                    }
-
-                    preg_match_all( '/\#([a-z0-9_-]+)/i', $sel, $id_matches );
-                    if ( ! empty( $id_matches[1] ) ) {
-                        foreach ( $id_matches[1] as $id_name ) {
-                            if ( isset( $ids_map[$id_name] ) ) {
-                                $is_matched = true;
-                                break 2;
-                            }
-                        }
-                    }
-
-                    preg_match( '/^([a-z0-9]+)/i', $sel, $tag_match );
-                    if ( ! empty( $tag_match[1] ) && isset( $tags_map[strtolower( $tag_match[1] )] ) ) {
-                        $is_matched = true;
-                        break;
-                    }
-                }
-
-                if ( $is_matched ) {
-                    $extracted[] = $selector_str . '{' . $rule_body . '}';
-                }
-            }
-        }
-
-        return implode( "\n", array_unique( $extracted ) );
-    }
-
-    /**
-     * Minify Critical CSS string
+     * Minify CSS string
      *
      * @param string $css
      * @return string

@@ -22,6 +22,8 @@ class Admin {
         add_action( 'wp_ajax_uwb_purge_cf_cache', array( $this, 'ajax_purge_cf_cache' ) );
         add_action( 'wp_ajax_uwb_sync_media_to_cdn', array( $this, 'ajax_sync_media_to_cdn' ) );
         add_action( 'wp_ajax_uwb_clear_critical_css_cache', array( $this, 'ajax_clear_critical_css_cache' ) );
+        add_action( 'wp_ajax_uwb_save_critical_css', array( 'Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS', 'ajax_save_critical_css' ) );
+        add_action( 'wp_ajax_nopriv_uwb_save_critical_css', array( 'Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS', 'ajax_save_critical_css' ) );
 
         $options_to_sync = array(
             'uwb_cache_page_enabled',
