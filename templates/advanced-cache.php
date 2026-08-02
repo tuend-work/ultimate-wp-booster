@@ -231,11 +231,11 @@ function uwb_advanced_cache_run() {
     if ( ! empty( $_COOKIE ) ) {
         foreach ( $_COOKIE as $key => $val ) {
             if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
-                if ( ! $cache_logged_in ) {
+                if ( intval( $cache_logged_in ) === 0 ) {
                     if ( $debug ) {
-                        error_log( "UWB: Run bypassed: User is logged in but cache_logged_in is false." );
+                        error_log( "UWB: Run bypassed: User is logged in but cache_logged_in is 0 (None)." );
                     }
-                    $GLOBALS['uwb_bypass_reason'] = 'Logged-in user (cache for logged-in users is disabled)';
+                    $GLOBALS['uwb_bypass_reason'] = 'Logged-in user (cache & optimize for logged-in users is disabled)';
                     return;
                 }
                 $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
@@ -594,18 +594,19 @@ function uwb_advanced_cache_shutdown() {
         }
     }
 
-    if ( ! $cache_logged_in && $logged_in_segment !== '' ) {
+    $cache_logged_in_val = intval( $cache_logged_in );
+    if ( $cache_logged_in_val !== 2 && $logged_in_segment !== '' ) {
         $should_cache = false;
-        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (cache for logged-in disabled)';
+        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (cache_logged_in is not set to Optimize & Cache)';
         if ( $debug ) {
-            error_log( "UWB: Caching bypassed: User is logged in but cache_logged_in is disabled." );
+            error_log( "UWB: Caching bypassed: User is logged in but cache_logged_in setting is " . $cache_logged_in_val );
         }
     }
-    if ( ! $cache_logged_in && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
+    if ( $cache_logged_in_val !== 2 && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
         $should_cache = false;
-        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (is_user_logged_in() = true)';
+        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (is_user_logged_in() = true, cache_logged_in is not set to Optimize & Cache)';
         if ( $debug ) {
-            error_log( "UWB: Caching bypassed: is_user_logged_in() is true but cache_logged_in is disabled." );
+            error_log( "UWB: Caching bypassed: is_user_logged_in() is true and cache_logged_in setting is " . $cache_logged_in_val );
         }
     }
 

@@ -1857,11 +1857,12 @@ class Admin {
                                             <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache for Logged-in Users</label>
                                             <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
                                                 <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
-                                                    <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>No (Recommended)</option>
-                                                    <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Yes</option>
+                                                    <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>None (Recommended)</option>
+                                                    <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Only Optimize</option>
+                                                    <option value="2" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 2 ); ?>>Optimize and Cache</option>
                                                 </select>
-                                                <div id="uwb-logged-in-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>"></div>
-                                                <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb-logged-in-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_logged_in', 0 ) ? '' : 'display:none;'; ?>" />
+                                                <div id="uwb-logged-in-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_logged_in', 0 ) == 2 ? '' : 'display:none;'; ?>"></div>
+                                                <input type="number" name="uwb_cache_logged_in_lifespan" id="uwb-logged-in-lifespan-group" value="<?php echo esc_attr( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ); ?>" min="1" placeholder="Lifespan (Minutes)" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto; <?php echo get_option( 'uwb_cache_logged_in', 0 ) == 2 ? '' : 'display:none;'; ?>" />
                                             </div>
                                             <p class="description">
                                                 Serve static cached pages to logged-in users. When enabled, enter lifespan in minutes (default is 10).<br>
@@ -4489,7 +4490,7 @@ js-(before|after)
             // Toggle Logged-in Cache Lifespan fields
             function toggleLoggedInFields() {
                 var cacheLoggedIn = $('#uwb_cache_logged_in').val();
-                if (cacheLoggedIn === '1') {
+                if (cacheLoggedIn === '2') {
                     $('#uwb-logged-in-lifespan-group').show();
                     $('#uwb-logged-in-divider').show();
                 } else {
