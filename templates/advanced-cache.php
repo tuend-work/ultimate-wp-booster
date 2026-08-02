@@ -743,11 +743,14 @@ function uwb_advanced_cache_shutdown() {
         }
 
         // Run Page Optimization Processor (Runs for both cached and bypassed requests)
-        $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
-        if ( ! file_exists( $plugin_dir . 'inc/Engine/Optimization/Optimizer.php' ) ) {
-            $plugin_dir = isset( $config['plugin_dir'] ) ? $config['plugin_dir'] : '';
+        $optimizer_path = '';
+        if ( defined( 'UWB_PLUGIN_DIR' ) ) {
+            $optimizer_path = UWB_PLUGIN_DIR . 'inc/Engine/Optimization/Optimizer.php';
         }
-        $optimizer_path = $plugin_dir . 'inc/Engine/Optimization/Optimizer.php';
+        if ( empty( $optimizer_path ) || ! file_exists( $optimizer_path ) ) {
+            $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
+            $optimizer_path = $plugin_dir . 'inc/Engine/Optimization/Optimizer.php';
+        }
         if ( file_exists( $optimizer_path ) ) {
             require_once $optimizer_path;
             if ( class_exists( 'Ultimate_WP_Booster\Engine\Optimization\Optimizer' ) ) {
@@ -807,4 +810,27 @@ function uwb_advanced_cache_shutdown() {
             error_log( "UWB: Failed to write gzip cache file: {$gzip_file}" );
         }
     }
+}
+
+function uwb_start_output_buffering() {
+    if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
+        define( 'UWB_BUFFER_STARTED', true );
+    }
+    if ( ! isset( $GLOBALS['uwb_config'] ) ) {
+        $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
+        $config = array();
+        if ( file_exists( $config_path ) ) {
+            $parsed_config = include $config_path;
+            if ( is_array( $parsed_config ) ) {
+                $config = $parsed_config;
+            }
+        }
+        $GLOBALS['uwb_config'] = $config;
+        $GLOBALS['uwb_config_path'] = $config_path;
+    }
+    $GLOBALS['uwb_accumulated_html']  = '';
+    $GLOBALS['uwb_do_not_cache']      = true;
+    
+    ob_start( 'uwb_advanced_cache_ob_callback' );
+    register_shutdown_function( 'uwb_advanced_cache_shutdown' );
 }

@@ -1858,7 +1858,7 @@ class Admin {
                                             <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">
                                                 <select name="uwb_cache_logged_in" id="uwb_cache_logged_in" style="flex: 1; border: none; border-radius: 0; padding: 12px; font-size: 14px; background: transparent; color: var(--uwb-text); outline: none; box-shadow: none; height: auto;">
                                                     <option value="0" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 0 ); ?>>None (Recommended)</option>
-                                                    <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Only Optimize</option>
+                                                    <option value="1" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 1 ); ?>>Optimize Only</option>
                                                     <option value="2" <?php selected( get_option( 'uwb_cache_logged_in', 0 ), 2 ); ?>>Optimize and Cache</option>
                                                 </select>
                                                 <div id="uwb-logged-in-divider" style="width: 1px; background: var(--uwb-border); <?php echo get_option( 'uwb_cache_logged_in', 0 ) == 2 ? '' : 'display:none;'; ?>"></div>
