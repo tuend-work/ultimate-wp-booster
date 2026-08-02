@@ -3048,18 +3048,6 @@ js-(before|after)
                             <div id="subtab-opt_html" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_html_minify', 'HTML Minify', 'Minify HTML source code.' );
-                                $this->render_toggle_switch( 'uwb_html_remove_qs', 'Remove Query Strings', 'Remove query strings from static resources.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_emojis', 'Disable Emojis', 'Remove default WordPress emoji styling and detection script.' );
-                                $this->render_toggle_switch( 'uwb_html_remove_noscript', 'Remove Noscript Tags', 'Remove all noscript tags from HTML.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_global_styles', 'Remove Global Styles', 'Remove default global inline styles and Gutenberg block library CSS.' );
-                                $this->render_toggle_switch( 'uwb_general_add_blank_favicon', 'Add Blank Favicon', 'Inject a blank base64 favicon to stop browsers requesting a favicon if not set.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_comment_urls', 'Remove Comment URLs', 'Remove the website URL field from the default comment form.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_rest_api_links', 'Remove REST API Links', 'Remove REST API discovery links from page headers and headers responses.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_rss_feed_links', 'Remove RSS Feed Links', 'Remove RSS feed and comment feed links from page head.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_shortlink', 'Remove Shortlink', 'Remove shortlinks from page head and HTTP headers response.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_rsd', 'Remove RSD Link', 'Remove Real Simple Discovery (RSD) link tag from page head.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_wlwmanifest', 'Remove wlwmanifest Link', 'Remove Windows Live Writer manifest XML link tag from page head.' );
-                                $this->render_toggle_switch( 'uwb_general_hide_wp_version', 'Hide WP Version', 'Hide WordPress version generator meta tag and query args from scripts/styles.' );
 
                                 $is_lazy_elem_on = (bool) get_option( 'uwb_html_lazy_load_elements_enabled', 0 );
                                 $this->render_toggle_switch( 'uwb_html_lazy_load_elements_enabled', 'Lazy Load Elements', 'Lazy load heavy HTML elements (e.g. <code>#comments</code>, <code>.footer-widgets</code>, <code>#related-products</code>) using <code>IntersectionObserver</code> to reduce initial DOM size and improve FCP, TBT, and LCP.' );
@@ -3090,6 +3078,18 @@ js-(before|after)
                                     </div>
                                 </div>
                                 <?php
+                                $this->render_toggle_switch( 'uwb_html_remove_qs', 'Remove Query Strings', 'Remove query strings from static resources.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_emojis', 'Disable Emojis', 'Remove default WordPress emoji styling and detection script.' );
+                                $this->render_toggle_switch( 'uwb_html_remove_noscript', 'Remove Noscript Tags', 'Remove all noscript tags from HTML.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_global_styles', 'Remove Global Styles', 'Remove default global inline styles and Gutenberg block library CSS.' );
+                                $this->render_toggle_switch( 'uwb_general_add_blank_favicon', 'Add Blank Favicon', 'Inject a blank base64 favicon to stop browsers requesting a favicon if not set.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_comment_urls', 'Remove Comment URLs', 'Remove the website URL field from the default comment form.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rest_api_links', 'Remove REST API Links', 'Remove REST API discovery links from page headers and headers responses.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rss_feed_links', 'Remove RSS Feed Links', 'Remove RSS feed and comment feed links from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_shortlink', 'Remove Shortlink', 'Remove shortlinks from page head and HTTP headers response.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rsd', 'Remove RSD Link', 'Remove Real Simple Discovery (RSD) link tag from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_wlwmanifest', 'Remove wlwmanifest Link', 'Remove Windows Live Writer manifest XML link tag from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_hide_wp_version', 'Hide WP Version', 'Hide WordPress version generator meta tag and query args from scripts/styles.' );
 
                                 $this->render_page_optimizer_tools_section( 'HTML Tools' );
                                 ?>
