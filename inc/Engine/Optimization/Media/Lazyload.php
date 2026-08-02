@@ -560,5 +560,112 @@ class Lazyload {
         $dom->clear();
         return $processed;
     }
+
+    /**
+     * Optimize first-view images: remove lazyload, add fetchpriority="high"
+     *
+     * @param string $html
+     * @param array $first_view_images
+     * @return string
+     */
+    public static function optimize_first_view_images( $html, $first_view_images ) {
+        if ( empty( $html ) || empty( $first_view_images ) ) {
+            return $html;
+        }
+
+        // Standardize image URLs to match both absolute and relative paths
+        $normalized_urls = array();
+        foreach ( $first_view_images as $url ) {
+            $url = trim( $url );
+            if ( empty( $url ) ) {
+                continue;
+            }
+            $normalized_urls[] = $url;
+            $parsed = wp_parse_url( $url );
+            if ( isset( $parsed['path'] ) ) {
+                $normalized_urls[] = $parsed['path'];
+                $normalized_urls[] = ltrim( $parsed['path'], '/' );
+            }
+        }
+        $normalized_urls = array_unique( $normalized_urls );
+
+        // Find all <img> tags in HTML and update attributes
+        return preg_replace_callback( '/<img\b[^>]*>/i', function( $matches ) use ( $normalized_urls ) {
+            $img_tag = $matches[0];
+
+            preg_match( '/\bsrc\s*=\s*["\']([^"\']+)["\']/i', $img_tag, $src_match );
+            preg_match( '/\bdata-src\s*=\s*["\']([^"\']+)["\']/i', $img_tag, $data_src_match );
+
+            $current_src = isset( $src_match[1] ) ? $src_match[1] : '';
+            $current_data_src = isset( $data_src_match[1] ) ? $data_src_match[1] : '';
+
+            $is_target = false;
+            foreach ( $normalized_urls as $target_url ) {
+                if ( ( ! empty( $current_src ) && strpos( $current_src, $target_url ) !== false ) ||
+                     ( ! empty( $current_data_src ) && strpos( $current_data_src, $target_url ) !== false ) ) {
+                    $is_target = true;
+                    break;
+                }
+            }
+
+            if ( ! $is_target ) {
+                return $img_tag;
+            }
+
+            // It is a first-view image! Let's modify it.
+            // 1. If data-src exists, copy it to src
+            if ( ! empty( $current_data_src ) ) {
+                if ( ! empty( $current_src ) ) {
+                    $img_tag = preg_replace( '/\bsrc\s*=\s*["\']([^"\']+)["\']/i', 'src="' . esc_url( $current_data_src ) . '"', $img_tag );
+                } else {
+                    $img_tag = preg_replace( '/<img/i', '<img src="' . esc_url( $current_data_src ) . '"', $img_tag );
+                }
+                $img_tag = preg_replace( '/\bdata-src\s*=\s*["\']([^"\']+)["\']/i', '', $img_tag );
+            }
+
+            // 2. If data-srcset exists, copy it to srcset
+            preg_match( '/\bdata-srcset\s*=\s*["\']([^"\']+)["\']/i', $img_tag, $data_srcset_match );
+            if ( isset( $data_srcset_match[1] ) ) {
+                $current_data_srcset = $data_srcset_match[1];
+                if ( preg_match( '/\bsrcset\s*=\s*["\']([^"\']+)["\']/i', $img_tag ) ) {
+                    $img_tag = preg_replace( '/\bsrcset\s*=\s*["\']([^"\']+)["\']/i', 'srcset="' . esc_attr( $current_data_srcset ) . '"', $img_tag );
+                } else {
+                    $img_tag = preg_replace( '/<img/i', '<img srcset="' . esc_attr( $current_data_srcset ) . '"', $img_tag );
+                }
+                $img_tag = preg_replace( '/\bdata-srcset\s*=\s*["\']([^"\']+)["\']/i', '', $img_tag );
+            }
+
+            // 3. Remove loading="lazy"
+            if ( preg_match( '/\bloading\s*=\s*["\']lazy["\']/i', $img_tag ) ) {
+                $img_tag = preg_replace( '/\bloading\s*=\s*["\']lazy["\']/i', '', $img_tag );
+            }
+
+            // 4. Remove lazyload classes from class="..."
+            preg_match( '/\bclass\s*=\s*["\']([^"\']+)["\']/i', $img_tag, $class_match );
+            if ( isset( $class_match[1] ) ) {
+                $classes = preg_split( '/\s+/', $class_match[1] );
+                $cleaned_classes = array();
+                foreach ( $classes as $c ) {
+                    if ( ! in_array( strtolower( $c ), array( 'lazyload', 'lazy', 'lazy-loaded', 'uwb-loaded' ), true ) ) {
+                        $cleaned_classes[] = $c;
+                    }
+                }
+                $img_tag = preg_replace( '/\bclass\s*=\s*["\']([^"\']+)["\']/i', 'class="' . esc_attr( implode( ' ', $cleaned_classes ) ) . '"', $img_tag );
+            }
+
+            // 5. Add fetchpriority="high" if not already present
+            if ( strpos( $img_tag, 'fetchpriority' ) === false ) {
+                $img_tag = preg_replace( '/<img/i', '<img fetchpriority="high"', $img_tag );
+            } else {
+                $img_tag = preg_replace( '/\bfetchpriority\s*=\s*["\']([^"\']+)["\']/i', 'fetchpriority="high"', $img_tag );
+            }
+
+            // Clean up double spaces or spaces before closing tag
+            $img_tag = preg_replace( '/\s+/', ' ', $img_tag );
+            $img_tag = str_replace( ' >', '>', $img_tag );
+
+            return $img_tag;
+        }, $html );
+    }
 }
 

@@ -141,11 +141,32 @@ class CriticalCSS {
             var finalCss = rulesExtracted.join('\n');
             if (!finalCss || finalCss.length < 20) return;
             if (styleEl) styleEl.textContent = finalCss;
+
+            // Extract first-screen images
+            var firstViewImages = [];
+            var imgs = document.querySelectorAll('img');
+            for (var j = 0; j < imgs.length; j++) {
+                var img = imgs[j];
+                var imgRect = img.getBoundingClientRect();
+                if (imgRect.top <= maxVh + 100 && imgRect.bottom >= 0 && imgRect.left <= (window.innerWidth || 1200) && imgRect.right >= 0) {
+                    var src = img.getAttribute('data-src') || img.src;
+                    if (src && src.indexOf('data:image') !== 0) {
+                        firstViewImages.push(src);
+                    }
+                }
+            }
+
+            var viewportData = {
+                critical_css: finalCss,
+                images: firstViewImages
+            };
+
             var payload = new FormData();
-            payload.append('action', 'uwb_save_critical_css');
+            payload.append('action', 'uwb_save_viewport_data');
             payload.append('url_hash', '<?php echo esc_js( $url_hash ); ?>');
             payload.append('token', '<?php echo esc_js( $token ); ?>');
-            payload.append('critical_css', finalCss);
+            payload.append('viewport_data', JSON.stringify(viewportData));
+
             if (navigator.sendBeacon) {
                 navigator.sendBeacon('<?php echo esc_url( $ajax_url ); ?>', payload);
             } else if (window.fetch) {
@@ -163,55 +184,6 @@ class CriticalCSS {
 <!--UWB_CRIT_END-->
         <?php
         return ob_get_clean();
-    }
-
-    /**
-     * Handle AJAX endpoint to receive Client-Side Extractor payload, update Static HTML cache directly, and strip extractor JS
-     */
-    public static function ajax_save_critical_css() {
-        $url_hash = isset( $_POST['url_hash'] ) ? (string) $_POST['url_hash'] : '';
-        $token    = isset( $_POST['token'] ) ? (string) $_POST['token'] : ( isset( $_POST['nonce'] ) ? (string) $_POST['nonce'] : '' );
-        $css_raw  = isset( $_POST['critical_css'] ) ? (string) $_POST['critical_css'] : '';
-
-        // 1. Strict MD5 Hex Validation (Prevents Path Traversal)
-        if ( empty( $url_hash ) || ! preg_match( '/^[a-f0-9]{32}$/i', $url_hash ) ) {
-            wp_send_json_error( array( 'message' => 'Invalid url_hash format' ) );
-        }
-
-        // 2. Strict HMAC Token / Nonce Verification
-        $salt = function_exists( 'wp_salt' ) ? wp_salt( 'auth' ) : 'uwb_secret_key';
-        $expected_token = hash_hmac( 'sha256', 'uwb_crit_' . $url_hash, $salt );
-
-        if ( ! hash_equals( $expected_token, $token ) && ! wp_verify_nonce( $token, 'uwb_crit_nonce_' . $url_hash ) ) {
-            wp_send_json_error( array( 'message' => 'Security token verification failed' ) );
-        }
-
-        if ( empty( trim( $css_raw ) ) ) {
-            wp_send_json_error( array( 'message' => 'Empty CSS payload' ) );
-        }
-
-        // 3. Payload Size Limit (Max 300KB)
-        if ( strlen( $css_raw ) > 307200 ) {
-            $css_raw = substr( $css_raw, 0, 307200 );
-        }
-
-        // 4. Strict CSS Sanitization
-        $sanitized_css = self::sanitize_critical_css( $css_raw );
-        if ( empty( $sanitized_css ) ) {
-            wp_send_json_error( array( 'message' => 'Invalid CSS content' ) );
-        }
-
-        // 5. Minify CSS payload
-        $minified_css = self::minify_css( $sanitized_css );
-
-        // 6. Directly update static HTML cache files and strip extractor script
-        $updated_count = self::update_static_html_cache_files( $url_hash, $minified_css );
-
-        wp_send_json_success( array(
-            'message' => 'Critical CSS embedded directly into static HTML cache files, extractor script stripped.',
-            'bytes'   => strlen( $minified_css ),
-            'updated' => $updated_count,
-        ) );
     }
 
     /**
@@ -239,95 +211,6 @@ class CriticalCSS {
         $css = preg_replace( $dangerous_patterns, '', $css );
 
         return trim( $css );
-    }
-
-    /**
-     * Directly update static HTML cache files on disk to fill Critical CSS and strip extractor script for specific URL hash
-     *
-     * @param string $url_hash
-     * @param string $critical_css
-     * @return int Number of updated cache files
-     */
-    private static function update_static_html_cache_files( $url_hash, $critical_css ) {
-        $wp_rocket_dir = WP_CONTENT_DIR . '/cache/wp-rocket';
-        if ( ! is_dir( $wp_rocket_dir ) ) {
-            return 0;
-        }
-
-        $style_replacement   = '<style id="uwb-critical-css" data-hash="' . $url_hash . '">' . trim( $critical_css ) . '</style>';
-        $placeholder_pattern = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?data-hash=[\'"]' . preg_quote( $url_hash, '#' ) . '[\'"][^>]*?>\s*</style>#is';
-        $fallback_pattern    = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>\s*</style>#is';
-        $updated_count       = 0;
-
-        try {
-            $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator( $wp_rocket_dir, \RecursiveDirectoryIterator::SKIP_DOTS ),
-                \RecursiveIteratorIterator::SELF_FIRST
-            );
-
-            foreach ( $iterator as $item ) {
-                if ( $item->isFile() && strpos( $item->getFilename(), '.html' ) !== false ) {
-                    $f = $item->getPathname();
-                    if ( filesize( $f ) > 100 ) {
-                        $content = @file_get_contents( $f );
-                        if ( preg_match( $placeholder_pattern, $content ) || ( strpos( $content, 'data-hash="' . $url_hash . '"' ) !== false && strpos( $content, 'uwb-critical-extractor' ) !== false ) ) {
-                            // 1. Fill Critical CSS into matching placeholder
-                            $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
-                            $content = preg_replace( $fallback_pattern, $style_replacement, $content );
-
-                            // 2. Multi-layer REMOVAL of extractor script tag from static HTML cache
-                            $content = preg_replace( '#<!--UWB_CRIT_START-->.*?<!--UWB_CRIT_END-->#is', '', $content );
-                            $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
-                            
-                            $start_pos = strpos( $content, '<!--UWB_CRIT_START-->' );
-                            $end_pos   = strpos( $content, '<!--UWB_CRIT_END-->' );
-                            if ( $start_pos !== false && $end_pos !== false && $end_pos > $start_pos ) {
-                                $content = substr( $content, 0, $start_pos ) . substr( $content, $end_pos + 20 );
-                            }
-
-                            @file_put_contents( $f, $content );
-                            $updated_count++;
-
-                            // 3. Purge matching .gzip file if present so webserver serves updated HTML
-                            $gzip_file = $f . '_gzip';
-                            if ( file_exists( $gzip_file ) ) {
-                                @unlink( $gzip_file );
-                            }
-                        }
-                    }
-                }
-            }
-        } catch ( \Exception $e ) {
-            $html_files = array_merge(
-                glob( $wp_rocket_dir . '/*/index*.html' ) ?: array(),
-                glob( $wp_rocket_dir . '/*/*/index*.html' ) ?: array(),
-                glob( $wp_rocket_dir . '/*/*/*/index*.html' ) ?: array()
-            );
-            foreach ( $html_files as $f ) {
-                if ( file_exists( $f ) && filesize( $f ) > 100 ) {
-                    $content = @file_get_contents( $f );
-                    if ( preg_match( $placeholder_pattern, $content ) || ( strpos( $content, 'data-hash="' . $url_hash . '"' ) !== false && strpos( $content, 'uwb-critical-extractor' ) !== false ) ) {
-                        $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
-                        $content = preg_replace( $fallback_pattern, $style_replacement, $content );
-                        $content = preg_replace( '#<!--UWB_CRIT_START-->.*?<!--UWB_CRIT_END-->#is', '', $content );
-                        $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*.*?<\/script>#is', '', $content );
-                        $start_pos = strpos( $content, '<!--UWB_CRIT_START-->' );
-                        $end_pos   = strpos( $content, '<!--UWB_CRIT_END-->' );
-                        if ( $start_pos !== false && $end_pos !== false && $end_pos > $start_pos ) {
-                            $content = substr( $content, 0, $start_pos ) . substr( $content, $end_pos + 20 );
-                        }
-                        @file_put_contents( $f, $content );
-                        $updated_count++;
-                        $gzip_file = $f . '_gzip';
-                        if ( file_exists( $gzip_file ) ) {
-                            @unlink( $gzip_file );
-                        }
-                    }
-                }
-            }
-        }
-
-        return $updated_count;
     }
 
     /**

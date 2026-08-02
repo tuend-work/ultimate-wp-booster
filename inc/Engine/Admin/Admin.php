@@ -22,8 +22,8 @@ class Admin {
         add_action( 'wp_ajax_uwb_purge_cf_cache', array( $this, 'ajax_purge_cf_cache' ) );
         add_action( 'wp_ajax_uwb_sync_media_to_cdn', array( $this, 'ajax_sync_media_to_cdn' ) );
         add_action( 'wp_ajax_uwb_clear_critical_css_cache', array( $this, 'ajax_clear_critical_css_cache' ) );
-        add_action( 'wp_ajax_uwb_save_critical_css', array( 'Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS', 'ajax_save_critical_css' ) );
-        add_action( 'wp_ajax_nopriv_uwb_save_critical_css', array( 'Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS', 'ajax_save_critical_css' ) );
+        add_action( 'wp_ajax_uwb_save_viewport_data', array( 'Ultimate_WP_Booster\Engine\Optimization\ViewportScreen', 'ajax_save_viewport_data' ) );
+        add_action( 'wp_ajax_nopriv_uwb_save_viewport_data', array( 'Ultimate_WP_Booster\Engine\Optimization\ViewportScreen', 'ajax_save_viewport_data' ) );
 
         $options_to_sync = array(
             'uwb_cache_page_enabled',
@@ -72,6 +72,7 @@ class Admin {
             'uwb_html_lazy_load_elements',
             'uwb_html_lazy_load_elements_excludes',
             'uwb_media_lazy_load_images',
+            'uwb_media_optimize_viewport_images',
             'uwb_media_lazy_load_iframes',
             'uwb_media_image_placeholder',
             'uwb_media_add_missing_sizes',
@@ -258,6 +259,7 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_html_lazy_load_elements_excludes', 'sanitize_textarea_field' );
 
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_images', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_optimize_viewport_images', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_iframes', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_image_placeholder', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_add_missing_sizes', 'intval' );
@@ -1561,24 +1563,9 @@ class Admin {
         $update_nonce = wp_create_nonce( 'uwb_github_update_nonce' );
         ?>
         <div class="uwb-dashboard-wrap">
-            <div class="uwb-header">
-                <div class="uwb-header-title">
-                    <h1>Ultimate WordPress Booster v<?php echo esc_html( UWB_VERSION ); ?></h1>
-                    <p>Optimize website loading speed with ultra-fast Static Page Caching.</p>
-                </div>
-                <div class="uwb-header-actions" style="display: flex; align-items: center; gap: 12px;">
-                    <span id="uwb-github-update-status" style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.9);"></span>
-                    <button type="button" id="uwb-github-update-btn" class="uwb-btn-purge" style="cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.3); outline: none;">
-                        <svg class="uwb-git-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" style="color: inherit;"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-                        <span class="uwb-btn-text">Update Plugin</span>
-                        <span class="uwb-spinner" style="display: none; margin-left: 6px;"></span>
-                    </button>
-                </div>
-            </div>
-
             <?php
             if ( isset( $_GET['uwb_msg'] ) || isset( $_GET['settings-updated'] ) ) : ?>
-            <div class="uwb-global-notices" style="margin-top: 16px;">
+            <div class="uwb-global-notices" style="margin-bottom: 24px;">
                 <?php
                 if ( isset( $_GET['uwb_msg'] ) ) {
                     $msg = sanitize_text_field( $_GET['uwb_msg'] );
@@ -1601,6 +1588,21 @@ class Admin {
             </div>
             <?php endif; ?>
 
+            <div class="uwb-header">
+                <div class="uwb-header-title">
+                    <h1>Ultimate WordPress Booster v<?php echo esc_html( UWB_VERSION ); ?></h1>
+                    <p>Optimize website loading speed with ultra-fast Static Page Caching.</p>
+                </div>
+                <div class="uwb-header-actions" style="display: flex; align-items: center; gap: 12px;">
+                    <span id="uwb-github-update-status" style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.9);"></span>
+                    <button type="button" id="uwb-github-update-btn" class="uwb-btn-purge" style="cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.3); outline: none;">
+                        <svg class="uwb-git-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" style="color: inherit;"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+                        <span class="uwb-btn-text">Update Plugin</span>
+                        <span class="uwb-spinner" style="display: none; margin-left: 6px;"></span>
+                    </button>
+                </div>
+            </div>
+
             <div class="uwb-layout">
                 <div class="uwb-sidebar-nav">
                     <div class="uwb-sidebar-toggle" id="uwb-toggle-sidebar" title="Thu gọn / Mở rộng">
@@ -1615,22 +1617,23 @@ class Admin {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                         <span>Cache Settings</span>
                     </div>
-                    <div class="uwb-nav-item" data-tab="preload_settings" title="Preload Settings">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                        <span>Preload Settings</span>
-                    </div>
                     <div class="uwb-nav-item" data-tab="page_optimizes" title="Page Optimizes">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="20" y1="20" x2="4" y2="4"/></svg>
                         <span>Page Optimizes</span>
                     </div>
-                    <div class="uwb-nav-item" data-tab="import_export" title="Import / Export">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        <span>Import / Export</span>
+                    <div class="uwb-nav-item" data-tab="preload_settings" title="Preload Settings">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <span>Preload Settings</span>
                     </div>
                     <div class="uwb-nav-item" data-tab="advanced_tools" title="Advanced / Tools">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         <span>Advanced</span>
                     </div>
+                    <div class="uwb-nav-item" data-tab="import_export" title="Import / Export">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Import / Export</span>
+                    </div>
+
                 </div>
 
                 <div class="uwb-content-panel">
@@ -2917,7 +2920,6 @@ js-(before|after)
                                 <?php
                                 $this->render_toggle_switch( 'uwb_html_minify', 'HTML Minify', 'Minify HTML source code.' );
                                 $this->render_toggle_switch( 'uwb_html_remove_qs', 'Remove Query Strings', 'Remove query strings from static resources.' );
-                                $this->render_toggle_switch( 'uwb_html_remove_gfonts', 'Remove Google Fonts', 'Remove Google Fonts from all pages.' );
                                 $this->render_toggle_switch( 'uwb_html_remove_emoji', 'Remove WordPress Emoji', 'Remove default WordPress Emoji CSS/JS.' );
                                 $this->render_toggle_switch( 'uwb_html_remove_noscript', 'Remove Noscript Tags', 'Remove all noscript tags from HTML.' );
 
@@ -2959,8 +2961,8 @@ js-(before|after)
                             <div id="subtab-opt_media" class="uwb-subtab-content">
                                 <?php
                                 $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
+                                $this->render_toggle_switch( 'uwb_media_optimize_viewport_images', 'Optimize Viewport Images (Above The Fold)', 'Automatically disable lazy loading and add fetchpriority="high" to images detected in the first screen (viewport) to improve LCP.' );
                                 $this->render_toggle_switch( 'uwb_media_lazy_load_iframes', 'Lazy Load Iframes / Videos', 'Delay iframe (YouTube/Vimeo) and HTML5 video loading until visible in viewport.' );
-                                $this->render_toggle_switch( 'uwb_media_image_placeholder', 'Use Image Placeholders', 'Use responsive placeholders for lazy loaded images.', true );
                                 $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
                                 $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
                                 $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', "skip-lazy\n.hero-section\nsection.banner-wrap", 'Specify CSS class names or parent container selectors (e.g. <code>skip-lazy</code>, <code>.hero-section</code>, <code>section.banner-wrap</code>, <code>div.no-lazy-container</code>) to exclude all nested images/iframes/videos inside those parent blocks from lazy loading (one per line).' );
@@ -5554,7 +5556,7 @@ js-(before|after)
                    Clear Cloudflare Cache
                 </a>
                 <a href="<?php echo esc_url( $s3_asset_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; color:#1d4ed8; border-color:#93c5fd; background:#eff6ff; display:inline-flex; align-items:center; gap:6px;" title="Xóa bộ đệm cdn_uploaded_assets.json & tệp gộp CSS/JS trên đĩa CDN S3/R2">
-                   Clear S3 Asset Cache
+                   Clear CSS / JS on S3 Storage
                 </a>
                 <a href="<?php echo esc_url( $opcache_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; background:#fff; display:inline-flex; align-items:center; gap:6px;">
                    Clear OPCache

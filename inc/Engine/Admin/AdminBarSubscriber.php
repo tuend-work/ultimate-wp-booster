@@ -145,7 +145,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-clear-s3-asset-cache',
             'parent' => 'uwb-admin-bar',
-            'title'  => '☁️ Clear S3 Asset Cache & Index',
+            'title'  => 'Clear CSS / JS on S3 Storage',
             'href'   => $clear_s3_url,
         ) );
         // Add sub-node: Flush All & Preload Cache
