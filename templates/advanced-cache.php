@@ -490,30 +490,19 @@ function uwb_advanced_cache_ob_callback( $buffer, $phase = 0 ) {
 function uwb_advanced_cache_shutdown() {
     $debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
-    // Force flush all active output buffers to ensure our callback is executed
+    $html = '';
     while ( ob_get_level() > 0 ) {
-        @ob_end_flush();
-    }
-
-    if ( ! empty( $GLOBALS['uwb_do_not_cache'] ) ) {
-        if ( $debug ) {
-            error_log( 'UWB: Caching bypassed: Globals uwb_do_not_cache is set (buffer was cleaned/discarded).' );
+        $level_content = @ob_get_clean();
+        if ( $level_content !== false ) {
+            $html = $level_content . $html;
         }
-        return;
     }
 
-    if ( ! isset( $GLOBALS['uwb_accumulated_html'] ) ) {
-        if ( $debug ) {
-            error_log( 'UWB: Caching bypassed: Globals uwb_accumulated_html is not set.' );
-        }
-        return;
+    if ( empty( $html ) && isset( $GLOBALS['uwb_accumulated_html'] ) ) {
+        $html = $GLOBALS['uwb_accumulated_html'];
     }
 
-    $html = $GLOBALS['uwb_accumulated_html'];
     if ( empty( $html ) ) {
-        if ( $debug ) {
-            error_log( 'UWB: Caching bypassed: HTML buffer is empty.' );
-        }
         return;
     }
 
@@ -536,6 +525,10 @@ function uwb_advanced_cache_shutdown() {
     // Determine if we should cache
     $should_cache = true;
     $shutdown_bypass_reason = ''; // Track reason for 'Dynamic Page' comment
+    if ( ! empty( $GLOBALS['uwb_do_not_cache'] ) ) {
+        $should_cache = false;
+        $shutdown_bypass_reason = 'Globals uwb_do_not_cache is set (buffer clean/discard or BufferSubscriber)';
+    }
     $response_code = http_response_code();
     if ( $response_code !== 200 && ! ( $cache_404 && $response_code === 404 ) ) {
         $should_cache = false;
@@ -770,7 +763,10 @@ function uwb_advanced_cache_shutdown() {
         }
     }
 
-    if ( ! $should_cache ) return;
+    if ( ! $should_cache ) {
+        echo $html;
+        return;
+    }
 
     if ( ! file_exists( $cache_dir ) ) {
         $mkdir_ok = @mkdir( $cache_dir, 0755, true );
@@ -782,12 +778,14 @@ function uwb_advanced_cache_shutdown() {
         if ( $debug ) {
             error_log( "UWB: Cache path exists but is not a directory: {$cache_dir}" );
         }
+        echo $html;
         return;
     }
     if ( ! is_writable( $cache_dir ) ) {
         if ( $debug ) {
             error_log( "UWB: Cache directory is not writable: {$cache_dir}" );
         }
+        echo $html;
         return;
     }
 
@@ -810,6 +808,7 @@ function uwb_advanced_cache_shutdown() {
             error_log( "UWB: Failed to write gzip cache file: {$gzip_file}" );
         }
     }
+    echo $html;
 }
 
 function uwb_start_output_buffering() {
