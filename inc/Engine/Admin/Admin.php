@@ -2919,20 +2919,6 @@ js-(before|after)
                                 </div>
                                 <?php
 
-                                $this->render_cdn_distribution_card(
-                                    'Cloudflare R2 / S3 CDN Distribution in HTML Output',
-                                    'uwb_cdn_distribute_html',
-                                    'Phân phối tài nguyên tĩnh trong HTML qua S3 CDN?',
-                                    'Tự động viết lại (rewrite) toàn bộ URL tài nguyên tĩnh trong mã nguồn HTML trang web để phân phối từ CDN Domain.',
-                                    array(
-                                        'Upload to S3 when:' => array(
-                                            'uwb_cdn_auto_rewrite_html_urls' => 'get_url (viết lại URL tĩnh trong HTML)',
-                                        ),
-                                        'Delete From S3 when:' => array(
-                                            'uwb_cdn_auto_purge_html_cf' => 'Delete file (xả Cloudflare Zone CDN Edge)',
-                                        ),
-                                    )
-                                );
                                 $this->render_page_optimizer_tools_section( 'HTML Tools' );
                                 ?>
                             </div>
