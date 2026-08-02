@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * File Import Exception
  *
@@ -19,5 +19,6 @@ namespace Ultimate_WP_Booster\Dependencies\Minify\Exceptions;
 class FileImportException extends BasicException
 {
 }
+
 
 

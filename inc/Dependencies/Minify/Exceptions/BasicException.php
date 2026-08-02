@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Basic exception
  *
@@ -21,5 +21,6 @@ use Ultimate_WP_Booster\Dependencies\Minify\Exception;
 abstract class BasicException extends Exception
 {
 }
+
 
 

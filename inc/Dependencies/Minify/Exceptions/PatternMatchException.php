@@ -1,6 +1,6 @@
-﻿<?php
+<?php
 /**
- * IO Exception
+ * Pattern Match Exception
  *
  * Please report bugs on https://github.com/matthiasmullie/minify/issues
  *
@@ -11,14 +11,11 @@
 namespace Ultimate_WP_Booster\Dependencies\Minify\Exceptions;
 
 /**
- * IO Exception Class
+ * Pattern Match Exception Class
  *
  * @package Minify\Exception
  * @author Matthias Mullie <minify@mullie.eu>
  */
-class IOException extends BasicException
+class PatternMatchException extends BasicException
 {
 }
-
-
-
