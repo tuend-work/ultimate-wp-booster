@@ -116,6 +116,7 @@ class Activation {
 
         // 6. Check for WP Rocket settings import
         if ( get_option( 'wp_rocket_settings' ) !== false ) {
+            return; //temp disable
             update_option( 'uwb_show_rocket_import_prompt', 1 );
         }
     }

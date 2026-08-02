@@ -1567,16 +1567,6 @@ class Admin {
                     <p>Optimize website loading speed with ultra-fast Static Page Caching.</p>
                 </div>
                 <div class="uwb-header-actions" style="display: flex; align-items: center; gap: 12px;">
-                    <?php 
-                    $clear_zone_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_zone_cache' ), 'uwb_clear_cdn_zone_cache_action' );
-                    $clear_s3_url   = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_s3_asset_cache' ), 'uwb_clear_s3_asset_cache_action' );
-                    ?>
-                    <a href="<?php echo esc_url( $clear_zone_url ); ?>" class="uwb-btn-purge" style="text-decoration:none; background:#d97706; border-color:#b45309; cursor:pointer;" title="Xóa CDN Edge Cache (Cloudflare Zone Purge)">
-                        🌐 Clear CDN Zone Cache
-                    </a>
-                    <a href="<?php echo esc_url( $clear_s3_url ); ?>" class="uwb-btn-purge" style="text-decoration:none; background:#0284c7; border-color:#0369a1; cursor:pointer;" title="Xóa chỉ mục cdn_uploaded_assets.json & tệp gộp S3/R2">
-                        ☁️ Clear S3 Asset Cache
-                    </a>
                     <span id="uwb-github-update-status" style="font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.9);"></span>
                     <button type="button" id="uwb-github-update-btn" class="uwb-btn-purge" style="cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.3); outline: none;">
                         <svg class="uwb-git-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" style="color: inherit;"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
@@ -1585,6 +1575,31 @@ class Admin {
                     </button>
                 </div>
             </div>
+
+            <?php
+            if ( isset( $_GET['uwb_msg'] ) || isset( $_GET['settings-updated'] ) ) : ?>
+            <div class="uwb-global-notices" style="margin-top: 16px;">
+                <?php
+                if ( isset( $_GET['uwb_msg'] ) ) {
+                    $msg = sanitize_text_field( $_GET['uwb_msg'] );
+                    $cnt = isset( $_GET['count'] ) ? intval( $_GET['count'] ) : 0;
+                    if ( $msg === 's3_asset_cleared' ) {
+                        echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:12px; font-weight:600; background:#f0fdf4; border-left:4px solid #22c55e; color:#15803d; border-radius:8px;"><p style="margin:0; font-size:13.5px;">☁️ <strong>S3 Asset Cache &amp; Index Cleared!</strong> Successfully cleared <code>cdn_uploaded_assets.json</code> index and removed <strong>' . $cnt . '</strong> asset file(s) from S3/R2 storage.</p></div>';
+                    } elseif ( $msg === 'cdn_zone_cleared' ) {
+                        echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:12px; font-weight:600; background:#fefce8; border-left:4px solid #eab308; color:#a16207; border-radius:8px;"><p style="margin:0; font-size:13.5px;">🌐 <strong>Cloudflare CDN Zone Cache Purged!</strong> Successfully executed Purge Everything on Cloudflare Edge Cache.</p></div>';
+                    } elseif ( $msg === 'cdn_zone_error' ) {
+                        $err = isset( $_GET['err'] ) ? esc_html( urldecode( $_GET['err'] ) ) : 'Missing API Credentials';
+                        echo '<div class="notice notice-error is-dismissible" style="padding:14px 18px; margin-bottom:12px; font-weight:600; background:#fef2f2; border-left:4px solid #ef4444; color:#b91c1c; border-radius:8px;"><p style="margin:0; font-size:13.5px;">❌ <strong>Cloudflare CDN Zone Purge Error:</strong> ' . $err . '</p></div>';
+                    } elseif ( $msg === 'cache_cleared' ) {
+                        echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:12px; font-weight:600; background:#eff6ff; border-left:4px solid #3b82f6; color:#1d4ed8; border-radius:8px;"><p style="margin:0; font-size:13.5px;">⚡ <strong>Static Page Cache Cleared!</strong> All HTML page cache files purged successfully.</p></div>';
+                    } elseif ( $msg === 'flush_all_preload_started' || $msg === 'preload_started' ) {
+                        echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:12px; font-weight:600; background:#f0fdf4; border-left:4px solid #10b981; color:#047857; border-radius:8px;"><p style="margin:0; font-size:13.5px;">🚀 <strong>Flush All &amp; Preload Started!</strong> Successfully purged Page Cache, Cloudflare CDN Zone, S3 Asset Cache, OPCache, and Object Cache! Preload crawler restarted.</p></div>';
+                    }
+                }
+                settings_errors();
+                ?>
+            </div>
+            <?php endif; ?>
 
             <div class="uwb-layout">
                 <div class="uwb-sidebar-nav">
@@ -1619,25 +1634,6 @@ class Admin {
                 </div>
 
                 <div class="uwb-content-panel">
-                    <?php
-                    if ( isset( $_GET['uwb_msg'] ) ) {
-                        $msg = sanitize_text_field( $_GET['uwb_msg'] );
-                        $cnt = isset( $_GET['count'] ) ? intval( $_GET['count'] ) : 0;
-                        if ( $msg === 's3_asset_cleared' ) {
-                            echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#f0fdf4; border-left:4px solid #22c55e; color:#15803d; border-radius:8px;"><p style="margin:0; font-size:13.5px;">☁️ <strong>S3 Asset Cache &amp; Index Cleared!</strong> Successfully cleared <code>cdn_uploaded_assets.json</code> index and removed <strong>' . $cnt . '</strong> asset file(s) from S3/R2 storage.</p></div>';
-                        } elseif ( $msg === 'cdn_zone_cleared' ) {
-                            echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#fefce8; border-left:4px solid #eab308; color:#a16207; border-radius:8px;"><p style="margin:0; font-size:13.5px;">🌐 <strong>Cloudflare CDN Zone Cache Purged!</strong> Successfully executed Purge Everything on Cloudflare Edge Cache.</p></div>';
-                        } elseif ( $msg === 'cdn_zone_error' ) {
-                            $err = isset( $_GET['err'] ) ? esc_html( urldecode( $_GET['err'] ) ) : 'Missing API Credentials';
-                            echo '<div class="notice notice-error is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#fef2f2; border-left:4px solid #ef4444; color:#b91c1c; border-radius:8px;"><p style="margin:0; font-size:13.5px;">❌ <strong>Cloudflare CDN Zone Purge Error:</strong> ' . $err . '</p></div>';
-                        } elseif ( $msg === 'cache_cleared' ) {
-                            echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#eff6ff; border-left:4px solid #3b82f6; color:#1d4ed8; border-radius:8px;"><p style="margin:0; font-size:13.5px;">⚡ <strong>Static Page Cache Cleared!</strong> All HTML page cache files purged successfully.</p></div>';
-                        } elseif ( $msg === 'flush_all_preload_started' || $msg === 'preload_started' ) {
-                            echo '<div class="notice notice-success is-dismissible" style="padding:14px 18px; margin-bottom:20px; font-weight:600; background:#f0fdf4; border-left:4px solid #10b981; color:#047857; border-radius:8px;"><p style="margin:0; font-size:13.5px;">🚀 <strong>Flush All &amp; Preload Started!</strong> Successfully purged Page Cache, Cloudflare CDN Zone, S3 Asset Cache, OPCache, and Object Cache! Preload crawler restarted.</p></div>';
-                        }
-                    }
-                    ?>
-                    <?php settings_errors(); ?>
                     <form method="post" action="options.php" novalidate>
                         <?php settings_fields( 'uwb_settings_group' ); ?>
 
@@ -5552,20 +5548,20 @@ js-(before|after)
             </h4>
             <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
                 <a href="<?php echo esc_url( $page_cache_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; background:#fff; display:inline-flex; align-items:center; gap:6px;">
-                    ⚡ Clear Page Cache
+                   Clear Page Cache
                 </a>
                 <a href="<?php echo esc_url( $zone_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; color:#b45309; border-color:#fcd34d; background:#fffbeb; display:inline-flex; align-items:center; gap:6px;" title="Thực hiện Purge Everything xóa Edge Cache trên Cloudflare CDN Zone">
-                    🌐 Clear CDN Zone Cache (Cloudflare)
+                   Clear Cloudflare Cache
                 </a>
                 <a href="<?php echo esc_url( $s3_asset_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; color:#1d4ed8; border-color:#93c5fd; background:#eff6ff; display:inline-flex; align-items:center; gap:6px;" title="Xóa bộ đệm cdn_uploaded_assets.json & tệp gộp CSS/JS trên đĩa CDN S3/R2">
-                    ☁️ Clear S3 Asset Cache &amp; Index
+                   Clear S3 Asset Cache
                 </a>
                 <a href="<?php echo esc_url( $opcache_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; background:#fff; display:inline-flex; align-items:center; gap:6px;">
-                    🧹 Clear OPCache
+                   Clear OPCache
                 </a>
                 <?php if ( wp_using_ext_object_cache() ) : ?>
                     <a href="<?php echo esc_url( $oc_url ); ?>" class="button button-secondary" style="height:38px; line-height:36px; padding:0 16px; border-radius:8px; font-weight:600; color:#047857; border-color:#6ee7b7; background:#ecfdf5; display:inline-flex; align-items:center; gap:6px;">
-                        💾 Clear Object Cache
+                        Clear Object Cache
                     </a>
                 <?php endif; ?>
             </div>
