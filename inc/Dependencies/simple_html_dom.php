@@ -68,7 +68,20 @@ if ( ! function_exists( 'str_get_html' ) ) {
 
             $ret = '';
             if ( isset( $this->_[HDOM_INFO_BEGIN] ) ) {
-                $ret = $this->dom->restore_noise( $this->_[HDOM_INFO_BEGIN] );
+                if ( ! empty( $this->attr ) ) {
+                    $attr_str = '';
+                    foreach ( $this->attr as $k => $v ) {
+                        if ( $v === true ) {
+                            $attr_str .= ' ' . $k;
+                        } else {
+                            $attr_str .= ' ' . $k . '="' . htmlspecialchars( (string) $v, ENT_QUOTES, 'UTF-8' ) . '"';
+                        }
+                    }
+                    $is_self_closing = ( substr( trim( $this->_[HDOM_INFO_BEGIN] ), -2 ) === '/>' );
+                    $ret = '<' . $this->tag . $attr_str . ( $is_self_closing ? ' />' : '>' );
+                } else {
+                    $ret = $this->dom->restore_noise( $this->_[HDOM_INFO_BEGIN] );
+                }
             }
 
             if ( isset( $this->_[HDOM_INFO_INNER] ) ) {
