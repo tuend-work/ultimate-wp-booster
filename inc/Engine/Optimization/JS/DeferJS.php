@@ -41,15 +41,13 @@ class DeferJS {
                     }
                 }
 
-                // Automatic Safety Exclusions for Critical Inline Variables & Slider Scripts (flatsomeVars, flickity, WooCommerce params)
+                // Automatic Safety Exclusions for Critical Inline Variables (flatsomeVars, WooCommerce params)
                 if ( stripos( $full_tag, 'flatsomeVars' ) !== false ||
-                     stripos( $full_tag, 'flatsome' ) !== false ||
-                     stripos( $full_tag, 'flickity' ) !== false ||
                      stripos( $full_tag, 'wc_add_to_cart_params' ) !== false ||
                      stripos( $full_tag, 'woocommerce_params' ) !== false ) {
                     $skipped_count++;
                     if ( is_array( $logs ) ) {
-                        $logs[] = "Defer JS: Excluded {$url_clean} (Automatic safety rule: Contains flatsome/flickity or WooCommerce inline variables)";
+                        $logs[] = "Defer JS: Excluded {$url_clean} (Automatic safety rule: Contains flatsomeVars or WooCommerce inline variables)";
                     }
                     return $full_tag;
                 }

@@ -24,10 +24,8 @@ class DelayJS {
                     }
                 }
 
-                // Automatic Hardcoded Safety Exclusions for Critical Inline Variables & Slider Scripts (flatsomeVars, flickity, WooCommerce params)
+                // Automatic Hardcoded Safety Exclusions for Critical Inline Variables (flatsomeVars, WooCommerce params)
                 if ( stripos( $matches[0], 'flatsomeVars' ) !== false ||
-                     stripos( $matches[0], 'flatsome' ) !== false ||
-                     stripos( $matches[0], 'flickity' ) !== false ||
                      stripos( $matches[0], 'wc_add_to_cart_params' ) !== false ||
                      stripos( $matches[0], 'woocommerce_params' ) !== false ) {
                     return $matches[0];

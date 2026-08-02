@@ -55,20 +55,16 @@ class JS {
                 }
             }
 
-            // Automatic Hardcoded Safety Exclusions for Specific Critical Scripts & Variables (flatsome, flickity, flatsomeVars, WooCommerce params)
+            // Automatic Hardcoded Safety Exclusions for Specific Critical Inline Variables (flatsomeVars, WooCommerce params)
             if ( ! $is_excluded ) {
                 if ( stripos( $tag, 'flatsomeVars' ) !== false ||
-                     stripos( $tag, 'flatsome' ) !== false ||
-                     stripos( $tag, 'flickity' ) !== false ||
                      stripos( $inline_content, 'flatsomeVars' ) !== false ||
-                     stripos( $inline_content, 'flatsome' ) !== false ||
-                     stripos( $inline_content, 'flickity' ) !== false ||
                      stripos( $inline_content, 'wc_add_to_cart_params' ) !== false ||
                      stripos( $inline_content, 'woocommerce_params' ) !== false ) {
                     $is_excluded = true;
                     if ( is_array( $logs ) ) {
                         $label = preg_match( '/src=([\'"])(.*?)\1/i', $attrs, $src_m ) ? $src_m[2] : 'Inline Script';
-                        $logs[] = "JS Combine: Excluded {$label} (Automatic safety rule: Contains flatsome/flickity or WooCommerce inline variables)";
+                        $logs[] = "JS Combine: Excluded {$label} (Automatic safety rule: Contains flatsomeVars or WooCommerce inline variables)";
                     }
                 }
             }
