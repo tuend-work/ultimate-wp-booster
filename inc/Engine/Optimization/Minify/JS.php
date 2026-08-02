@@ -156,14 +156,15 @@ class JS {
 
         if ( file_exists( $cache_file ) ) {
             \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $cache_file );
-            foreach ( $to_combine as $item ) {
-                $html = str_replace( $item['tag'], '', $html );
-            }
+            $first = true;
             $new_tag = '<script src="' . esc_url( $cache_url ) . '"></script>';
-            if ( stripos( $html, '</body>' ) !== false ) {
-                $html = str_ireplace( '</body>', $new_tag . "\n" . '</body>', $html );
-            } else {
-                $html .= "\n" . $new_tag;
+            foreach ( $to_combine as $item ) {
+                if ( $first ) {
+                    $html = str_replace( $item['tag'], $new_tag, $html );
+                    $first = false;
+                } else {
+                    $html = str_replace( $item['tag'], '', $html );
+                }
             }
 
             if ( is_array( $logs ) ) {
