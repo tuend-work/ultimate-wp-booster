@@ -65,6 +65,8 @@ class Admin {
             'uwb_html_remove_gfonts',
             'uwb_html_remove_emoji',
             'uwb_html_remove_noscript',
+            'uwb_html_lazy_load_elements_enabled',
+            'uwb_html_lazy_load_elements',
             'uwb_media_lazy_load_images',
             'uwb_media_lazy_load_iframes',
             'uwb_media_image_placeholder',
@@ -242,6 +244,8 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_html_remove_gfonts', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_html_remove_emoji', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_html_remove_noscript', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_html_lazy_load_elements_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_html_lazy_load_elements', 'sanitize_textarea_field' );
 
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_images', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_iframes', 'intval' );
@@ -2853,6 +2857,30 @@ js-(before|after)
                                 $this->render_toggle_switch( 'uwb_html_remove_emoji', 'Remove WordPress Emoji', 'Remove default WordPress Emoji CSS/JS.' );
                                 $this->render_toggle_switch( 'uwb_html_remove_noscript', 'Remove Noscript Tags', 'Remove all noscript tags from HTML.' );
 
+                                $is_lazy_elem_on = (bool) get_option( 'uwb_html_lazy_load_elements_enabled', 0 );
+                                $this->render_toggle_switch( 'uwb_html_lazy_load_elements_enabled', 'Enable Lazy Load Elements', 'Lazy load heavy HTML elements (e.g. <code>#comments</code>, <code>.footer-widgets</code>, <code>#related-products</code>) using <code>IntersectionObserver</code> to reduce initial DOM size and improve FCP, TBT, and LCP.' );
+                                ?>
+
+                                <div id="uwb-lazy-elements-textarea-wrap" style="margin-bottom:24px; <?php echo $is_lazy_elem_on ? '' : 'display:none;'; ?>">
+                                    <?php
+                                    $this->render_textarea_setting(
+                                        'uwb_html_lazy_load_elements',
+                                        'Lazy Load Element Selectors',
+                                        "#comments\n.footer-widgets\n#related-products\n.widget-area",
+                                        'Specify CSS selectors (IDs or class names) of heavy HTML elements to lazy load (one per line).<br>Example: <code>#comments</code>, <code>.site-footer</code>, <code>#related-products</code>, <code>.widget-area</code>'
+                                    );
+                                    ?>
+                                    <div class="uwb-warning-box" style="margin-top: -8px; background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e40af; padding: 16px; border-radius: 8px;">
+                                        <strong style="display:block; font-size:13.5px; margin-bottom:6px; color:#1e3a8a;">💡 SEO &amp; Troubleshooting Guidelines for Lazy Loading Elements (Perfmatters Standard):</strong>
+                                        <ul style="margin: 0; padding-left: 20px; font-size: 12.5px; line-height: 1.6; color: #1e40af;">
+                                            <li><strong>100% Indexable via <code>&lt;noscript&gt;</code> Fallback:</strong> Content inside lazy-loaded elements is preserved inside <code>&lt;noscript&gt;</code> tags. Search engine crawlers (Googlebot) read <code>&lt;noscript&gt;</code> tags, making all text, links, and schema 100% crawlable &amp; indexable (verifiable via Google Search Console URL Inspection &amp; Rich Results Test).</li>
+                                            <li><strong>DOM Monitoring:</strong> When a lazy element is rendered upon user scroll, DOM Monitoring automatically re-triggers image/iframe lazyloading for all nested assets inside the loaded element tree.</li>
+                                            <li><strong>Avoid Above-the-fold &amp; Lightbox:</strong> Do NOT lazy load above-the-fold / LCP elements (header, hero banners) or elements containing images that initiate a lightbox popup.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <?php
+
                                 $this->render_cdn_distribution_card(
                                     'Cloudflare R2 / S3 CDN Distribution in HTML Output',
                                     'uwb_cdn_distribute_html',
@@ -4513,6 +4541,14 @@ js-(before|after)
                         }).html('✕ Server error purging Cloudflare cache.');
                     }
                 });
+            // Toggle Lazy Load Elements Textarea visibility
+            $('input[name="uwb_html_lazy_load_elements_enabled"]').on('change', function() {
+                var val = $(this).val();
+                if (val == '1') {
+                    $('#uwb-lazy-elements-textarea-wrap').slideDown(250);
+                } else {
+                    $('#uwb-lazy-elements-textarea-wrap').slideUp(250);
+                }
             });
 
             // Flush Redis Cache

@@ -7,6 +7,7 @@ use Ultimate_WP_Booster\Engine\Optimization\Media\Lazyload;
 use Ultimate_WP_Booster\Engine\Optimization\JS\DelayJS;
 use Ultimate_WP_Booster\Engine\Optimization\JS\DeferJS;
 use Ultimate_WP_Booster\Engine\Optimization\HTML\Minify as HTMLMinifier;
+use Ultimate_WP_Booster\Engine\Optimization\HTML\LazyElements;
 use Ultimate_WP_Booster\Engine\CDN\CDNManager;
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
@@ -63,6 +64,13 @@ class Optimizer {
             if ( $debug_enabled ) $debug_logs[] = "Query Strings Removal: Applied";
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "Query Strings Removal: Disabled in settings";
+        }
+
+        // 5.5. Lazy Load HTML Elements
+        if ( ! empty( $config['html_lazy_load_elements_enabled'] ) && ! empty( $config['html_lazy_load_elements'] ) ) {
+            $html = LazyElements::process( $html, $config['html_lazy_load_elements'], $debug_logs );
+        } elseif ( $debug_enabled ) {
+            $debug_logs[] = "Lazy Load Elements: Disabled in settings";
         }
 
         // 6. Lazy Load Images
