@@ -156,42 +156,14 @@ class JS {
 
         if ( file_exists( $cache_file ) ) {
             \Ultimate_WP_Booster\Engine\CDN\CDNManager::upload_asset_to_cdn( $cache_file );
-
-            $body_pos = stripos( $html, '<body' );
-            $target_item = null;
-
-            if ( $body_pos !== false ) {
-                foreach ( $to_combine as $item ) {
-                    $item_pos = stripos( $html, $item['tag'] );
-                    if ( $item_pos !== false && $item_pos > $body_pos ) {
-                        $target_item = $item;
-                        break;
-                    }
-                }
-            }
-
-            if ( ! $target_item && ! empty( $to_combine ) ) {
-                $target_item = reset( $to_combine );
-            }
-
-            $replaced = false;
-            $new_tag  = '<script src="' . esc_url( $cache_url ) . '"></script>';
-
             foreach ( $to_combine as $item ) {
-                if ( ! $replaced && $target_item && $item['tag'] === $target_item['tag'] ) {
-                    $html     = str_replace( $item['tag'], $new_tag, $html );
-                    $replaced = true;
-                } else {
-                    $html = str_replace( $item['tag'], '', $html );
-                }
+                $html = str_replace( $item['tag'], '', $html );
             }
-
-            if ( ! $replaced ) {
-                if ( stripos( $html, '</body>' ) !== false ) {
-                    $html = str_ireplace( '</body>', $new_tag . "\n" . '</body>', $html );
-                } else {
-                    $html .= "\n" . $new_tag;
-                }
+            $new_tag = '<script src="' . esc_url( $cache_url ) . '"></script>';
+            if ( stripos( $html, '</body>' ) !== false ) {
+                $html = str_ireplace( '</body>', $new_tag . "\n" . '</body>', $html );
+            } else {
+                $html .= "\n" . $new_tag;
             }
 
             if ( is_array( $logs ) ) {
@@ -322,11 +294,11 @@ class JS {
     }
 
     public static function is_webpack_bundle( $local_path, $url = '' ) {
-        if ( ! empty( $url ) && ( stripos( $url, 'chunk.' ) !== false || stripos( $url, 'flatsome' ) !== false ) ) {
+        if ( ! empty( $url ) && stripos( $url, 'chunk.' ) !== false ) {
             return true;
         }
 
-        if ( $local_path && ( stripos( $local_path, 'chunk.' ) !== false || stripos( $local_path, 'flatsome' ) !== false ) ) {
+        if ( $local_path && stripos( $local_path, 'chunk.' ) !== false ) {
             return true;
         }
 
