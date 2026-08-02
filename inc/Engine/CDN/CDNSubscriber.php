@@ -27,6 +27,7 @@ class CDNSubscriber implements Subscriber_Interface {
             'manage_media_columns'            => 'add_media_columns',
             'manage_media_custom_column'      => array( 'render_media_column', 10, 2 ),
             'wp_prepare_attachment_for_js'    => array( 'prepare_attachment_for_js', 10, 3 ),
+            'wp_ajax_uwb_get_attachment_info' => 'ajax_get_attachment_info',
         );
     }
 
@@ -387,6 +388,17 @@ class CDNSubscriber implements Subscriber_Interface {
         }
 
         return $response;
+    }
+
+    public function ajax_get_attachment_info() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        $id = isset( $_POST['attachment_id'] ) ? intval( $_POST['attachment_id'] ) : 0;
+        if ( ! $id ) {
+            wp_send_json_error( array( 'message' => 'Invalid Attachment ID' ) );
+        }
+
+        $data = $this->prepare_attachment_data( $id );
+        wp_send_json_success( $data );
     }
 
     public function render_media_column( $column_name, $post_id ) {
@@ -929,45 +941,78 @@ class CDNSubscriber implements Subscriber_Interface {
                             $msg.css('color', '#dc2626').text('Error: ' + (res.data ? res.data.message : 'Restore failed'));
                         }
                     }
-            // 5. Backbone Grid View Cloud Badge Decoration & Hover Popover
+            // 5. Grid View Cloud Badge Scanner & Backbone Listener
+            function getCloudSvgSrc(isOffloaded) {
+                return isOffloaded ?
+                    'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOSIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDI5IDE4IiBmaWxsPSJub25lIj48cGF0aCBkPSJNMjAuNSA3QzE5LjYgMy4xIDE2LjEgMCAxMiAwIDguNyAwIDYuMSAyLjMgNS4yIDUuNCAyLjIgNi42IDAgOSA2LjAgMCAxMi40IDAgMTguNmMwIDMuMSAyLjUgNS40IDUuNiA1LjRoMTUuNGMzLjEgMCA1LjYtMi41IDUuNi01LjYgMC0zLjEtMi40LTUuNC01LjUtNS40eiIgZmlsbD0iIzAyODRjNyIvPjwvc3ZnPg==' :
+                    'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOSIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDI5IDE4IiBmaWxsPSJub25lIj48cGF0aCBkPSJNMjAuNSA3QzE5LjYgMy4xIDE2LjEgMCAxMiAwIDguNyAwIDYuMSAyLjMgNS4yIDUuNCAyLjIgNi42IDAgOSA2LjAgMCAxMi40IDAgMTguNmMwIDMuMSAyLjUgNS40IDUuNiA1LjRoMTUuNGMzLjEgMCA1LjYtMi41IDUuNi01LjRoMTUuNGMzLjEgMCA1LjYtMi41IDUuNi01LjRoMTUuNGMzLjEgMCA1LjYtMi41IDUuNi01LjRoMTUuNGMzLjEgMCA1LjYtMi41IDUuNi01LjR6IiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==';
+            }
+
+            function scanAndInjectGridIcons() {
+                $('.attachment-preview').each(function() {
+                    var $prev = $(this);
+                    if ($prev.find('.ilab-s3-logo').length || $prev.find('.uwb-cloud-icon-btn').length) {
+                        return;
+                    }
+
+                    var $li = $prev.closest('li.attachment');
+                    var id = $li.data('id') || $li.attr('data-id');
+                    if (!id) return;
+
+                    var model = null;
+                    if (typeof wp !== 'undefined' && wp.media && wp.media.attachment) {
+                        try {
+                            var att = wp.media.attachment(id);
+                            if (att) model = att.toJSON();
+                        } catch(err) {}
+                    }
+
+                    var isOffloaded = model ? !!model.uwb_offloaded : false;
+                    if (isOffloaded) {
+                        $prev.addClass('has-s3');
+                    }
+
+                    var $img = $('<img class="ilab-s3-logo uwb-cloud-icon-btn ' + (isOffloaded ? 'is-offloaded' : 'not-offloaded') + '" data-post-id="' + id + '" data-container="grid" src="' + getCloudSvgSrc(isOffloaded) + '" width="29" height="18" title="' + (isOffloaded ? '☁️ Synced to S3 CDN' : '☁️ Not Synced') + '" />');
+                    if (model) {
+                        $img.data('att-data', model);
+                    }
+                    $prev.prepend($img);
+                });
+            }
+
+            scanAndInjectGridIcons();
+            setInterval(scanAndInjectGridIcons, 500);
+
             if (typeof wp !== 'undefined' && wp.media && wp.media.view && wp.media.view.Attachment) {
-                var OldLibrary = wp.media.view.Attachment.Library;
-                if (OldLibrary) {
-                    wp.media.view.Attachment.Library = OldLibrary.extend({
-                        render: function() {
-                            OldLibrary.prototype.render.apply(this, arguments);
-                            this.injectUwbCloudBadge();
-                            return this;
-                        },
-                        injectUwbCloudBadge: function() {
-                            var model = this.model.toJSON();
-                            var $el   = this.$el;
-                            if ($el.find('.uwb-cloud-icon-btn').length) return;
-
-                            var isOffloaded = model.uwb_offloaded;
-                            var iconColor   = isOffloaded ? '#0284c7' : '#94a3b8';
-                            var fillColor   = isOffloaded ? '#0284c7' : 'none';
-
-                            var $badge = $('<div class="uwb-cloud-icon-btn ' + (isOffloaded ? 'is-offloaded' : 'not-offloaded') + '" title="' + (isOffloaded ? '☁️ Synced to S3 CDN' : '☁️ Not Synced') + '">' +
-                                '<svg width="18" height="18" viewBox="0 0 24 24" fill="' + fillColor + '" stroke="' + iconColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>' +
-                            '</div>');
-
-                            $badge.data('att-data', model);
-                            $el.css('position', 'relative').find('.attachment-preview').append($badge);
-                        }
-                    });
-                }
+                var types = ['Library', 'EditLibrary', 'Selection', 'Attachments'];
+                types.forEach(function(t) {
+                    if (wp.media.view.Attachment[t]) {
+                        var orig = wp.media.view.Attachment[t];
+                        wp.media.view.Attachment[t] = orig.extend({
+                            render: function() {
+                                orig.prototype.render.apply(this, arguments);
+                                var model = this.model ? this.model.toJSON() : {};
+                                var $el   = this.$el;
+                                var $prev = $el.find('.attachment-preview');
+                                if ($prev.length && !$prev.find('.ilab-s3-logo').length && !$prev.find('.uwb-cloud-icon-btn').length) {
+                                    var isOffloaded = !!model.uwb_offloaded;
+                                    if (isOffloaded) {
+                                        $prev.addClass('has-s3');
+                                    }
+                                    var $img = $('<img class="ilab-s3-logo uwb-cloud-icon-btn ' + (isOffloaded ? 'is-offloaded' : 'not-offloaded') + '" data-post-id="' + (model.id || model.ID || '') + '" data-container="grid" src="' + getCloudSvgSrc(isOffloaded) + '" width="29" height="18" title="' + (isOffloaded ? '☁️ Synced to S3 CDN' : '☁️ Not Synced') + '" />');
+                                    $img.data('att-data', model);
+                                    $prev.prepend($img);
+                                }
+                                return this;
+                            }
+                        });
+                    }
+                });
             }
 
             var hideTimer = null;
 
-            $(document).on('mouseenter', '.uwb-cloud-icon-btn, .uwb-cloud-list-icon', function(e) {
-                clearTimeout(hideTimer);
-                var $icon = $(this);
-                var rawData = $icon.data('att-data');
-                var data = (typeof rawData === 'string') ? JSON.parse(rawData) : rawData;
-                if (!data) return;
-
+            function renderPopover($icon, data) {
                 $('.uwb-storage-info-popover').remove();
 
                 var type        = data.mime || data.subtype || 'image';
@@ -975,7 +1020,7 @@ class CDNSubscriber implements Subscriber_Interface {
                 var bucket      = data.uwb_bucket || 'cdn-bucket';
                 var path        = data.uwb_s3_key || '';
                 var cacheCtrl   = data.uwb_cache_control || 'public,max-age=2592000';
-                var isOffloaded = data.uwb_offloaded;
+                var isOffloaded = !!data.uwb_offloaded;
                 var id          = data.id || data.ID;
                 var cdnDomain   = data.uwb_cdn_domain ? data.uwb_cdn_domain.replace(/\/$/, '') : '';
                 var storageUrl  = isOffloaded && cdnDomain && path ? (cdnDomain + '/' + path) : (data.url || '');
@@ -1050,11 +1095,41 @@ class CDNSubscriber implements Subscriber_Interface {
 
                 $popover.find('.uwb-pop-arrow').addClass(arrowClass);
                 $popover.css({ top: top + 'px', left: left + 'px' });
+            }
+
+            $(document).on('mouseenter', '.ilab-s3-logo, .uwb-cloud-icon-btn, .uwb-cloud-list-icon', function(e) {
+                clearTimeout(hideTimer);
+                var $icon = $(this);
+                var rawData = $icon.data('att-data');
+                var data = null;
+                if (rawData) {
+                    data = (typeof rawData === 'string') ? JSON.parse(rawData) : rawData;
+                }
+
+                var id = $icon.attr('data-post-id') || $icon.data('id') || ($icon.closest('li.attachment').data('id'));
+
+                if (!data && id) {
+                    $.post(ajaxurl, {
+                        action: 'uwb_get_attachment_info',
+                        attachment_id: id,
+                        nonce: '<?php echo wp_create_nonce("uwb_admin_nonce"); ?>'
+                    }, function(res) {
+                        if (res.success && res.data) {
+                            $icon.data('att-data', res.data);
+                            renderPopover($icon, res.data);
+                        }
+                    });
+                    return;
+                }
+
+                if (data) {
+                    renderPopover($icon, data);
+                }
             });
 
-            $(document).on('mouseleave', '.uwb-cloud-icon-btn, .uwb-cloud-list-icon, .uwb-storage-info-popover', function() {
+            $(document).on('mouseleave', '.ilab-s3-logo, .uwb-cloud-icon-btn, .uwb-cloud-list-icon, .uwb-storage-info-popover', function() {
                 hideTimer = setTimeout(function() {
-                    if (!$('.uwb-storage-info-popover:hover').length && !$('.uwb-cloud-icon-btn:hover').length && !$('.uwb-cloud-list-icon:hover').length) {
+                    if (!$('.uwb-storage-info-popover:hover').length && !$('.ilab-s3-logo:hover').length && !$('.uwb-cloud-icon-btn:hover').length && !$('.uwb-cloud-list-icon:hover').length) {
                         $('.uwb-storage-info-popover').remove();
                     }
                 }, 200);
@@ -1065,24 +1140,22 @@ class CDNSubscriber implements Subscriber_Interface {
         });
         </script>
         <style id="uwb-cloud-badge-css">
-        .uwb-cloud-icon-btn {
-            position: absolute;
-            bottom: 6px;
-            right: 6px;
-            z-index: 20;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2px;
-            border-radius: 4px;
-            transition: transform 0.15s ease;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(2px);
+        .has-s3 > .ilab-s3-logo,
+        .attachment-preview > .ilab-s3-logo,
+        .attachment-preview > .uwb-cloud-icon-btn {
+            display: block !important;
+            position: absolute !important;
+            right: 5px !important;
+            bottom: 5px !important;
+            z-index: 20 !important;
+            cursor: pointer !important;
+            width: 29px !important;
+            height: 18px !important;
+            transition: transform 0.15s ease !important;
         }
+        .ilab-s3-logo:hover,
         .uwb-cloud-icon-btn:hover {
-            transform: scale(1.2);
-            background: #ffffff;
+            transform: scale(1.2) !important;
         }
         .uwb-storage-info-popover {
             position: absolute;
