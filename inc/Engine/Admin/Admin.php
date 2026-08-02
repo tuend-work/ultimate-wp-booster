@@ -2917,13 +2917,9 @@ class Admin {
                                     'only_edit'   => 'Only Allow When Editing Posts/Pages',
                                 ), 'Control or disable the WordPress Heartbeat API.' );
 
-                                $this->render_toggle_switch( 'uwb_general_remove_global_styles', 'Remove Global Styles', 'Remove default global inline styles and Gutenberg block library CSS.' );
-                                $this->render_toggle_switch( 'uwb_general_add_blank_favicon', 'Add Blank Favicon', 'Inject a blank base64 favicon to stop browsers requesting a favicon if not set.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_comment_urls', 'Remove Comment URLs', 'Remove the website URL field from the default comment form.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_comments', 'Disable Comments', 'Close comments, pings, and hide comments on the front-end completely.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_password_strength_meter', 'Disable Password Strength Meter', 'Disable password strength meter scripts in WooCommerce or checkout pages.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_google_maps', 'Disable Google Maps', 'De-enqueue Google Maps API scripts and styles from the front-end.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_rest_api_links', 'Remove REST API Links', 'Remove REST API discovery links from page headers and headers responses.' );
 
                                 $this->render_select_setting( 'uwb_general_disable_rest_api', 'Disable REST API', array(
                                     'default'           => 'Default',
@@ -2932,16 +2928,10 @@ class Admin {
                                 ), 'Block REST API requests to secure your site\'s endpoints.' );
 
                                 $this->render_toggle_switch( 'uwb_general_disable_self_pingbacks', 'Disable Self Pingbacks', 'Stop WordPress from pingbacking your own posts when you link to them.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_rss_feed_links', 'Remove RSS Feed Links', 'Remove RSS feed and comment feed links from page head.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_rss_feeds', 'Disable RSS Feeds', 'Disable RSS feed generation and redirect feed URLs to display error page.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_shortlink', 'Remove Shortlink', 'Remove shortlinks from page head and HTTP headers response.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_rsd', 'Remove RSD Link', 'Remove Real Simple Discovery (RSD) link tag from page head.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_wlwmanifest', 'Remove wlwmanifest Link', 'Remove Windows Live Writer manifest XML link tag from page head.' );
-                                $this->render_toggle_switch( 'uwb_general_hide_wp_version', 'Hide WP Version', 'Hide WordPress version generator meta tag and query args from scripts/styles.' );
                                 $this->render_toggle_switch( 'uwb_general_remove_jquery_migrate', 'Remove jQuery Migrate', 'Remove jQuery Migrate script dependency from frontend scripts.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_xmlrpc', 'Disable XML-RPC', 'Disable XML-RPC requests and remove RSD links to block brute-force attacks.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_dashicons', 'Disable Dashicons', 'De-enqueue Dashicons stylesheet on frontend for non-logged-in users.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_emojis', 'Disable Emojis', 'Remove default WordPress emoji styling and detection script.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_embeds', 'Disable Embeds', 'De-enqueue oEmbed javascript and disable oEmbed-related discovery links.' );
                                 ?>
                             </div>
@@ -3059,8 +3049,17 @@ js-(before|after)
                                 <?php
                                 $this->render_toggle_switch( 'uwb_html_minify', 'HTML Minify', 'Minify HTML source code.' );
                                 $this->render_toggle_switch( 'uwb_html_remove_qs', 'Remove Query Strings', 'Remove query strings from static resources.' );
-                                $this->render_toggle_switch( 'uwb_html_remove_emoji', 'Remove WordPress Emoji', 'Remove default WordPress Emoji CSS/JS.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_emojis', 'Disable Emojis', 'Remove default WordPress emoji styling and detection script.' );
                                 $this->render_toggle_switch( 'uwb_html_remove_noscript', 'Remove Noscript Tags', 'Remove all noscript tags from HTML.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_global_styles', 'Remove Global Styles', 'Remove default global inline styles and Gutenberg block library CSS.' );
+                                $this->render_toggle_switch( 'uwb_general_add_blank_favicon', 'Add Blank Favicon', 'Inject a blank base64 favicon to stop browsers requesting a favicon if not set.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_comment_urls', 'Remove Comment URLs', 'Remove the website URL field from the default comment form.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rest_api_links', 'Remove REST API Links', 'Remove REST API discovery links from page headers and headers responses.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rss_feed_links', 'Remove RSS Feed Links', 'Remove RSS feed and comment feed links from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_shortlink', 'Remove Shortlink', 'Remove shortlinks from page head and HTTP headers response.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_rsd', 'Remove RSD Link', 'Remove Real Simple Discovery (RSD) link tag from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_remove_wlwmanifest', 'Remove wlwmanifest Link', 'Remove Windows Live Writer manifest XML link tag from page head.' );
+                                $this->render_toggle_switch( 'uwb_general_hide_wp_version', 'Hide WP Version', 'Hide WordPress version generator meta tag and query args from scripts/styles.' );
 
                                 $is_lazy_elem_on = (bool) get_option( 'uwb_html_lazy_load_elements_enabled', 0 );
                                 $this->render_toggle_switch( 'uwb_html_lazy_load_elements_enabled', 'Lazy Load Elements', 'Lazy load heavy HTML elements (e.g. <code>#comments</code>, <code>.footer-widgets</code>, <code>#related-products</code>) using <code>IntersectionObserver</code> to reduce initial DOM size and improve FCP, TBT, and LCP.' );
