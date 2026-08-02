@@ -360,50 +360,134 @@ class CDNManager {
         );
     }
 
-    public static function is_attachment_offloaded( $attachment_id ) {
-        $cloud_status = get_post_meta( $attachment_id, '_uwb_s3_cloud_status', true );
-        if ( ! empty( $cloud_status ) ) {
-            return ( $cloud_status === 'synced' || $cloud_status === 'uploaded' || $cloud_status === '1' );
+    public static function get_table_name() {
+        global $wpdb;
+        return $wpdb->prefix . 'uwb_s3_attachments';
+    }
+
+    public static function init_db_table() {
+        global $wpdb;
+        $table_name = self::get_table_name();
+        if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) !== $table_name ) {
+            $charset_collate = $wpdb->get_charset_collate();
+            $sql = "CREATE TABLE $table_name (
+                attachment_id bigint(20) NOT NULL,
+                s3_key varchar(255) NOT NULL,
+                s3_uploaded bigint(20) NOT NULL,
+                s3_cloud_status varchar(50) NOT NULL DEFAULT 'synced',
+                s3_local_status varchar(50) NOT NULL DEFAULT 'kept',
+                s3_local_deleted tinyint(1) NOT NULL DEFAULT 0,
+                PRIMARY KEY  (attachment_id),
+                KEY s3_key (s3_key(191)),
+                KEY s3_cloud_status (s3_cloud_status)
+            ) $charset_collate;";
+            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+            dbDelta( $sql );
+            self::migrate_postmeta_to_table();
         }
-        return (bool) get_post_meta( $attachment_id, '_uwb_s3_uploaded', true );
+    }
+
+    private static function migrate_postmeta_to_table() {
+        global $wpdb;
+        $table_name = self::get_table_name();
+        $rows = $wpdb->get_results( "
+            SELECT post_id, meta_value AS uploaded 
+            FROM {$wpdb->postmeta} 
+            WHERE meta_key = '_uwb_s3_uploaded'
+        " );
+        if ( ! empty( $rows ) ) {
+            foreach ( $rows as $row ) {
+                $attachment_id = (int) $row->post_id;
+                $uploaded = (int) $row->uploaded;
+                $s3_key = get_post_meta( $attachment_id, '_uwb_s3_key', true );
+                $cloud_status = get_post_meta( $attachment_id, '_uwb_s3_cloud_status', true );
+                if ( empty( $cloud_status ) ) {
+                    $cloud_status = 'synced';
+                }
+                $local_status = get_post_meta( $attachment_id, '_uwb_s3_local_status', true );
+                if ( empty( $local_status ) ) {
+                    $local_status = 'kept';
+                }
+                $local_deleted = (int) get_post_meta( $attachment_id, '_uwb_s3_local_deleted', true );
+                
+                $wpdb->replace( $table_name, array(
+                    'attachment_id'    => $attachment_id,
+                    's3_key'           => $s3_key,
+                    's3_uploaded'      => $uploaded,
+                    's3_cloud_status'  => $cloud_status,
+                    's3_local_status'  => $local_status,
+                    's3_local_deleted' => $local_deleted
+                ) );
+                
+                delete_post_meta( $attachment_id, '_uwb_s3_key' );
+                delete_post_meta( $attachment_id, '_uwb_s3_uploaded' );
+                delete_post_meta( $attachment_id, '_uwb_s3_cloud_status' );
+                delete_post_meta( $attachment_id, '_uwb_s3_local_status' );
+                delete_post_meta( $attachment_id, '_uwb_s3_local_deleted' );
+            }
+        }
+    }
+
+    public static function get_s3_attachment_meta( $attachment_id ) {
+        global $wpdb;
+        self::init_db_table();
+        $table_name = self::get_table_name();
+        return $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $table_name WHERE attachment_id = %d",
+            $attachment_id
+        ), ARRAY_A );
+    }
+
+    public static function is_attachment_offloaded( $attachment_id ) {
+        global $wpdb;
+        self::init_db_table();
+        $table_name = self::get_table_name();
+        $cloud_status = $wpdb->get_var( $wpdb->prepare(
+            "SELECT s3_cloud_status FROM $table_name WHERE attachment_id = %d",
+            $attachment_id
+        ) );
+        return ( $cloud_status === 'synced' || $cloud_status === 'uploaded' || $cloud_status === '1' );
     }
 
     public static function is_local_deleted( $attachment_id ) {
-        $local_status = get_post_meta( $attachment_id, '_uwb_s3_local_status', true );
-        if ( ! empty( $local_status ) ) {
-            return ( $local_status === 'removed' || $local_status === 'deleted' );
+        global $wpdb;
+        self::init_db_table();
+        $table_name = self::get_table_name();
+        $local_deleted = $wpdb->get_var( $wpdb->prepare(
+            "SELECT s3_local_deleted FROM $table_name WHERE attachment_id = %d",
+            $attachment_id
+        ) );
+        if ( null !== $local_deleted ) {
+            return (bool) $local_deleted;
         }
-
-        $flag = get_post_meta( $attachment_id, '_uwb_s3_local_deleted', true );
-        if ( '' !== $flag ) {
-            return (bool) $flag;
-        }
-
-        // Fallback check: if offloaded to S3 but attached file is missing on local disk
-        if ( self::is_attachment_offloaded( $attachment_id ) ) {
-            $file = get_attached_file( $attachment_id );
-            if ( $file && ! file_exists( $file ) ) {
-                return true;
-            }
-        }
-
         return false;
     }
 
     public static function mark_attachment_offloaded( $attachment_id, $s3_key = '', $local_deleted = false ) {
-        $now = time();
-        update_post_meta( $attachment_id, '_uwb_s3_cloud_status', 'synced' );
-        update_post_meta( $attachment_id, '_uwb_s3_uploaded', $now );
-        if ( ! empty( $s3_key ) ) {
-            update_post_meta( $attachment_id, '_uwb_s3_key', sanitize_text_field( $s3_key ) );
+        global $wpdb;
+        self::init_db_table();
+        $table_name = self::get_table_name();
+        if ( empty( $s3_key ) ) {
+            $s3_key = self::get_attachment_s3_key( $attachment_id );
         }
-        $local_status = $local_deleted ? 'removed' : 'kept';
-        update_post_meta( $attachment_id, '_uwb_s3_local_status', $local_status );
-        update_post_meta( $attachment_id, '_uwb_s3_local_deleted', $local_deleted ? 1 : 0 );
+        $wpdb->replace( $table_name, array(
+            'attachment_id'    => (int) $attachment_id,
+            's3_key'           => sanitize_text_field( $s3_key ),
+            's3_uploaded'      => time(),
+            's3_cloud_status'  => 'synced',
+            's3_local_status'  => $local_deleted ? 'removed' : 'kept',
+            's3_local_deleted' => $local_deleted ? 1 : 0
+        ) );
     }
 
     public static function get_attachment_s3_key( $attachment_id ) {
-        $s3_key = get_post_meta( $attachment_id, '_uwb_s3_key', true );
+        global $wpdb;
+        self::init_db_table();
+        $table_name = self::get_table_name();
+        $s3_key = $wpdb->get_var( $wpdb->prepare(
+            "SELECT s3_key FROM $table_name WHERE attachment_id = %d",
+            $attachment_id
+        ) );
         if ( ! empty( $s3_key ) ) {
             return $s3_key;
         }
@@ -426,9 +510,13 @@ class CDNManager {
     }
 
     public static function mark_local_deleted( $attachment_id, $is_deleted = true ) {
-        $status = $is_deleted ? 'removed' : 'kept';
-        update_post_meta( $attachment_id, '_uwb_s3_local_status', $status );
-        update_post_meta( $attachment_id, '_uwb_s3_local_deleted', $is_deleted ? 1 : 0 );
+        global $wpdb;
+        self::init_db_table();
+        $table_name = self::get_table_name();
+        $wpdb->update( $table_name, array(
+            's3_local_status'  => $is_deleted ? 'removed' : 'kept',
+            's3_local_deleted' => $is_deleted ? 1 : 0
+        ), array( 'attachment_id' => $attachment_id ) );
     }
 
     public static function download_attachment_from_s3( $attachment_id ) {
@@ -448,7 +536,7 @@ class CDNManager {
 
         $uploads     = wp_upload_dir();
         $base_dir    = rtrim( str_replace( '\\', '/', $uploads['basedir'] ), '/' );
-        $file_norm   = str_replace( '\\', '/', $file );
+        $file_norm   = str_replace( '/\\', '/', $file );
 
         if ( strpos( $file_norm, $base_dir ) !== 0 ) {
             return false;
@@ -486,10 +574,9 @@ class CDNManager {
     }
 
     public static function remove_attachment_offload_flag( $attachment_id ) {
-        delete_post_meta( $attachment_id, '_uwb_s3_cloud_status' );
-        delete_post_meta( $attachment_id, '_uwb_s3_local_status' );
-        delete_post_meta( $attachment_id, '_uwb_s3_uploaded' );
-        delete_post_meta( $attachment_id, '_uwb_s3_key' );
-        delete_post_meta( $attachment_id, '_uwb_s3_local_deleted' );
+        global $wpdb;
+        self::init_db_table();
+        $table_name = self::get_table_name();
+        $wpdb->delete( $table_name, array( 'attachment_id' => $attachment_id ) );
     }
 }

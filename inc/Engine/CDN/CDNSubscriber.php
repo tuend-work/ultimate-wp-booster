@@ -444,14 +444,12 @@ class CDNSubscriber implements Subscriber_Interface {
         }
 
         if ( $offloaded ) {
-            $s3_key        = get_post_meta( $post_id, '_uwb_s3_key', true );
-            $timestamp     = get_post_meta( $post_id, '_uwb_s3_uploaded', true );
+            $s3_meta       = CDNManager::get_s3_attachment_meta( $post_id );
+            $s3_key        = isset( $s3_meta['s3_key'] ) ? $s3_meta['s3_key'] : '';
+            $timestamp     = isset( $s3_meta['s3_uploaded'] ) ? (int) $s3_meta['s3_uploaded'] : 0;
             $date          = $timestamp ? date_i18n( 'd/m/Y H:i', $timestamp ) : '';
             $local_deleted = CDNManager::is_local_deleted( $post_id );
-            $cloud_status  = get_post_meta( $post_id, '_uwb_s3_cloud_status', true );
-            if ( empty( $cloud_status ) ) {
-                $cloud_status = 'synced';
-            }
+            $cloud_status  = isset( $s3_meta['s3_cloud_status'] ) ? $s3_meta['s3_cloud_status'] : 'synced';
             $local_status  = $local_deleted ? 'removed' : 'kept';
 
             $output .= '<span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;" title="' . esc_attr( $s3_key ) . '&#10;_uwb_s3_cloud_status: ' . esc_attr( $cloud_status ) . '&#10;Uploaded: ' . esc_attr( $date ) . '">☁️ S3 CDN</span>';
@@ -628,14 +626,14 @@ class CDNSubscriber implements Subscriber_Interface {
             return;
         }
 
-        // Auto-heal meta for offloaded attachments missing _uwb_s3_local_status flag
+        // Auto-heal meta for offloaded attachments missing s3_local_status flag
         if ( 'local_removed' === $filter || 's3_synced' === $filter ) {
             global $wpdb;
+            $table_name = CDNManager::get_table_name();
+            CDNManager::init_db_table();
             $missing_ids = $wpdb->get_col( "
-                SELECT p.ID FROM {$wpdb->posts} p
-                INNER JOIN {$wpdb->postmeta} pm ON (p.ID = pm.post_id AND pm.meta_key = '_uwb_s3_uploaded')
-                LEFT JOIN {$wpdb->postmeta} pm2 ON (p.ID = pm2.post_id AND pm2.meta_key = '_uwb_s3_local_status')
-                WHERE p.post_type = 'attachment' AND pm2.meta_id IS NULL
+                SELECT attachment_id FROM $table_name
+                WHERE s3_cloud_status = 'synced' AND s3_local_status IS NULL
                 LIMIT 100
             " );
             if ( ! empty( $missing_ids ) ) {
@@ -650,65 +648,52 @@ class CDNSubscriber implements Subscriber_Interface {
             }
         }
 
-        $meta_query = $query->get( 'meta_query' );
-        if ( ! is_array( $meta_query ) ) {
-            $meta_query = array();
-        }
+        if ( 'optimized' === $filter || 'unoptimized' === $filter ) {
+            $meta_query = $query->get( 'meta_query' );
+            if ( ! is_array( $meta_query ) ) {
+                $meta_query = array();
+            }
 
-        if ( 'optimized' === $filter ) {
-            $meta_query[] = array(
-                'relation' => 'OR',
-                array(
+            if ( 'optimized' === $filter ) {
+                $meta_query[] = array(
+                    'relation' => 'OR',
+                    array(
+                        'key'     => '_uwb_img_compress_status',
+                        'value'   => 'compressed',
+                        'compare' => '=',
+                    ),
+                    array(
+                        'key'     => '_uwb_img_convert_webp_status',
+                        'value'   => 'converted',
+                        'compare' => '=',
+                    ),
+                    array(
+                        'key'     => '_uwb_img_convert_avif_status',
+                        'value'   => 'converted',
+                        'compare' => '=',
+                    ),
+                );
+            } elseif ( 'unoptimized' === $filter ) {
+                $meta_query[] = array(
                     'key'     => '_uwb_img_compress_status',
-                    'value'   => 'compressed',
-                    'compare' => '=',
-                ),
-                array(
-                    'key'     => '_uwb_img_convert_webp_status',
-                    'value'   => 'converted',
-                    'compare' => '=',
-                ),
-                array(
-                    'key'     => '_uwb_img_convert_avif_status',
-                    'value'   => 'converted',
-                    'compare' => '=',
-                ),
-            );
-        } elseif ( 'unoptimized' === $filter ) {
-            $meta_query[] = array(
-                'key'     => '_uwb_img_compress_status',
-                'compare' => 'NOT EXISTS',
-            );
-        } elseif ( 's3_synced' === $filter ) {
-            $meta_query[] = array(
-                'relation' => 'OR',
-                array(
-                    'key'     => '_uwb_s3_cloud_status',
-                    'value'   => 'synced',
-                    'compare' => '=',
-                ),
-                array(
-                    'key'     => '_uwb_s3_uploaded',
-                    'compare' => 'EXISTS',
-                ),
-            );
-        } elseif ( 'local_removed' === $filter ) {
-            $meta_query[] = array(
-                'relation' => 'OR',
-                array(
-                    'key'     => '_uwb_s3_local_status',
-                    'value'   => array( 'removed', 'deleted' ),
-                    'compare' => 'IN',
-                ),
-                array(
-                    'key'     => '_uwb_s3_local_deleted',
-                    'value'   => array( '1', 1, 'true', true ),
-                    'compare' => 'IN',
-                ),
-            );
+                    'compare' => 'NOT EXISTS',
+                );
+            }
+            $query->set( 'meta_query', $meta_query );
+        } else {
+            add_filter( 'posts_join', function( $join, $wp_query ) use ( $filter ) {
+                global $wpdb;
+                if ( strpos( $join, 'uwb_s3_attachments' ) === false ) {
+                    $table_name = CDNManager::get_table_name();
+                    if ( 's3_synced' === $filter ) {
+                        $join .= " INNER JOIN $table_name ON ($wpdb->posts.ID = $table_name.attachment_id AND $table_name.s3_cloud_status = 'synced') ";
+                    } elseif ( 'local_removed' === $filter ) {
+                        $join .= " INNER JOIN $table_name ON ($wpdb->posts.ID = $table_name.attachment_id AND $table_name.s3_local_deleted = 1) ";
+                    }
+                }
+                return $join;
+            }, 10, 2 );
         }
-
-        $query->set( 'meta_query', $meta_query );
     }
 
     public function register_media_bulk_actions( $bulk_actions ) {
