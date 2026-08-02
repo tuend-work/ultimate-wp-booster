@@ -2858,7 +2858,7 @@ js-(before|after)
                                 $this->render_toggle_switch( 'uwb_html_remove_noscript', 'Remove Noscript Tags', 'Remove all noscript tags from HTML.' );
 
                                 $is_lazy_elem_on = (bool) get_option( 'uwb_html_lazy_load_elements_enabled', 0 );
-                                $this->render_toggle_switch( 'uwb_html_lazy_load_elements_enabled', 'Enable Lazy Load Elements', 'Lazy load heavy HTML elements (e.g. <code>#comments</code>, <code>.footer-widgets</code>, <code>#related-products</code>) using <code>IntersectionObserver</code> to reduce initial DOM size and improve FCP, TBT, and LCP.' );
+                                $this->render_toggle_switch( 'uwb_html_lazy_load_elements_enabled', 'Lazy Load Elements', 'Lazy load heavy HTML elements (e.g. <code>#comments</code>, <code>.footer-widgets</code>, <code>#related-products</code>) using <code>IntersectionObserver</code> to reduce initial DOM size and improve FCP, TBT, and LCP.' );
                                 ?>
 
                                 <div id="uwb-lazy-elements-textarea-wrap" style="margin-bottom:24px; <?php echo $is_lazy_elem_on ? '' : 'display:none;'; ?>">
@@ -2866,8 +2866,8 @@ js-(before|after)
                                     $this->render_textarea_setting(
                                         'uwb_html_lazy_load_elements',
                                         'Lazy Load Element Selectors',
-                                        "#comments\n.footer-widgets\n#related-products\n.widget-area",
-                                        'Specify CSS selectors (IDs or class names) of heavy HTML elements to lazy load (one per line).<br>Example: <code>#comments</code>, <code>.site-footer</code>, <code>#related-products</code>, <code>.widget-area</code>'
+                                        "#comments\n.product_list_widget > li\n.footer-widgets\n#related-products\n.widget-area",
+                                        'Specify CSS selectors (IDs, class names, or parent > child rules) of heavy HTML elements to lazy load (one per line).<br>Example: <code>#comments</code>, <code>.product_list_widget > li</code>, <code>.site-footer</code>, <code>#related-products</code>, <code>.widget-area</code>'
                                     );
                                     ?>
                                     <div class="uwb-warning-box" style="margin-top: -8px; background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e40af; padding: 16px; border-radius: 8px;">

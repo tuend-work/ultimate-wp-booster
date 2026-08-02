@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 /**
  * Lazy Load HTML Elements (Perfmatters technique with <noscript> SEO Fallback)
+ * Supports standard selectors (#comments, .footer-widgets) and parent > child combinators (.product_list_widget > li).
  */
 class LazyElements {
 
@@ -32,23 +33,28 @@ class LazyElements {
         foreach ( $lines as $selector ) {
             if ( empty( $selector ) ) continue;
 
-            $selector_type = '';
-            $selector_name = '';
-
-            if ( strpos( $selector, '#' ) === 0 ) {
-                $selector_type = 'id';
-                $selector_name = substr( $selector, 1 );
-            } elseif ( strpos( $selector, '.' ) === 0 ) {
-                $selector_type = 'class';
-                $selector_name = substr( $selector, 1 );
+            // Check if selector contains child combinators e.g. ".product_list_widget > li" or ".widget-area .widget"
+            if ( strpos( $selector, '>' ) !== false || strpos( $selector, ' ' ) !== false ) {
+                $html = self::replace_combinator_selector( $html, $selector, $elem_index, $count );
             } else {
-                $selector_type = 'tag';
-                $selector_name = $selector;
+                $selector_type = '';
+                $selector_name = '';
+
+                if ( strpos( $selector, '#' ) === 0 ) {
+                    $selector_type = 'id';
+                    $selector_name = substr( $selector, 1 );
+                } elseif ( strpos( $selector, '.' ) === 0 ) {
+                    $selector_type = 'class';
+                    $selector_name = substr( $selector, 1 );
+                } else {
+                    $selector_type = 'tag';
+                    $selector_name = $selector;
+                }
+
+                if ( empty( $selector_name ) ) continue;
+
+                $html = self::replace_target_element( $html, $selector_type, $selector_name, $elem_index, $count );
             }
-
-            if ( empty( $selector_name ) ) continue;
-
-            $html = self::replace_target_element( $html, $selector_type, $selector_name, $elem_index, $count );
         }
 
         if ( $count > 0 ) {
@@ -59,6 +65,65 @@ class LazyElements {
         }
 
         return $html;
+    }
+
+    /**
+     * Handle parent > child combinator selectors e.g. ".product_list_widget > li" or "#my-list li"
+     *
+     * @param string $html
+     * @param string $selector
+     * @param int    $elem_index
+     * @param int    $count
+     * @return string
+     */
+    private static function replace_combinator_selector( $html, $selector, &$elem_index, &$count ) {
+        $parts = preg_split( '/\s*(?:>|\s)\s*/', trim( $selector ) );
+        if ( count( $parts ) < 2 ) {
+            return $html;
+        }
+
+        $parent_sel = array_shift( $parts );
+        $child_sel  = implode( ' ', $parts );
+
+        $parent_type = 'tag';
+        $parent_name = $parent_sel;
+        if ( strpos( $parent_sel, '#' ) === 0 ) {
+            $parent_type = 'id';
+            $parent_name = substr( $parent_sel, 1 );
+        } elseif ( strpos( $parent_sel, '.' ) === 0 ) {
+            $parent_type = 'class';
+            $parent_name = substr( $parent_sel, 1 );
+        }
+
+        $child_type = 'tag';
+        $child_name = $child_sel;
+        if ( strpos( $child_sel, '#' ) === 0 ) {
+            $child_type = 'id';
+            $child_name = substr( $child_sel, 1 );
+        } elseif ( strpos( $child_sel, '.' ) === 0 ) {
+            $child_type = 'class';
+            $child_name = substr( $child_sel, 1 );
+        }
+
+        $escaped_parent = preg_quote( $parent_name, '#' );
+
+        if ( 'id' === $parent_type ) {
+            $parent_pattern = '#(<([a-z0-9]+)\b[^>]*?\bid=["\']' . $escaped_parent . '["\'][^>]*>)(.*?)(</\2>)#is';
+        } elseif ( 'class' === $parent_type ) {
+            $parent_pattern = '#(<([a-z0-9]+)\b[^>]*?\bclass=["\'][^"\']*?\b' . $escaped_parent . '\b[^"\']*?["\'][^>]*>)(.*?)(</\2>)#is';
+        } else {
+            $parent_pattern = '#(<(' . $escaped_parent . ')\b[^>]*>)(.*?)(</\2>)#is';
+        }
+
+        return preg_replace_callback( $parent_pattern, function( $p_matches ) use ( $child_type, $child_name, &$elem_index, &$count ) {
+            $parent_open  = $p_matches[1];
+            $parent_inner = $p_matches[3];
+            $parent_close = $p_matches[4];
+
+            $parent_inner = self::replace_target_element( $parent_inner, $child_type, $child_name, $elem_index, $count );
+
+            return $parent_open . $parent_inner . $parent_close;
+        }, $html );
     }
 
     /**
