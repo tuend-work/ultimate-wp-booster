@@ -143,12 +143,28 @@ class CriticalCSS {
             if (styleEl) styleEl.textContent = finalCss;
 
             // Extract first-screen images
+            function isSliderHidden(img) {
+                var p = img.parentElement;
+                while (p) {
+                    if (p.classList) {
+                        if (p.classList.contains('slick-slide') && !p.classList.contains('slick-active')) return true;
+                        if (p.classList.contains('swiper-slide') && !p.classList.contains('swiper-slide-active') && !p.classList.contains('swiper-slide-duplicate-active')) return true;
+                        if (p.classList.contains('owl-item') && !p.classList.contains('active')) return true;
+                        if (p.classList.contains('carousel-item') && !p.classList.contains('active')) return true;
+                        if (p.classList.contains('gallery-cell') && !p.classList.contains('is-selected')) return true;
+                        if (p.classList.contains('slick-cloned')) return true;
+                    }
+                    p = p.parentElement;
+                }
+                return false;
+            }
+
             var firstViewImages = [];
             var imgs = document.querySelectorAll('img');
             for (var j = 0; j < imgs.length; j++) {
                 var img = imgs[j];
                 var imgRect = img.getBoundingClientRect();
-                if (imgRect.width > 2 && imgRect.height > 2) {
+                if (imgRect.width > 2 && imgRect.height > 2 && !isSliderHidden(img)) {
                     var style = window.getComputedStyle(img);
                     if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
                         var inVertical = imgRect.top <= maxVh && imgRect.bottom >= 0;
