@@ -3,7 +3,23 @@ namespace Ultimate_WP_Booster\Engine\CDN;
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-class CDNManager {
+    public static function is_asset_uploaded_to_cdn( $s3_key ) {
+        $s3_key = ltrim( str_replace( '\\', '/', $s3_key ), '/' );
+        if ( empty( $s3_key ) ) {
+            return false;
+        }
+
+        if ( isset( self::$uploaded_runtime_cache[ $s3_key ] ) ) {
+            return true;
+        }
+
+        $file_cache = self::load_uploaded_file_cache();
+        if ( isset( $file_cache[ $s3_key ] ) ) {
+            return true;
+        }
+
+        return false;
+    }
 
     public static function process_html( $html, $config = array() ) {
         if ( empty( $html ) ) {
@@ -68,6 +84,11 @@ class CDNManager {
                 return $matches[0];
             }
 
+            $s3_key = ltrim( $path_part, '/' );
+            if ( ! self::is_asset_uploaded_to_cdn( $s3_key ) ) {
+                return $matches[0];
+            }
+
             if ( empty( $query ) ) {
                 $query = '?ver=' . $version;
             } else {
@@ -106,15 +127,19 @@ class CDNManager {
 
                 if ( preg_match( '/^(?:https?:\/\/' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?$/i', $url, $m ) ) {
                     $path_part = parse_url( $url, PHP_URL_PATH );
-                    $query     = isset( $m[2] ) ? $m[2] : '';
+                    $s3_key    = ltrim( $path_part, '/' );
 
-                    if ( empty( $query ) ) {
-                        $query = '?ver=' . $version;
-                    } elseif ( strpos( $query, 'ver=' ) === false && strpos( $query, 'v=' ) === false ) {
-                        $query .= '&ver=' . $version;
+                    if ( self::is_asset_uploaded_to_cdn( $s3_key ) ) {
+                        $query = isset( $m[2] ) ? $m[2] : '';
+
+                        if ( empty( $query ) ) {
+                            $query = '?ver=' . $version;
+                        } elseif ( strpos( $query, 'ver=' ) === false && strpos( $query, 'v=' ) === false ) {
+                            $query .= '&ver=' . $version;
+                        }
+
+                        $url = $cdn_domain . $path_part . $query;
                     }
-
-                    $url = $cdn_domain . $path_part . $query;
                 }
 
                 $new_entries[] = esc_url( $url ) . $descriptor;
