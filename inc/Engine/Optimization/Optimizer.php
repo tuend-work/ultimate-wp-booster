@@ -128,6 +128,25 @@ class Optimizer {
         if ( ! empty( $config['general_hide_wp_version'] ) ) {
             $html = preg_replace( '/<meta[^>]+name=[\'"]generator[\'"][^>]+content=[\'"]WordPress[^\'"]*[\'"][^>]*>/i', '', $html );
         }
+        if ( ! empty( $config['general_disable_dashicons'] ) ) {
+            if ( strpos( $html, 'admin-bar' ) === false && strpos( $html, 'wp-admin-bar' ) === false ) {
+                $html = preg_replace( '/<link[^>]+href=[\'"][^\'"]*dashicons\b[^\'"]*[\'"][^>]*>/i', '', $html );
+            }
+        }
+        if ( ! empty( $config['general_disable_embeds'] ) ) {
+            $html = preg_replace( '/<script[^>]+src=[\'"][^\'"]*wp-embed\b[^\'"]*[\'"][^>]*>.*?<\/script>/is', '', $html );
+            $html = preg_replace( '/<script[^>]+src=[\'"][^\'"]*wp-embed\b[^\'"]*[\'"][^>]*>/i', '', $html );
+        }
+        if ( ! empty( $config['general_remove_jquery_migrate'] ) ) {
+            $html = preg_replace( '/<script[^>]+src=[\'"][^\'"]*jquery-migrate\b[^\'"]*[\'"][^>]*>.*?<\/script>/is', '', $html );
+            $html = preg_replace( '/<script[^>]+src=[\'"][^\'"]*jquery-migrate\b[^\'"]*[\'"][^>]*>/i', '', $html );
+        }
+        if ( ! empty( $config['general_disable_google_maps'] ) ) {
+            $html = preg_replace( '/<script[^>]+src=[\'"][^\'"]*maps\.googleapis\.com\b[^\'"]*[\'"][^>]*>.*?<\/script>/is', '', $html );
+            $html = preg_replace( '/<script[^>]+src=[\'"][^\'"]*maps\.googleapis\.com\b[^\'"]*[\'"][^>]*>/i', '', $html );
+            $html = preg_replace( '/<script[^>]+src=[\'"][^\'"]*maps\.google\.com\b[^\'"]*[\'"][^>]*>.*?<\/script>/is', '', $html );
+            $html = preg_replace( '/<script[^>]+src=[\'"][^\'"]*maps\.google\.com\b[^\'"]*[\'"][^>]*>/i', '', $html );
+        }
 
         // 5.5. Lazy Load HTML Elements
         $lazy_elem_enabled = isset( $config['html_lazy_load_elements_enabled'] ) ? $config['html_lazy_load_elements_enabled'] : get_option( 'uwb_html_lazy_load_elements_enabled', 0 );
