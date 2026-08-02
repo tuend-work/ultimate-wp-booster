@@ -92,6 +92,35 @@ class S3Client {
         return $this->request( 'DELETE', "/{$this->bucket}/{$key}" );
     }
 
+    public function list_objects( $prefix = '' ) {
+        if ( ! $this->is_configured() ) {
+            return new \WP_Error( 'cdn_not_configured', 'S3/R2 credentials are incomplete.' );
+        }
+
+        $prefix = ltrim( $prefix, '/' );
+        $query  = array( 'list-type' => 2 );
+        if ( ! empty( $prefix ) ) {
+            $query['prefix'] = $prefix;
+        }
+
+        $response = $this->request( 'GET', "/{$this->bucket}", $query );
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        $keys = array();
+        if ( is_string( $response ) && ! empty( $response ) ) {
+            preg_match_all( '#<Key>(.*?)</Key>#i', $response, $matches );
+            if ( ! empty( $matches[1] ) ) {
+                foreach ( $matches[1] as $k ) {
+                    $keys[] = html_entity_decode( $k );
+                }
+            }
+        }
+
+        return $keys;
+    }
+
     public function get_object( $key, $dest_file = null ) {
         if ( ! $this->is_configured() ) {
             return new \WP_Error( 'cdn_not_configured', 'S3/R2 credentials are incomplete.' );

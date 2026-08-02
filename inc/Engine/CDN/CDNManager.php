@@ -300,6 +300,16 @@ class CDNManager {
             }
         }
 
+        $s3_client = self::get_s3_client();
+        if ( $s3_client->is_configured() ) {
+            $remote_keys = $s3_client->list_objects( 'wp-content/cache/ultimate-wp-booster/' );
+            if ( is_array( $remote_keys ) ) {
+                foreach ( $remote_keys as $rk ) {
+                    $keys_to_delete[ $rk ] = true;
+                }
+            }
+        }
+
         $content_dir = str_replace( '\\', '/', WP_CONTENT_DIR );
         $dirs = array(
             WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify',
@@ -324,11 +334,10 @@ class CDNManager {
         }
 
         $deleted_count = 0;
-        $s3_client = self::get_s3_client();
         if ( $s3_client->is_configured() && ! empty( $keys_to_delete ) ) {
             foreach ( array_keys( $keys_to_delete ) as $s3_key ) {
                 $del_ok = $s3_client->delete_object( $s3_key );
-                if ( $del_ok ) {
+                if ( $del_ok && ! is_wp_error( $del_ok ) ) {
                     $deleted_count++;
                 }
             }
