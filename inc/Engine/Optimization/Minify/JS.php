@@ -174,7 +174,11 @@ class JS {
         return $html;
     }
 
-    public static function minify_external( $html, &$logs = null ) {
+    public static function minify_external( $html, $excludes_str = '', &$logs = null ) {
+        if ( is_array( $excludes_str ) || is_null( $excludes_str ) ) {
+            $logs = $excludes_str;
+            $excludes_str = '';
+        }
         $cache_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/minify';
         if ( ! is_dir( $cache_dir ) ) {
             @mkdir( $cache_dir, 0755, true );
@@ -182,16 +186,26 @@ class JS {
 
         $home_url = function_exists( 'home_url' ) ? home_url() : '';
         $home_host = ! empty( $home_url ) ? parse_url( $home_url, PHP_URL_HOST ) : '';
+        $excludes = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", (string) $excludes_str ) ) ) );
         $minified_count = 0;
         $skipped_count = 0;
 
-        $html = preg_replace_callback('#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host, &$logs, &$minified_count, &$skipped_count ) {
+        $html = preg_replace_callback('#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>\s*</script>#is', function( $matches ) use ( $cache_dir, $home_url, $home_host, $excludes, &$logs, &$minified_count, &$skipped_count ) {
             $tag = $matches[0];
             $url = $matches[2];
             $url_clean = strtok( $url, '?' );
 
             if ( strtolower( substr( $url_clean, -3 ) ) !== '.js' ) {
                 return $tag;
+            }
+
+            foreach ( $excludes as $ex ) {
+                if ( ! empty( $ex ) && ( stripos( $tag, $ex ) !== false || stripos( $url, $ex ) !== false ) ) {
+                    if ( is_array( $logs ) ) {
+                        $logs[] = "JS Minify: Excluded {$url_clean} (Matched exclusion rule: '{$ex}')";
+                    }
+                    return $tag;
+                }
             }
 
             $local_path = self::resolve_local_path( $url_clean, $home_url, $home_host );
@@ -223,7 +237,7 @@ class JS {
             $file_mtime = ( $local_path && file_exists( $local_path ) ) ? filemtime( $local_path ) : '';
             $hash = md5( $url_clean . '_' . $file_mtime );
             $cache_file = $cache_dir . '/' . $hash . '.js';
-            $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.css' );
+            $cache_url = self::safe_content_url( '/cache/ultimate-wp-booster/minify/' . $hash . '.js' );
 
             if ( ! file_exists( $cache_file ) ) {
                 $content = '';

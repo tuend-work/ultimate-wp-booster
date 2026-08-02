@@ -165,7 +165,8 @@ class Optimizer {
             $include_ext = ! empty( $config['js_combine_ext_inline'] );
             $html = JSMinifier::combine( $html, $js_excludes, $include_ext, $debug_logs );
         } elseif ( ! empty( $config['js_minify'] ) ) {
-            $html = JSMinifier::minify_external( $html, $debug_logs );
+            $js_excludes = isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '';
+            $html = JSMinifier::minify_external( $html, $js_excludes, $debug_logs );
             $html = JSMinifier::minify_inline( $html );
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "JS Optimization (Combine & Minify): Disabled in settings";
