@@ -74,6 +74,7 @@ class CriticalCSS {
 
         ob_start();
         ?>
+<!--UWB_CRIT_START-->
 <script id="uwb-critical-extractor">
 (function(){
     if (window.__uwb_crit_ran) return;
@@ -159,6 +160,7 @@ class CriticalCSS {
     }
 })();
 </script>
+<!--UWB_CRIT_END-->
         <?php
         return ob_get_clean();
     }
@@ -266,12 +268,19 @@ class CriticalCSS {
                     $f = $item->getPathname();
                     if ( filesize( $f ) > 100 ) {
                         $content = @file_get_contents( $f );
-                        if ( preg_match( $placeholder_pattern, $content ) || strpos( $content, 'uwb-critical-extractor' ) !== false ) {
+                        if ( preg_match( $placeholder_pattern, $content ) || strpos( $content, 'uwb-critical-extractor' ) !== false || strpos( $content, 'UWB_CRIT_START' ) !== false ) {
                             // 1. Fill Critical CSS into placeholder
                             $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
 
-                            // 2. Completely REMOVE extractor script tag from static HTML cache
+                            // 2. Multi-layer REMOVAL of extractor script tag from static HTML cache
+                            $content = preg_replace( '#<!--UWB_CRIT_START-->.*?<!--UWB_CRIT_END-->#is', '', $content );
                             $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
+                            
+                            $start_pos = strpos( $content, '<!--UWB_CRIT_START-->' );
+                            $end_pos   = strpos( $content, '<!--UWB_CRIT_END-->' );
+                            if ( $start_pos !== false && $end_pos !== false && $end_pos > $start_pos ) {
+                                $content = substr( $content, 0, $start_pos ) . substr( $content, $end_pos + 20 );
+                            }
 
                             @file_put_contents( $f, $content );
                             $updated_count++;
@@ -294,9 +303,15 @@ class CriticalCSS {
             foreach ( $html_files as $f ) {
                 if ( file_exists( $f ) && filesize( $f ) > 100 ) {
                     $content = @file_get_contents( $f );
-                    if ( preg_match( $placeholder_pattern, $content ) || strpos( $content, 'uwb-critical-extractor' ) !== false ) {
+                    if ( preg_match( $placeholder_pattern, $content ) || strpos( $content, 'uwb-critical-extractor' ) !== false || strpos( $content, 'UWB_CRIT_START' ) !== false ) {
                         $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
+                        $content = preg_replace( '#<!--UWB_CRIT_START-->.*?<!--UWB_CRIT_END-->#is', '', $content );
                         $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
+                        $start_pos = strpos( $content, '<!--UWB_CRIT_START-->' );
+                        $end_pos   = strpos( $content, '<!--UWB_CRIT_END-->' );
+                        if ( $start_pos !== false && $end_pos !== false && $end_pos > $start_pos ) {
+                            $content = substr( $content, 0, $start_pos ) . substr( $content, $end_pos + 20 );
+                        }
                         @file_put_contents( $f, $content );
                         $updated_count++;
                         $gzip_file = $f . '_gzip';
