@@ -2043,8 +2043,8 @@ class Admin {
                                                         <span style="color: #10b981; font-weight:700;">Active (RAM Engine &amp; Tagging)</span>
                                                     </div>
                                                     <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
-                                                        <strong style="color: #64748b;">Auto-Reload:</strong>
-                                                        <span style="color: #3b82f6; font-weight:600;">Zero Webserver Restart Required</span>
+                                                        <strong style="color: #64748b;">Header Caching:</strong>
+                                                        <span style="color: #3b82f6; font-weight:600;">Dynamic (No Server Restart Needed)</span>
                                                     </div>
                                                     <div style="display: flex; justify-content: space-between;">
                                                         <strong style="color: #64748b;">Htaccess Status:</strong>
