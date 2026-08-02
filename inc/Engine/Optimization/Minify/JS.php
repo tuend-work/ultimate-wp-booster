@@ -294,11 +294,11 @@ class JS {
     }
 
     public static function is_webpack_bundle( $local_path, $url = '' ) {
-        if ( ! empty( $url ) && stripos( $url, 'chunk.' ) !== false ) {
+        if ( ! empty( $url ) && ( stripos( $url, 'chunk.' ) !== false || stripos( $url, 'flatsome' ) !== false ) ) {
             return true;
         }
 
-        if ( $local_path && stripos( $local_path, 'chunk.' ) !== false ) {
+        if ( $local_path && ( stripos( $local_path, 'chunk.' ) !== false || stripos( $local_path, 'flatsome' ) !== false ) ) {
             return true;
         }
 
@@ -336,12 +336,20 @@ class JS {
 
     private static function resolve_local_path( $url, $home_url, $home_host ) {
         $parsed = parse_url( $url );
+        $path   = isset( $parsed['path'] ) ? $parsed['path'] : '';
+
+        $cdn_domain = get_option( 'uwb_cdn_domain', '' );
+        $cdn_host   = '';
+        if ( ! empty( $cdn_domain ) ) {
+            $cdn_host = parse_url( ( strpos( $cdn_domain, 'http' ) === 0 ? '' : 'https://' ) . $cdn_domain, PHP_URL_HOST );
+        }
+
         if ( ! empty( $parsed['host'] ) && ! empty( $home_host ) ) {
-            if ( strcasecmp( $parsed['host'], $home_host ) !== 0 ) {
+            if ( strcasecmp( $parsed['host'], $home_host ) !== 0 && ( empty( $cdn_host ) || strcasecmp( $parsed['host'], $cdn_host ) !== 0 ) ) {
                 return false;
             }
         }
-        $path = isset( $parsed['path'] ) ? $parsed['path'] : '';
+
         $home_path = parse_url( $home_url, PHP_URL_PATH );
         $home_path = $home_path ? rtrim( $home_path, '/' ) : '';
         

@@ -171,6 +171,23 @@ class Optimizer {
             $debug_logs[] = "JS Optimization (Combine & Minify): Disabled in settings";
         }
 
+        // 11.2. Fix Flatsome Webpack publicPath for chunk.slider.js and dynamic chunks
+        if ( stripos( $html, 'flatsomeVars' ) !== false && stripos( $html, 'assets_url' ) === false ) {
+            $cdn_domain = get_option( 'uwb_cdn_domain', '' );
+            $flatsome_assets_url = content_url( '/themes/flatsome/assets/js/' );
+            if ( ! empty( $cdn_domain ) && get_option( 'uwb_cdn_enabled', 0 ) ) {
+                $cdn_domain_clean = rtrim( $cdn_domain, '/' );
+                if ( strpos( $cdn_domain_clean, 'http://' ) !== 0 && strpos( $cdn_domain_clean, 'https://' ) !== 0 ) {
+                    $cdn_domain_clean = 'https://' . $cdn_domain_clean;
+                }
+                $flatsome_assets_url = str_replace( home_url(), $cdn_domain_clean, $flatsome_assets_url );
+            }
+
+            $patch_script = '<script id="uwb-flatsome-assets-fix">if(typeof flatsomeVars!=="undefined"&&!flatsomeVars.assets_url){flatsomeVars.assets_url=' . json_encode( $flatsome_assets_url ) . ';}</script>';
+            $html = preg_replace( '/(<script\b[^>]*?id=["\']flatsome-js-js-extra["\'][^>]*?>.*?<\/script>)/is', '$1' . $patch_script, $html, 1 );
+            if ( $debug_enabled ) $debug_logs[] = "Flatsome Assets URL Fix: Injected assets_url into flatsomeVars";
+        }
+
         // 11.5. Defer Javascript
         if ( ! empty( $config['js_load_defer'] ) ) {
             $js_defer_excludes = isset( $config['tuning_js_defer_excludes'] ) ? $config['tuning_js_defer_excludes'] : ( isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '' );
