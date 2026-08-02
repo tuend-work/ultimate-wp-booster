@@ -67,6 +67,7 @@ class Admin {
             'uwb_html_remove_noscript',
             'uwb_html_lazy_load_elements_enabled',
             'uwb_html_lazy_load_elements',
+            'uwb_html_lazy_load_elements_excludes',
             'uwb_media_lazy_load_images',
             'uwb_media_lazy_load_iframes',
             'uwb_media_image_placeholder',
@@ -250,6 +251,7 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_html_remove_noscript', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_html_lazy_load_elements_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_html_lazy_load_elements', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_html_lazy_load_elements_excludes', 'sanitize_textarea_field' );
 
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_images', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_iframes', 'intval' );
@@ -2872,6 +2874,12 @@ js-(before|after)
                                         'Lazy Load Element Selectors',
                                         "#comments\n.product_list_widget > li\n.footer-widgets\n#related-products\n.widget-area",
                                         'Specify CSS selectors (IDs, class names, or parent > child rules) of heavy HTML elements to lazy load (one per line).<br>Example: <code>#comments</code>, <code>.product_list_widget > li</code>, <code>.site-footer</code>, <code>#related-products</code>, <code>.widget-area</code>'
+                                    );
+                                    $this->render_textarea_setting(
+                                        'uwb_html_lazy_load_elements_excludes',
+                                        'Exclude Lazy Load Element Selectors',
+                                        "#header\n.no-lazy-element\nfooter.no-lazy",
+                                        'Specify CSS selectors (IDs, class names, or element tags) that should NEVER be lazy loaded (one per line).<br>Example: <code>#header</code>, <code>.no-lazy-widget</code>, <code>#flatsome_recent_posts-2</code>'
                                     );
                                     ?>
                                     <div class="uwb-warning-box" style="margin-top: -8px; background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e40af; padding: 16px; border-radius: 8px;">

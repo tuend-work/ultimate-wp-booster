@@ -96,9 +96,10 @@ class Optimizer {
         // 5.5. Lazy Load HTML Elements
         $lazy_elem_enabled = isset( $config['html_lazy_load_elements_enabled'] ) ? $config['html_lazy_load_elements_enabled'] : get_option( 'uwb_html_lazy_load_elements_enabled', 0 );
         $lazy_elem_selectors = isset( $config['html_lazy_load_elements'] ) ? $config['html_lazy_load_elements'] : get_option( 'uwb_html_lazy_load_elements', '' );
+        $lazy_elem_excludes = isset( $config['html_lazy_load_elements_excludes'] ) ? $config['html_lazy_load_elements_excludes'] : get_option( 'uwb_html_lazy_load_elements_excludes', '' );
 
         if ( ! empty( $lazy_elem_enabled ) && ! empty( $lazy_elem_selectors ) ) {
-            $html = LazyElements::process( $html, $lazy_elem_selectors, $debug_logs );
+            $html = LazyElements::process( $html, $lazy_elem_selectors, $lazy_elem_excludes, $debug_logs );
         } elseif ( $debug_enabled ) {
             $debug_logs[] = "Lazy Load Elements: Disabled in settings";
         }

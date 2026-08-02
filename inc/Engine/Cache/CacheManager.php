@@ -358,6 +358,7 @@ class CacheManager {
             'html_remove_noscript'        => intval( get_option( 'uwb_html_remove_noscript', 0 ) ),
             'html_lazy_load_elements_enabled' => intval( get_option( 'uwb_html_lazy_load_elements_enabled', 0 ) ),
             'html_lazy_load_elements'     => get_option( 'uwb_html_lazy_load_elements', '' ),
+            'html_lazy_load_elements_excludes' => get_option( 'uwb_html_lazy_load_elements_excludes', '' ),
             'media_lazy_load_images'      => intval( get_option( 'uwb_media_lazy_load_images', 0 ) ),
             'media_lazy_load_iframes'     => intval( get_option( 'uwb_media_lazy_load_iframes', 0 ) ),
             'media_lazy_load_excludes'    => get_option( 'uwb_media_lazy_load_excludes', '' ),

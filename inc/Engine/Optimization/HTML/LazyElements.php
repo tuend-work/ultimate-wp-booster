@@ -17,7 +17,7 @@ class LazyElements {
      * @param array|null $debug_logs
      * @return string
      */
-    public static function process( $html, $selectors_text, &$debug_logs = null ) {
+    public static function process( $html, $selectors_text, $excludes_text = '', &$debug_logs = null ) {
         if ( empty( $html ) || empty( $selectors_text ) ) {
             return $html;
         }
@@ -43,6 +43,22 @@ class LazyElements {
             return $html;
         }
 
+        // Collect excluded nodes
+        $exclude_lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', (string) $excludes_text ) ) ) );
+        $excluded_hashes = array();
+        if ( ! empty( $exclude_lines ) ) {
+            foreach ( $exclude_lines as $ex_sel ) {
+                $ex_sel = trim( $ex_sel );
+                if ( empty( $ex_sel ) ) continue;
+                $ex_elems = $dom->find( $ex_sel );
+                if ( ! empty( $ex_elems ) ) {
+                    foreach ( $ex_elems as $ex_node ) {
+                        $excluded_hashes[spl_object_hash( $ex_node )] = true;
+                    }
+                }
+            }
+        }
+
         $count = 0;
         $elem_index = 0;
 
@@ -54,6 +70,22 @@ class LazyElements {
             if ( empty( $elements ) ) continue;
 
             foreach ( $elements as $element ) {
+                // Check if element or any parent node is excluded
+                if ( ! empty( $excluded_hashes ) ) {
+                    $is_excluded = false;
+                    $curr = $element;
+                    while ( $curr ) {
+                        if ( isset( $excluded_hashes[spl_object_hash( $curr )] ) ) {
+                            $is_excluded = true;
+                            break;
+                        }
+                        $curr = $curr->parent;
+                    }
+                    if ( $is_excluded ) {
+                        continue;
+                    }
+                }
+
                 $class_attr = $element->getAttribute( 'class' );
                 if ( is_string( $class_attr ) && strpos( $class_attr, 'uwb-lazy-element' ) !== false ) {
                     continue;
