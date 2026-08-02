@@ -379,7 +379,7 @@ class CacheManager {
             'js_combine_ext_inline'       => intval( get_option( 'uwb_js_combine_ext_inline', 0 ) ),
             'js_load_defer'               => intval( get_option( 'uwb_js_load_defer', 0 ) ),
             'tuning_critical_css'         => get_option( 'uwb_tuning_critical_css', '' ),
-            'auto_critical_css'           => intval( get_option( 'uwb_auto_critical_css', 1 ) ),
+            'auto_critical_css'           => intval( get_option( 'uwb_auto_critical_css', 0 ) ),
             'tuning_css_excludes'         => get_option( 'uwb_tuning_css_excludes', '' ),
             'tuning_js_excludes'          => get_option( 'uwb_tuning_js_excludes', "jquery.js\njquery.min.js\njquery-migrate\nflatsomeVars\nwp-i18n\nwp-hooks\nwp-polyfill" ),
             'tuning_js_defer_excludes'    => get_option( 'uwb_tuning_js_defer_excludes', "jquery.js\njquery.min.js\njquery-migrate\nflatsomeVars\nwp-i18n\nwp-hooks\nwp-polyfill" ),

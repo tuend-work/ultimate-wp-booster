@@ -54,7 +54,7 @@ class Optimizer {
         }
 
         // 1. Critical CSS Injection (Auto-generated Above-The-Fold + Custom Override)
-        $auto_critical_on = isset( $config['auto_critical_css'] ) ? (bool) $config['auto_critical_css'] : true;
+        $auto_critical_on = isset( $config['auto_critical_css'] ) ? (bool) $config['auto_critical_css'] : false;
         $critical_css_content = '';
 
         if ( ! empty( $config['tuning_critical_css'] ) ) {

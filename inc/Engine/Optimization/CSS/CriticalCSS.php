@@ -27,7 +27,7 @@ class CriticalCSS {
             return '';
         }
 
-        $enabled = (int) get_option( 'uwb_auto_critical_css', 1 );
+        $enabled = (int) get_option( 'uwb_auto_critical_css', 0 );
         if ( ! $enabled ) {
             return '';
         }
@@ -101,7 +101,7 @@ class CriticalCSS {
             return array();
         }
 
-        $classes = array( 'header', 'site-header', 'nav', 'main-menu', 'hero', 'slider', 'banner', 'section-bg', 'container', 'row', 'col' );
+        $classes = array( 'header', 'site-header', 'header-wrapper', 'top-bar', 'nav', 'main-menu', 'hero', 'slider', 'banner', 'section-bg', 'container', 'row', 'col', 'fill', 'relative' );
         $ids     = array( 'header', 'wrapper', 'main', 'content' );
         $tags    = array( 'html', 'body', 'header', 'nav', 'h1', 'h2', 'h3', 'a', 'img', 'p', 'section', 'div' );
 
@@ -166,7 +166,6 @@ class CriticalCSS {
         if ( ! empty( $link_matches[2] ) ) {
             $home_url = function_exists( 'home_url' ) ? home_url() : '';
             foreach ( $link_matches[2] as $href ) {
-                // Check if it's a CSS file
                 if ( stripos( $href, '.css' ) === false && stripos( $href, 'styles' ) === false ) {
                     continue;
                 }
@@ -192,7 +191,7 @@ class CriticalCSS {
     }
 
     /**
-     * Extract CSS rules matching Above-The-Fold selectors
+     * Extract CSS rules matching Above-The-Fold selectors, preserving :root variables and @media
      *
      * @param string $css
      * @param array  $target
@@ -210,24 +209,27 @@ class CriticalCSS {
         // Remove CSS comments
         $css = preg_replace( '!/\*.*?\*/!s', '', $css );
 
-        // Parse CSS blocks: @media / @font-face or standard selector blocks
         $extracted = array();
 
-        // 1. Always keep CSS Reset & Global Layout rules
-        $extracted[] = '*,*::before,*::after{box-sizing:border-box}html,body{margin:0;padding:0}';
+        // 1. Preserve all :root variables for color & layout definitions
+        preg_match_all( '/:root\s*\{[^{}]+\}/i', $css, $root_matches );
+        if ( ! empty( $root_matches[0] ) ) {
+            foreach ( $root_matches[0] as $r ) {
+                $extracted[] = $r;
+            }
+        }
 
         // 2. Parse rules via regex matcher
         preg_match_all( '/([^{}@]+)\{([^{}]+)\}/i', $css, $matches, PREG_SET_ORDER );
         if ( ! empty( $matches ) ) {
             foreach ( $matches as $m ) {
-                $selector_str = trim( $am_sel = $m[1] );
+                $selector_str = trim( $m[1] );
                 $rule_body    = trim( $m[2] );
 
                 if ( empty( $selector_str ) || empty( $rule_body ) ) {
                     continue;
                 }
 
-                // Skip @import or @charset
                 if ( strpos( $selector_str, '@' ) === 0 ) {
                     if ( strpos( $selector_str, '@font-face' ) === 0 || strpos( $selector_str, '@keyframes' ) === 0 ) {
                         $extracted[] = $selector_str . '{' . $rule_body . '}';
@@ -235,7 +237,6 @@ class CriticalCSS {
                     continue;
                 }
 
-                // Check individual comma-separated selectors
                 $selectors = explode( ',', $selector_str );
                 $is_matched = false;
 
@@ -243,13 +244,11 @@ class CriticalCSS {
                     $sel = trim( $sel );
                     if ( empty( $sel ) ) continue;
 
-                    // Match universal / body / html
                     if ( $sel === '*' || $sel === 'body' || $sel === 'html' || strpos( $sel, ':root' ) !== false ) {
                         $is_matched = true;
                         break;
                     }
 
-                    // Extract classes (.class) and IDs (#id) from selector
                     preg_match_all( '/\.([a-z0-9_-]+)/i', $sel, $c_matches );
                     if ( ! empty( $c_matches[1] ) ) {
                         foreach ( $c_matches[1] as $c_name ) {
@@ -270,7 +269,6 @@ class CriticalCSS {
                         }
                     }
 
-                    // Match HTML tags (header, nav, section, img, etc.)
                     preg_match( '/^([a-z0-9]+)/i', $sel, $tag_match );
                     if ( ! empty( $tag_match[1] ) && isset( $tags_map[strtolower( $tag_match[1] )] ) ) {
                         $is_matched = true;
