@@ -266,5 +266,49 @@ class GeneralOptimizationSubscriber implements Subscriber_Interface {
                 return intval( $autosave );
             } );
         }
+
+        // 25. HTTP 103 Early Hints
+        if ( (int) get_option( 'uwb_general_enable_early_hints', 0 ) === 1 ) {
+            add_action( 'send_headers', function() {
+                if ( is_admin() ) {
+                    return;
+                }
+
+                $hints = array();
+
+                // Preload Fonts
+                $preload_fonts = get_option( 'uwb_preload_fonts', '' );
+                if ( ! empty( $preload_fonts ) ) {
+                    $fonts = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $preload_fonts ) ) ) );
+                    foreach ( $fonts as $font ) {
+                        if ( empty( $font ) ) {
+                            continue;
+                        }
+                        if ( strpos( $font, 'http' ) !== 0 ) {
+                            $font = home_url( '/' . ltrim( $font, '/' ) );
+                        }
+                        $font = esc_url( $font );
+                        $hints[] = "<{$font}>; rel=preload; as=font; crossorigin";
+                    }
+                }
+
+                // Preconnect Domains
+                $preconnect_domains = get_option( 'uwb_preconnect_domains', '' );
+                if ( ! empty( $preconnect_domains ) ) {
+                    $domains = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $preconnect_domains ) ) ) );
+                    foreach ( $domains as $domain ) {
+                        if ( empty( $domain ) ) {
+                            continue;
+                        }
+                        $domain = esc_url( $domain );
+                        $hints[] = "<{$domain}>; rel=preconnect; crossorigin";
+                    }
+                }
+
+                if ( ! empty( $hints ) ) {
+                    header( 'Link: ' . implode( ', ', $hints ), false );
+                }
+            } );
+        }
     }
 }

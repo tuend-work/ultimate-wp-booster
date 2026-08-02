@@ -426,6 +426,7 @@ class CacheManager {
             'general_heartbeat_frequency'             => get_option( 'uwb_general_heartbeat_frequency', 'default' ),
             'general_limit_post_revisions'            => get_option( 'uwb_general_limit_post_revisions', 'default' ),
             'general_autosave_interval'               => get_option( 'uwb_general_autosave_interval', 'default' ),
+            'general_enable_early_hints'              => intval( get_option( 'uwb_general_enable_early_hints', 0 ) ),
         );
 
         $config_content = "<?php\n" .

@@ -136,6 +136,7 @@ class Admin {
             'uwb_general_heartbeat_frequency',
             'uwb_general_limit_post_revisions',
             'uwb_general_autosave_interval',
+            'uwb_general_enable_early_hints',
         );
         foreach ( $options_to_sync as $opt ) {
             add_action( "update_option_{$opt}", array( $this, 'write_config_file_and_purge' ) );
@@ -402,6 +403,7 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_general_heartbeat_frequency', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_general_limit_post_revisions', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_general_autosave_interval', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_general_enable_early_hints', 'intval' );
     }
 
     public function sanitize_object_cache_enabled( $val ) {
@@ -2940,9 +2942,10 @@ class Admin {
                                 $this->render_toggle_switch( 'uwb_general_hide_wp_version', 'Hide WP Version', 'Hide WordPress version generator meta tag and query args from scripts/styles.' );
                                 $this->render_toggle_switch( 'uwb_general_remove_jquery_migrate', 'Remove jQuery Migrate', 'Remove jQuery Migrate script dependency from frontend scripts.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_xmlrpc', 'Disable XML-RPC', 'Disable XML-RPC requests and remove RSD links to block brute-force attacks.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_embeds', 'Disable Embeds', 'De-enqueue oEmbed javascript and disable oEmbed-related discovery links.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_dashicons', 'Disable Dashicons', 'De-enqueue Dashicons stylesheet on frontend for non-logged-in users.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_emojis', 'Disable Emojis', 'Remove default WordPress emoji styling and detection script.' );
+                                $this->render_toggle_switch( 'uwb_general_disable_embeds', 'Disable Embeds', 'De-enqueue oEmbed javascript and disable oEmbed-related discovery links.' );
+                                $this->render_toggle_switch( 'uwb_general_enable_early_hints', 'Enable HTTP 103 Early Hints', 'Send HTTP 103 Early Hints link headers for preloaded fonts and preconnect domains to speed up browser rendering.' );
                                 ?>
                             </div>
 
