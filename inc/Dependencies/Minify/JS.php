@@ -128,12 +128,16 @@ class JS extends Minify
 
         $dataDir = __DIR__ . '/../data/js/';
         $options = FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES;
-        $this->keywordsReserved = file($dataDir . 'keywords_reserved.txt', $options);
-        $this->keywordsBefore = file($dataDir . 'keywords_before.txt', $options);
-        $this->keywordsAfter = file($dataDir . 'keywords_after.txt', $options);
-        $this->operators = file($dataDir . 'operators.txt', $options);
-        $this->operatorsBefore = file($dataDir . 'operators_before.txt', $options);
-        $this->operatorsAfter = file($dataDir . 'operators_after.txt', $options);
+        $loadFile = function ($filename) use ($dataDir, $options) {
+            $path = $dataDir . $filename;
+            return file_exists($path) ? file($path, $options) : array();
+        };
+        $this->keywordsReserved = $loadFile('keywords_reserved.txt');
+        $this->keywordsBefore = $loadFile('keywords_before.txt');
+        $this->keywordsAfter = $loadFile('keywords_after.txt');
+        $this->operators = $loadFile('operators.txt');
+        $this->operatorsBefore = $loadFile('operators_before.txt');
+        $this->operatorsAfter = $loadFile('operators_after.txt');
     }
 
     /**
