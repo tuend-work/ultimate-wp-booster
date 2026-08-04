@@ -189,20 +189,38 @@ class CDNSubscriber implements Subscriber_Interface {
     // Behaviour B: if NOT on S3 yet → upload first, then rewrite URL
     // -------------------------------------------------------------------------
     public function filter_attachment_url( $url, $post_id ) {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( sprintf( 'UWB CDN Trace - Input URL: %s | Post ID: %d | Distribute: %s | AutoRewrite: %s | CustomDomainOption: %s',
+                $url,
+                $post_id,
+                get_option( 'uwb_cdn_distribute_media', 0 ),
+                get_option( 'uwb_cdn_auto_rewrite_attachment_url', 0 ),
+                get_option( 'uwb_cdn_custom_domain', '' )
+            ) );
+        }
         if ( get_option( 'uwb_media_opt_enabled', 0 ) && get_option( 'uwb_img_opt_event_get_url', 0 ) ) {
             if ( ! get_post_meta( $post_id, '_uwb_img_compress_status', true ) ) {
                 \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $post_id, array(), false );
             }
         }
         if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'UWB CDN Trace - Bypassed because uwb_cdn_distribute_media is disabled.' );
+            }
             return $url;
         }
         if ( ! get_option( 'uwb_cdn_auto_rewrite_attachment_url', 0 ) ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'UWB CDN Trace - Bypassed because uwb_cdn_auto_rewrite_attachment_url is disabled.' );
+            }
             return $url;
         }
 
         $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
         if ( empty( $cdn_domain ) ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'UWB CDN Trace - Bypassed because uwb_cdn_custom_domain is empty.' );
+            }
             return $url;
         }
 
@@ -220,20 +238,22 @@ class CDNSubscriber implements Subscriber_Interface {
         $base_url      = rtrim( $uploads['baseurl'], '/' );
         $base_url_path = wp_parse_url( $base_url, PHP_URL_PATH );
 
+        $output_url = $url;
         if ( strpos( $url, $base_url ) === 0 ) {
             $rel = ltrim( substr( $url, strlen( $base_url ) ), '/' );
-            return $cdn_domain . '/wp-content/uploads/' . $rel;
-        }
-
-        if ( $base_url_path ) {
+            $output_url = $cdn_domain . '/wp-content/uploads/' . $rel;
+        } elseif ( $base_url_path ) {
             $url_path = wp_parse_url( $url, PHP_URL_PATH );
             if ( $url_path && strpos( $url_path, $base_url_path ) === 0 ) {
                 $rel = ltrim( substr( $url_path, strlen( $base_url_path ) ), '/' );
-                return $cdn_domain . $base_url_path . '/' . $rel;
+                $output_url = $cdn_domain . $base_url_path . '/' . $rel;
             }
         }
 
-        return $url;
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'UWB CDN Trace - Output URL: ' . $output_url );
+        }
+        return $output_url;
     }
 
     public function filter_attachment_srcset( $sources, $size_array, $image_src, $image_meta, $attachment_id ) {
