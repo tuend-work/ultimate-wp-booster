@@ -35,9 +35,6 @@ class Analyzer {
         $this->cache_dir = WP_CONTENT_DIR . self::CACHE_DIR;
     }
 
-    /**
-     * Initialise hooks. Called from main plugin bootstrap.
-     */
     public function init(): void {
         $this->enabled = (bool) get_option( 'uwb_uro_analyzer_enabled', false );
         if ( ! $this->enabled ) {
@@ -47,8 +44,37 @@ class Analyzer {
         $this->start_time   = microtime( true );
         $this->start_memory = memory_get_usage( true );
 
+        // Hijack WP Hooks to profile individual callback execution times
+        $this->hijack_wp_hooks();
+        add_action( 'all', [ $this, 'hijack_dynamic_hooks' ] );
+
         // Record after WP fully initialised
         add_action( 'wp_loaded', [ $this, 'record' ], 9999 );
+    }
+
+    /**
+     * Hijack dynamically registered actions/filters as they are fired.
+     */
+    public function hijack_dynamic_hooks( string $hook_name ): void {
+        global $wp_filter;
+        if ( isset( $wp_filter[ $hook_name ] ) && $wp_filter[ $hook_name ] instanceof \WP_Hook && ! ( $wp_filter[ $hook_name ] instanceof Uro_WP_Hook ) ) {
+            $wp_filter[ $hook_name ] = new Uro_WP_Hook( $wp_filter[ $hook_name ] );
+        }
+    }
+
+    /**
+     * Hijack already-registered action/filter hooks.
+     */
+    private function hijack_wp_hooks(): void {
+        global $wp_filter;
+        if ( ! is_array( $wp_filter ) ) {
+            return;
+        }
+        foreach ( $wp_filter as $name => $hook ) {
+            if ( $hook instanceof \WP_Hook && ! ( $hook instanceof Uro_WP_Hook ) ) {
+                $wp_filter[ $name ] = new Uro_WP_Hook( $hook );
+            }
+        }
     }
 
     /**
@@ -265,5 +291,139 @@ class Analyzer {
     public function clear_log(): void {
         $log_file = $this->cache_dir . 'log.php';
         @unlink( $log_file );
+    }
+
+    /**
+     * Accumulates execution time of a hook callback under its parent plugin.
+     */
+    public static function record_callback_time( $callback, float $duration_seconds ): void {
+        static $plugin_cache = [];
+
+        $cb_key = '';
+        if ( is_string( $callback ) ) {
+            $cb_key = $callback;
+        } elseif ( is_array( $callback ) ) {
+            $cb_key = ( is_object( $callback[0] ) ? get_class( $callback[0] ) : $callback[0] ) . '::' . $callback[1];
+        } elseif ( $callback instanceof \Closure ) {
+            $cb_key = 'closure_' . spl_object_hash( $callback );
+        } else {
+            return;
+        }
+
+        if ( ! isset( $plugin_cache[ $cb_key ] ) ) {
+            $plugin_name = null;
+            try {
+                if ( is_string( $callback ) && function_exists( $callback ) ) {
+                    $ref = new \ReflectionFunction( $callback );
+                    $plugin_name = self::get_plugin_from_filepath( $ref->getFileName() );
+                } elseif ( is_array( $callback ) && isset( $callback[0] ) ) {
+                    $class = is_object( $callback[0] ) ? get_class( $callback[0] ) : $callback[0];
+                    if ( class_exists( $class ) && method_exists( $class, $callback[1] ) ) {
+                        $ref = new \ReflectionMethod( $class, $callback[1] );
+                        $plugin_name = self::get_plugin_from_filepath( $ref->getFileName() );
+                    }
+                } elseif ( $callback instanceof \Closure ) {
+                    $ref = new \ReflectionFunction( $callback );
+                    $plugin_name = self::get_plugin_from_filepath( $ref->getFileName() );
+                }
+            } catch ( \Throwable $e ) {
+                // Silence reflection exceptions
+            }
+            $plugin_cache[ $cb_key ] = $plugin_name ?: 'core_or_other';
+        }
+
+        $plugin = $plugin_cache[ $cb_key ];
+        if ( $plugin !== 'core_or_other' ) {
+            if ( ! isset( $GLOBALS['_uro_plugin_times'][ $plugin ] ) ) {
+                $GLOBALS['_uro_plugin_times'][ $plugin ] = 0.0;
+            }
+            $GLOBALS['_uro_plugin_times'][ $plugin ] += round( $duration_seconds * 1000, 2 );
+        }
+    }
+
+    /**
+     * Determines which active plugin file path owns the given file path.
+     */
+    public static function get_plugin_from_filepath( ?string $file ): ?string {
+        if ( ! $file ) {
+            return null;
+        }
+        $file = wp_normalize_path( $file );
+        if ( strpos( $file, 'wp-content/plugins/' ) !== false ) {
+            $parts = explode( 'wp-content/plugins/', $file );
+            $sub = explode( '/', $parts[1] );
+            $dir = $sub[0];
+            
+            static $active_plugins_cache = null;
+            if ( $active_plugins_cache === null ) {
+                $active_plugins_cache = get_option( 'active_plugins', [] );
+            }
+            foreach ( $active_plugins_cache as $ap ) {
+                if ( strpos( $ap, $dir . '/' ) === 0 ) {
+                    return $ap;
+                }
+            }
+        }
+        return null;
+    }
+}
+
+/**
+ * Custom WP_Hook subclass for profiling callback execution times.
+ */
+class Uro_WP_Hook extends \WP_Hook {
+
+    public function __construct( \WP_Hook $original ) {
+        $this->callbacks     = $original->callbacks;
+        $this->iterations    = $original->iterations;
+        $this->nesting_level = $original->nesting_level;
+        if ( isset( $original->doing_action ) ) {
+            $this->doing_action = $original->doing_action;
+        }
+    }
+
+    public function apply_filters( $value, $args ) {
+        if ( ! $this->callbacks ) {
+            return $value;
+        }
+
+        $this->nesting_level++;
+        $this->iterations[ $this->nesting_level ] = array_keys( $this->callbacks );
+
+        do {
+            $priority = current( $this->iterations[ $this->nesting_level ] );
+            if ( false === $priority ) {
+                break;
+            }
+
+            $current_iteration = $this->callbacks[ $priority ];
+            foreach ( $current_iteration as $idx => $the_ ) {
+                if ( empty( $the_['function'] ) ) {
+                    continue;
+                }
+
+                $start = microtime( true );
+
+                if ( ! $this->doing_action ) {
+                    $value = call_user_func_array( $the_['function'], array_slice( $args, 0, $the_['accepted_args'] ) );
+                } else {
+                    call_user_func_array( $the_['function'], array_slice( $args, 0, $the_['accepted_args'] ) );
+                }
+
+                $duration = microtime( true ) - $start;
+                Analyzer::record_callback_time( $the_['function'], $duration );
+            }
+        } while ( next( $this->iterations[ $this->nesting_level ] ) !== false );
+
+        unset( $this->iterations[ $this->nesting_level ] );
+        $this->nesting_level--;
+
+        return $value;
+    }
+
+    public function do_action( $args ) {
+        $this->doing_action = true;
+        $this->apply_filters( '', $args );
+        $this->doing_action = false;
     }
 }
