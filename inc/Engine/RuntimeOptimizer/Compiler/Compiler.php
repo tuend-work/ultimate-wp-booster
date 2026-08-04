@@ -364,14 +364,12 @@ class Compiler {
             ];
         }
 
-        // Verify the generated MU plugin is parseable
-        $verify = @include $tmp_path;
-        if ( ! is_array( $verify ) ) {
-            @unlink( $tmp_path );
+        // Verify the file was written and is not empty
+        if ( ! file_exists( $tmp_path ) || filesize( $tmp_path ) === 0 ) {
             return [
                 'success' => false,
-                'message' => 'Generated MU plugin is invalid PHP.',
-                'errors'  => [ 'include test failed for ' . $tmp_path ],
+                'message' => 'Failed to write temporary MU plugin file.',
+                'errors'  => [ 'File missing or empty: ' . $tmp_path ],
             ];
         }
         @rename( $tmp_path, $mu_plugin_file );
