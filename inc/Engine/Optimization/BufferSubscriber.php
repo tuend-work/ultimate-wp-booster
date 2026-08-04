@@ -14,7 +14,7 @@ class BufferSubscriber implements Subscriber_Interface {
     }
 
     public function start_buffering() {
-        if ( is_admin() || is_feed() || is_trackback() || is_robots() ) {
+        if ( is_admin() || is_feed() || is_trackback() || is_robots() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
             return;
         }
 

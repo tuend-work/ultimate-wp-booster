@@ -91,7 +91,7 @@ function uwb_advanced_cache_run() {
         // Dynamically check query bypass parameters from config (falls back to defaults if not set)
         $bypass_queries = isset( $config['bypass_query_params'] ) 
             ? $config['bypass_query_params'] 
-            : array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset' );
+            : array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset', 'rest_route' );
 
         $intersect = array_intersect( array_keys( $query_params ), $bypass_queries );
         if ( ! empty( $intersect ) ) {
@@ -258,7 +258,15 @@ function uwb_advanced_cache_run() {
     $uri_path       = rawurldecode( $uri_parts[0] );
     $normalized_uri = trim( $uri_path, '/' );
 
-    // 6.0. Bypass WooCommerce Cart, Checkout, and My Account pages
+    // 6.0. Bypass REST API requests and WooCommerce protected pages
+    if ( strpos( $uri_path, '/wp-json' ) === 0 || strpos( $normalized_uri, 'wp-json' ) === 0 || isset( $_GET['rest_route'] ) ) {
+        if ( $debug ) {
+            error_log( "UWB: Run bypassed: REST API request detected ({$uri_path})." );
+        }
+        $GLOBALS['uwb_bypass_reason'] = 'REST API request: ' . $uri_path;
+        return;
+    }
+
     if ( preg_match( '#/(cart|checkout|my-account)/?#i', $uri_path ) ||
          strpos( $normalized_uri, 'cart' ) === 0 || 
          strpos( $normalized_uri, 'checkout' ) === 0 || 
@@ -545,6 +553,11 @@ function uwb_advanced_cache_shutdown() {
         }
     }
     
+    if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+        $should_cache = false;
+        $shutdown_bypass_reason = 'REST_REQUEST constant is true';
+    }
+
     $is_special_page = is_admin() || is_search() || is_feed() || is_trackback() || is_robots();
     if ( $is_special_page || ( is_404() && ! $cache_404 ) ) {
         $should_cache = false;
