@@ -1737,10 +1737,6 @@ class Admin {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         <span>Advanced</span>
                     </div>
-                    <div class="uwb-nav-item" data-tab="runtime_optimizer" title="Runtime Optimizer">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                        <span>Runtime Optimizer</span>
-                    </div>
                     <div class="uwb-nav-item" data-tab="import_export" title="Import / Export">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         <span>Import / Export</span>
@@ -3924,15 +3920,130 @@ js-(before|after)
                             <h2 style="margin-top:0;">Advanced &amp; Tools</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Developer settings for debugging and troubleshooting.</p>
 
-                            <!-- Debug Mode -->
-                            <div style="background:#fff8e1; border:1px solid #fcd34d; border-radius:12px; padding:24px; margin-bottom:24px;">
-                                <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px; color:#92400e;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                    Developer: Debug Mode
-                                </h3>
-                                <p class="description" style="margin-bottom:16px; color:#92400e;"><strong>Warning:</strong> When enabled, the optimizer appends a debug log as an HTML comment to every cached page. <strong>Disable on production.</strong></p>
+                            <!-- Horizontal Sub-tabs Nav -->
+                            <div class="uwb-sub-tabs-nav" style="margin-bottom: 24px;">
+                                <div class="uwb-sub-tab-item active" data-subtab="advanced_debug">General / Debug</div>
+                                <div class="uwb-sub-tab-item" data-subtab="plugin_load_manager">Plugin Load Manager</div>
+                            </div>
 
-                                <?php $this->render_toggle_switch( 'uwb_debug_mode', 'Enable Optimizer Debug Log', 'Appends debug info as HTML comments. Use only for troubleshooting.' ); ?>
+                            <!-- SUB-TAB: General / Debug -->
+                            <div id="subtab-advanced_debug" class="uwb-subtab-content active">
+                                <!-- Debug Mode -->
+                                <div style="background:#fff8e1; border:1px solid #fcd34d; border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px; color:#92400e;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                        Developer: Debug Mode
+                                    </h3>
+                                    <p class="description" style="margin-bottom:16px; color:#92400e;"><strong>Warning:</strong> When enabled, the optimizer appends a debug log as an HTML comment to every cached page. <strong>Disable on production.</strong></p>
+                                    
+                                    <?php $this->render_toggle_switch( 'uwb_debug_mode', 'Enable Optimizer Debug Log', 'Appends debug info as HTML comments. Use only for troubleshooting.' ); ?>
+                                </div>
+                            </div>
+
+                            <!-- SUB-TAB: Plugin Load Manager -->
+                            <div id="subtab-plugin_load_manager" class="uwb-subtab-content">
+                                <h3 style="margin-top:0; display:flex; align-items:center; gap:10px; font-size: 16px; font-weight: 700;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--uwb-primary)" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                    Plugin Load Manager (Runtime)
+                                </h3>
+                                <p style="color:var(--uwb-text-muted); margin-bottom:24px; font-size: 13px;">Giảm thời gian bootstrap WordPress bằng cách kiểm soát chính xác plugin nào được load theo ngữ cảnh request (URL, UserRole, Device, WooCommerce, AJAX/REST). Rule được biên dịch thành Lookup Table — Runtime chỉ mất vài micro giây.</p>
+
+                                <!-- Status Bar -->
+                                <div id="uro-status-bar" style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:20px; margin-bottom:24px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
+                                    <div style="flex:1; min-width:200px;">
+                                        <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">RUNTIME STATUS</div>
+                                        <div id="uro-status-runtime" style="font-weight:700; font-size:14px;">⏳ Loading...</div>
+                                    </div>
+                                    <div style="flex:1; min-width:200px;">
+                                        <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">COMPILED</div>
+                                        <div id="uro-status-compiled" style="font-weight:700; font-size:14px;">—</div>
+                                    </div>
+                                    <div style="flex:1; min-width:200px;">
+                                        <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">RULES</div>
+                                        <div id="uro-status-rules" style="font-weight:700; font-size:14px;">—</div>
+                                    </div>
+                                    <div style="flex:1; min-width:200px;">
+                                        <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">COMPILE TIME</div>
+                                        <div id="uro-status-time" style="font-weight:700; font-size:14px;">—</div>
+                                    </div>
+                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                        <button id="btn-uro-enable" type="button" class="button button-primary" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">⚡ Enable Runtime</button>
+                                        <button id="btn-uro-disable" type="button" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; display:none;">🔴 Disable Runtime</button>
+                                        <button id="btn-uro-rebuild" type="button" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">🔨 Rebuild</button>
+                                    </div>
+                                </div>
+
+                                <div id="uro-result-msg" style="display:none; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:600; font-size:13px;"></div>
+
+                                <!-- Sub-tabs -->
+                                <div class="uwb-sub-tabs-nav" style="margin-bottom:24px;">
+                                    <div class="uwb-sub-tab-item active" data-subtab="uro_rules">Rules Editor</div>
+                                    <div class="uwb-sub-tab-item" data-subtab="uro_plugins">Plugin List</div>
+                                    <div class="uwb-sub-tab-item" data-subtab="uro_analyzer">Analyzer</div>
+                                </div>
+
+                                <!-- SUB-TAB: Rules Editor -->
+                                <div id="subtab-uro_rules" class="uwb-subtab-content active">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                                        <div>
+                                            <strong style="font-size:14px;">Rule Editor</strong>
+                                            <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Tạo rules để disable plugin trên từng loại trang. Thứ tự = Priority (nhỏ = ưu tiên cao).</p>
+                                        </div>
+                                        <button id="btn-uro-add-rule" type="button" class="button button-primary" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">+ Add Rule</button>
+                                    </div>
+                                    <div id="uro-rules-list" style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
+                                        <div style="text-align:center; padding:40px; color:var(--uwb-text-muted); border:2px dashed var(--uwb-border); border-radius:12px;" id="uro-no-rules">
+                                            ⚡ Chưa có rule nào. Bấm <strong>Add Rule</strong> để bắt đầu.
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                        <button id="btn-uro-save-rules" type="button" class="button button-primary" style="padding:10px 24px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">💾 Save &amp; Compile</button>
+                                        <button id="btn-uro-scan-plugins" type="button" class="button" style="padding:10px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">🔍 Refresh Plugin List</button>
+                                    </div>
+                                </div>
+
+                                <!-- SUB-TAB: Plugin List -->
+                                <div id="subtab-uro_plugins" class="uwb-subtab-content">
+                                    <div style="margin-bottom:16px;">
+                                        <strong style="font-size:14px;">Installed Plugins (Stable IDs)</strong>
+                                        <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Plugin ID được gán cố định theo thứ tự alphabet. ID không thay đổi khi bạn activate/deactivate plugin khác.</p>
+                                    </div>
+                                    <div id="uro-plugin-list-table" style="overflow:auto;">
+                                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                                            <thead><tr style="background:var(--uwb-bg); border-bottom:2px solid var(--uwb-border);">
+                                                <th style="padding:10px 12px; text-align:left; font-weight:700;">ID</th>
+                                                <th style="padding:10px 12px; text-align:left; font-weight:700;">Plugin Name</th>
+                                                <th style="padding:10px 12px; text-align:left; font-weight:700;">File</th>
+                                                <th style="padding:10px 12px; text-align:left; font-weight:700;">Version</th>
+                                            </tr></thead>
+                                            <tbody id="uro-plugin-tbody"><tr><td colspan="4" style="padding:20px; text-align:center; color:var(--uwb-text-muted);">Loading...</td></tr></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- SUB-TAB: Analyzer -->
+                                <div id="subtab-uro_analyzer" class="uwb-subtab-content">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                                        <div>
+                                            <strong style="font-size:14px;">Page Load Analyzer</strong>
+                                            <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Phân tích plugin nào đang load trên từng trang — hooks, memory, execution time.</p>
+                                        </div>
+                                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                                                <input type="checkbox" id="uro-analyzer-toggle" style="width:16px; height:16px;"> Enable Analyzer
+                                            </label>
+                                            <button id="btn-uro-get-log" type="button" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">📊 Refresh Log</button>
+                                            <button id="btn-uro-clear-log" type="button" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; color:#dc2626;">🗑 Clear</button>
+                                        </div>
+                                    </div>
+                                    <div id="uro-analyzer-recs" style="display:none; background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; padding:16px; margin-bottom:20px;">
+                                        <strong style="font-size:13px;">💡 Recommendations:</strong>
+                                        <ul id="uro-analyzer-recs-list" style="margin:8px 0 0; padding-left:20px; font-size:13px;"></ul>
+                                    </div>
+                                    <div id="uro-analyzer-log" style="font-size:12.5px; max-height:500px; overflow:auto;">
+                                        <p style="color:var(--uwb-text-muted);">Enable Analyzer và duyệt web để thu thập dữ liệu.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -3970,112 +4081,6 @@ js-(before|after)
                                 <button type="submit" name="uwb_import_settings" class="button" style="padding:10px 20px; height:auto; border-radius:8px; font-weight:600; border:1px solid var(--uwb-border); background:#fff; cursor:pointer; color:var(--uwb-text);">Import Settings (JSON)</button>
                             </div>
                         </form>
-                    </div>
-
-                    <!-- TAB: Runtime Optimizer -->
-                    <div id="tab-runtime_optimizer" class="uwb-tab-content">
-                        <h2 style="margin-top:0; display:flex; align-items:center; gap:10px;">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--uwb-primary)" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                            Ultimate Runtime Optimizer
-                        </h2>
-                        <p style="color:var(--uwb-text-muted); margin-bottom:24px;">Giảm thời gian bootstrap WordPress bằng cách kiểm soát chính xác plugin nào được load theo ngữ cảnh request (URL, UserRole, Device, WooCommerce, AJAX/REST). Rule được biên dịch thành Lookup Table — Runtime chỉ mất vài micro giây.</p>
-
-                        <!-- Status Bar -->
-                        <div id="uro-status-bar" style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:20px; margin-bottom:24px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
-                            <div style="flex:1; min-width:200px;">
-                                <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">RUNTIME STATUS</div>
-                                <div id="uro-status-runtime" style="font-weight:700; font-size:14px;">⏳ Loading...</div>
-                            </div>
-                            <div style="flex:1; min-width:200px;">
-                                <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">COMPILED</div>
-                                <div id="uro-status-compiled" style="font-weight:700; font-size:14px;">—</div>
-                            </div>
-                            <div style="flex:1; min-width:200px;">
-                                <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">RULES</div>
-                                <div id="uro-status-rules" style="font-weight:700; font-size:14px;">—</div>
-                            </div>
-                            <div style="flex:1; min-width:200px;">
-                                <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">COMPILE TIME</div>
-                                <div id="uro-status-time" style="font-weight:700; font-size:14px;">—</div>
-                            </div>
-                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <button id="btn-uro-enable" class="button button-primary" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">⚡ Enable Runtime</button>
-                                <button id="btn-uro-disable" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; display:none;">🔴 Disable Runtime</button>
-                                <button id="btn-uro-rebuild" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">🔨 Rebuild</button>
-                            </div>
-                        </div>
-
-                        <div id="uro-result-msg" style="display:none; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:600; font-size:13px;"></div>
-
-                        <!-- Sub-tabs -->
-                        <div class="uwb-sub-tabs-nav" style="margin-bottom:24px;">
-                            <div class="uwb-sub-tab-item active" data-subtab="uro_rules">Rules Editor</div>
-                            <div class="uwb-sub-tab-item" data-subtab="uro_plugins">Plugin List</div>
-                            <div class="uwb-sub-tab-item" data-subtab="uro_analyzer">Analyzer</div>
-                        </div>
-
-                        <!-- SUB-TAB: Rules Editor -->
-                        <div id="subtab-uro_rules" class="uwb-subtab-content active">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-                                <div>
-                                    <strong style="font-size:14px;">Rule Editor</strong>
-                                    <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Tạo rules để disable plugin trên từng loại trang. Thứ tự = Priority (nhỏ = ưu tiên cao).</p>
-                                </div>
-                                <button id="btn-uro-add-rule" class="button button-primary" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">+ Add Rule</button>
-                            </div>
-                            <div id="uro-rules-list" style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
-                                <div style="text-align:center; padding:40px; color:var(--uwb-text-muted); border:2px dashed var(--uwb-border); border-radius:12px;" id="uro-no-rules">
-                                    ⚡ Chưa có rule nào. Bấm <strong>Add Rule</strong> để bắt đầu.
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                                <button id="btn-uro-save-rules" class="button button-primary" style="padding:10px 24px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">💾 Save &amp; Compile</button>
-                                <button id="btn-uro-scan-plugins" class="button" style="padding:10px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">🔍 Refresh Plugin List</button>
-                            </div>
-                        </div>
-
-                        <!-- SUB-TAB: Plugin List -->
-                        <div id="subtab-uro_plugins" class="uwb-subtab-content">
-                            <div style="margin-bottom:16px;">
-                                <strong style="font-size:14px;">Installed Plugins (Stable IDs)</strong>
-                                <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Plugin ID được gán cố định theo thứ tự alphabet. ID không thay đổi khi bạn activate/deactivate plugin khác.</p>
-                            </div>
-                            <div id="uro-plugin-list-table" style="overflow:auto;">
-                                <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                                    <thead><tr style="background:var(--uwb-bg); border-bottom:2px solid var(--uwb-border);">
-                                        <th style="padding:10px 12px; text-align:left; font-weight:700;">ID</th>
-                                        <th style="padding:10px 12px; text-align:left; font-weight:700;">Plugin Name</th>
-                                        <th style="padding:10px 12px; text-align:left; font-weight:700;">File</th>
-                                        <th style="padding:10px 12px; text-align:left; font-weight:700;">Version</th>
-                                    </tr></thead>
-                                    <tbody id="uro-plugin-tbody"><tr><td colspan="4" style="padding:20px; text-align:center; color:var(--uwb-text-muted);">Loading...</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- SUB-TAB: Analyzer -->
-                        <div id="subtab-uro_analyzer" class="uwb-subtab-content">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-                                <div>
-                                    <strong style="font-size:14px;">Page Load Analyzer</strong>
-                                    <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Phân tích plugin nào đang load trên từng trang — hooks, memory, execution time.</p>
-                                </div>
-                                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
-                                        <input type="checkbox" id="uro-analyzer-toggle" style="width:16px; height:16px;"> Enable Analyzer
-                                    </label>
-                                    <button id="btn-uro-get-log" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">📊 Refresh Log</button>
-                                    <button id="btn-uro-clear-log" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; color:#dc2626;">🗑 Clear</button>
-                                </div>
-                            </div>
-                            <div id="uro-analyzer-recs" style="display:none; background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; padding:16px; margin-bottom:20px;">
-                                <strong style="font-size:13px;">💡 Recommendations:</strong>
-                                <ul id="uro-analyzer-recs-list" style="margin:8px 0 0; padding-left:20px; font-size:13px;"></ul>
-                            </div>
-                            <div id="uro-analyzer-log" style="font-size:12.5px; max-height:500px; overflow:auto;">
-                                <p style="color:var(--uwb-text-muted);">Enable Analyzer và duyệt web để thu thập dữ liệu.</p>
-                            </div>
-                        </div>
                     </div>
 
                 </div>
@@ -4687,8 +4692,15 @@ js-(before|after)
                 localStorage.setItem('uwb_active_tab', tabId);
 
                 // Hide submit row on non-settings tabs (these tabs have their own forms)
-                if (['url_status', 'import_export', 'runtime_optimizer'].indexOf(tabId) !== -1) {
+                if (['url_status', 'import_export'].indexOf(tabId) !== -1) {
                     $('#uwb-submit-row').hide();
+                } else if (tabId === 'advanced_tools') {
+                    var sub = $('#tab-advanced_tools').find('.uwb-sub-tab-item.active').data('subtab');
+                    if (sub === 'plugin_load_manager') {
+                        $('#uwb-submit-row').hide();
+                    } else {
+                        $('#uwb-submit-row').show();
+                    }
                 } else {
                     $('#uwb-submit-row').show();
                 }
@@ -4711,7 +4723,15 @@ js-(before|after)
                 parentTab.find('.uwb-subtab-content').removeClass('active');
                 $('#subtab-' + subtabId).addClass('active');
 
-                localStorage.setItem('uwb_active_subtab', subtabId);
+                var tabId = parentTab.attr('id').replace('tab-', '');
+                localStorage.setItem('uwb_subtab_' + tabId, subtabId);
+
+                // Hide submit row on Plugin Load Manager sub-tab, show on others
+                if (subtabId === 'plugin_load_manager') {
+                    $('#uwb-submit-row').hide();
+                } else if (tabId === 'advanced_tools') {
+                    $('#uwb-submit-row').show();
+                }
             });
 
             // Toggle Switches interactive handler
@@ -5899,8 +5919,15 @@ js-(before|after)
                 $('.uwb-tab-content').removeClass('active');
                 $('#tab-' + savedTab).addClass('active');
                 
-                if (['url_status', 'import_export', 'runtime_optimizer'].indexOf(savedTab) !== -1) {
+                if (['url_status', 'import_export'].indexOf(savedTab) !== -1) {
                     $('#uwb-submit-row').hide();
+                } else if (savedTab === 'advanced_tools') {
+                    var sub = localStorage.getItem('uwb_subtab_advanced_tools');
+                    if (sub === 'plugin_load_manager') {
+                        $('#uwb-submit-row').hide();
+                    } else {
+                        $('#uwb-submit-row').show();
+                    }
                 } else {
                     $('#uwb-submit-row').show();
                 }
@@ -5915,18 +5942,18 @@ js-(before|after)
                 loadUrlTable();
             }
             
-            var savedSubtab = localStorage.getItem('uwb_active_subtab');
-            if (savedSubtab) {
-                var $targetSubtabBtn = $('.uwb-sub-tab-item[data-subtab="' + savedSubtab + '"]');
-                if ($targetSubtabBtn.length) {
-                    var $parentTab = $targetSubtabBtn.closest('.uwb-tab-content');
-                    $parentTab.find('.uwb-sub-tab-item').removeClass('active');
-                    $targetSubtabBtn.addClass('active');
+            // Restore sub-tab active state for each tab
+            $('.uwb-tab-content').each(function() {
+                var tabId = $(this).attr('id').replace('tab-', '');
+                var savedSub = localStorage.getItem('uwb_subtab_' + tabId);
+                if (savedSub) {
+                    $(this).find('.uwb-sub-tab-item').removeClass('active');
+                    $(this).find('.uwb-sub-tab-item[data-subtab="' + savedSub + '"]').addClass('active');
                     
-                    $parentTab.find('.uwb-subtab-content').removeClass('active');
-                    $('#subtab-' + savedSubtab).addClass('active');
+                    $(this).find('.uwb-subtab-content').removeClass('active');
+                    $(this).find('#subtab-' + savedSub).addClass('active');
                 }
-            }
+            });
 
             // Toggle event action checkboxes on CDN distribution switch change
             $(document).on('change', 'input[name="uwb_cdn_distribute_css"], input[name="uwb_cdn_distribute_js"], input[name="uwb_cdn_distribute_html"], input[name="uwb_cdn_distribute_media"], input[name="uwb_cdn_distribute_font"]', function() {

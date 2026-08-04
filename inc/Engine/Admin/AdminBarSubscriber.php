@@ -81,10 +81,19 @@ class AdminBarSubscriber implements Subscriber_Interface {
         }
 
         if ( ! $is_critical_admin && $can_manage ) {
+            // Add parent node: Advanced
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-bar-advanced',
+                'parent' => 'uwb-admin-bar',
+                'title'  => 'Advanced',
+                'href'   => '#',
+            ) );
+
+            // Add child node: Runtime Control
             $wp_admin_bar->add_node( array(
                 'id'     => 'uwb-plugin-manager',
-                'parent' => 'uwb-admin-bar',
-                'title'  => '⚡ Plugin Manager',
+                'parent' => 'uwb-bar-advanced',
+                'title'  => '⚡ Runtime Control',
                 'href'   => '#',
                 'meta'   => array(
                     'onclick' => 'jQuery("#uwb-quick-pm-modal").css("display", "flex"); return false;',
@@ -494,7 +503,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
                     <div style="flex:1;">
                         <h3 style="margin:0; font-size:16px; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:8px;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                            ⚡ URO Plugin Manager
+                            ⚡ Runtime Plugin Manager
                         </h3>
                         <p style="margin:4px 0 0; font-size:12px; color:#64748b; word-break:break-all;">
                             Chặn plugin trên đường dẫn: <strong style="color:#0f172a;"><?php echo esc_html( $current_path_clean ); ?></strong>
