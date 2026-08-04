@@ -159,7 +159,6 @@ class CriticalCSS {
             }
             var finalCss = rulesExtracted.join('\n');
             if (!finalCss || finalCss.length < 20) return;
-            if (styleEl) styleEl.textContent = finalCss;
 
             // Extract first-screen images
             function isSliderHidden(img) {
