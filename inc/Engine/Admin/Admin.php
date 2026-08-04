@@ -2988,14 +2988,14 @@ class Admin {
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:20px; margin-top:16px; margin-bottom:24px;">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
                                         <h4 style="margin:0; font-size:14px; font-weight:700; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
-                                            ⚡ Critical CSS (Above-The-Fold) Storage &amp; Manual Override
+                                            ⚡ Auto Critical CSS &amp; Custom Manual Addition
                                         </h4>
                                         <button type="button" id="btn-clear-critical-css" class="button button-secondary button-small" style="font-weight:600; padding:4px 12px; border-radius:6px; cursor:pointer;">
                                             Clear Critical CSS Cache
                                         </button>
                                     </div>
                                     <?php
-                                    $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Custom Manual Critical CSS Override', '', 'Bổ sung các quy tắc CSS tùy chỉnh thủ công nếu muốn đè thêm vào &lt;head&gt;.' );
+                                    $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Custom Above-The-Fold CSS (Manual Addition)', '', 'Nhập các quy tắc CSS tùy chỉnh để xuất ra thẻ &lt;style id="uwb-manual-critical-css"&gt; riêng biệt trong &lt;head&gt; (chèn song song với Critical CSS tự động và có độ ưu tiên cao nhất).' );
                                     ?>
                                 </div>
 

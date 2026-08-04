@@ -28,13 +28,21 @@ class CriticalCSS {
 
         $manual_clean = ! empty( $manual_css ) ? self::minify_css( self::sanitize_critical_css( $manual_css ) ) : '';
 
-        // If HTML already contains filled Critical CSS inside <style id="uwb-critical-css">
+        // Inject Custom Manual Critical CSS in a separate tag with highest priority
+        if ( ! empty( $manual_clean ) && strpos( $html, 'id="uwb-manual-critical-css"' ) === false ) {
+            $manual_tag = '<style id="uwb-manual-critical-css">' . $manual_clean . '</style>';
+            if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+                $html = str_replace( $matches[0], $matches[0] . "\n" . $manual_tag, $html );
+            }
+        }
+
+        if ( ! $enabled ) {
+            return $html;
+        }
+
+        // If HTML already contains filled Auto Critical CSS inside <style id="uwb-critical-css">
         if ( preg_match( '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>(.*?)</style>#is', $html, $css_matches ) ) {
             $existing_css = isset( $css_matches[1] ) ? trim( $css_matches[1] ) : '';
-            if ( ! empty( $manual_clean ) && strpos( $existing_css, $manual_clean ) === false ) {
-                $combined = ( ! empty( $existing_css ) ? $existing_css . "\n/* Manual Override (Priority) */\n" : '' ) . $manual_clean;
-                $html = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>.*?</style>#is', '<style id="uwb-critical-css">' . $combined . '</style>', $html, 1 );
-            }
             if ( ! empty( $existing_css ) && strlen( $existing_css ) > 10 ) {
                 return $html;
             }
@@ -47,17 +55,16 @@ class CriticalCSS {
         $url_clean = strtok( $url, '?' );
         $url_hash = md5( $url_clean );
 
-        // Inject Placeholder in <head> with initial manual CSS if present
-        $initial_css = ! empty( $manual_clean ) ? '/* Manual Override (Priority) */' . $manual_clean : '';
-        $placeholder_tag = '<style id="uwb-critical-css" data-hash="' . $url_hash . '">' . $initial_css . '</style>';
+        // Inject Auto Critical CSS Placeholder in <head> if not present
+        $placeholder_tag = '<style id="uwb-critical-css" data-hash="' . $url_hash . '"></style>';
         if ( strpos( $html, 'id="uwb-critical-css"' ) === false ) {
             if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
                 $html = str_replace( $matches[0], $matches[0] . "\n" . $placeholder_tag, $html );
             }
         }
 
-        // Inject background Client-Side Extractor JS before </body> if not already present
-        if ( $enabled && strpos( $html, 'id="uwb-critical-extractor"' ) === false ) {
+        // Inject background Client-Side Extractor JS before </body> if not present
+        if ( strpos( $html, 'id="uwb-critical-extractor"' ) === false ) {
             $extractor_script = self::render_extractor_script( $url_hash );
             if ( stripos( $html, '</body>' ) !== false ) {
                 $html = str_ireplace( '</body>', $extractor_script . "\n" . '</body>', $html );
