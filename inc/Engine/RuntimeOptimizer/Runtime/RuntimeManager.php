@@ -53,6 +53,7 @@ class RuntimeManager {
         add_action( 'wp_ajax_uwb_uro_get_analyzer_log',  [ $this, 'ajax_get_analyzer_log' ] );
         add_action( 'wp_ajax_uwb_uro_clear_analyzer',    [ $this, 'ajax_clear_analyzer' ] );
         add_action( 'wp_ajax_uwb_uro_toggle_runtime',    [ $this, 'ajax_toggle_runtime' ] );
+        add_action( 'wp_ajax_uwb_uro_quick_save_rule',   [ $this, 'ajax_quick_save_rule' ] );
     }
 
     // =========================================================================
@@ -267,5 +268,74 @@ class RuntimeManager {
         $analyzer = new \Ultimate_WP_Booster\Engine\RuntimeOptimizer\Analyzer\Analyzer();
         $analyzer->clear_log();
         wp_send_json_success();
+    }
+
+    public function ajax_quick_save_rule(): void {
+        check_ajax_referer( 'uwb_uro_quick_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Insufficient permissions.' );
+        }
+
+        $url_path = isset( $_POST['url_path'] ) ? sanitize_text_field( wp_unslash( $_POST['url_path'] ) ) : '';
+        if ( empty( $url_path ) ) {
+            wp_send_json_error( 'Invalid URL path.' );
+        }
+
+        $blocked_plugins = isset( $_POST['blocked_plugins'] ) ? (array) $_POST['blocked_plugins'] : [];
+        $rules_json = get_option( 'uwb_uro_rules', '[]' );
+        $rules = json_decode( $rules_json, true );
+        if ( ! is_array( $rules ) ) {
+            $rules = [];
+        }
+
+        // Find if there is an existing rule for this exact URL path
+        $found_key = null;
+        foreach ( $rules as $key => $rule ) {
+            if ( isset( $rule['conditions']['url'] ) && count( $rule['conditions']['url'] ) === 1 && $rule['conditions']['url'][0] === $url_path && $rule['action'] === 'deny' ) {
+                $found_key = $key;
+                break;
+            }
+        }
+
+        if ( empty( $blocked_plugins ) ) {
+            // If no plugins are blocked, remove the rule if it exists
+            if ( $found_key !== null ) {
+                unset( $rules[ $found_key ] );
+                $rules = array_values( $rules );
+            }
+        } else {
+            // Update or create rule
+            $rule_data = [
+                'id' => ( $found_key !== null && isset( $rules[ $found_key ]['id'] ) ) ? $rules[ $found_key ]['id'] : 'rule-' . time(),
+                'name' => 'Quick block on ' . $url_path,
+                'enabled' => true,
+                'priority' => 10,
+                'action' => 'deny',
+                'plugins' => $blocked_plugins,
+                'conditions' => [
+                    'url' => [ $url_path ],
+                    'post_type' => [],
+                    'taxonomy' => [],
+                    'woocommerce' => [],
+                    'user_role' => [],
+                    'device' => [],
+                    'is_ajax' => null,
+                    'is_rest' => null,
+                    'callback' => null,
+                ]
+            ];
+
+            if ( $found_key !== null ) {
+                $rules[ $found_key ] = $rule_data;
+            } else {
+                $rules[] = $rule_data;
+            }
+        }
+
+        update_option( 'uwb_uro_rules', json_encode( $rules ), false );
+
+        // Trigger recompile
+        $result = $this->recompile();
+        wp_send_json( $result );
     }
 }
