@@ -73,7 +73,7 @@ class CDNManager {
         $version = defined( 'UWB_VERSION' ) ? UWB_VERSION : time();
 
         // 1. Rewrite single URL attributes: href, src, data-src
-        $pattern = '/(href|src|data-src)=([\'"])((?:https?:\/\/' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?)\2/i';
+        $pattern = '/(href|src|data-src)=([\'"])((?:https?:\/\/(?:[a-z0-9\-]+\.)*' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?)\2/i';
 
         $html = preg_replace_callback( $pattern, function( $matches ) use ( $home_host, $cdn_domain, $version ) {
             $attr    = $matches[1];
@@ -127,7 +127,7 @@ class CDNManager {
                 $url = $parts[0];
                 $descriptor = isset( $parts[1] ) ? ' ' . $parts[1] : '';
 
-                if ( preg_match( '/^(?:https?:\/\/' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?$/i', $url, $m ) ) {
+                if ( preg_match( '/^(?:https?:\/\/(?:[a-z0-9\-]+\.)*' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?$/i', $url, $m ) ) {
                     $path_part = parse_url( $url, PHP_URL_PATH );
                     $s3_key    = ltrim( $path_part, '/' );
 
