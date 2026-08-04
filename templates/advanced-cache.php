@@ -232,6 +232,9 @@ function uwb_advanced_cache_run() {
         foreach ( $_COOKIE as $key => $val ) {
             if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
                 if ( intval( $cache_logged_in ) === 0 ) {
+                    if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
+                        define( 'UWB_BUFFER_STARTED', true );
+                    }
                     if ( $debug ) {
                         error_log( "UWB: Run bypassed: User is logged in but cache_logged_in is 0 (None)." );
                     }
@@ -843,7 +846,11 @@ function uwb_advanced_cache_shutdown() {
             $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
             $optimizer_path = $plugin_dir . 'inc/Engine/Optimization/Optimizer.php';
         }
-        if ( file_exists( $optimizer_path ) ) {
+        // Skip Optimizer if user is logged in and cache_logged_in setting is 0 (None)
+        $is_user_logged_in_req = ( $logged_in_cookie_hash !== '' || ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) );
+        $skip_optimization     = ( $is_user_logged_in_req && intval( $cache_logged_in ) === 0 );
+
+        if ( ! $skip_optimization && file_exists( $optimizer_path ) ) {
             require_once $optimizer_path;
             if ( class_exists( 'Ultimate_WP_Booster\Engine\Optimization\Optimizer' ) ) {
                 $html = \Ultimate_WP_Booster\Engine\Optimization\Optimizer::process( $html, $config );

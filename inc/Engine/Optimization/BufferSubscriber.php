@@ -22,6 +22,11 @@ class BufferSubscriber implements Subscriber_Interface {
             return; // Handled by early drop-in advanced-cache.php
         }
 
+        $cache_logged_in = intval( get_option( 'uwb_cache_logged_in', 0 ) );
+        if ( is_user_logged_in() && $cache_logged_in === 0 ) {
+            return; // Do not buffer or optimize for logged-in users when cache_logged_in is set to None (0)
+        }
+
         if ( function_exists( 'uwb_start_output_buffering' ) ) {
             uwb_start_output_buffering();
         }
