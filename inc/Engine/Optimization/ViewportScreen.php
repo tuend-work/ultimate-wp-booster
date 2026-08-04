@@ -124,6 +124,9 @@ class ViewportScreen {
                     if ( filesize( $f ) > 100 ) {
                         $content = @file_get_contents( $f );
                         if ( preg_match( $placeholder_pattern, $content ) || ( strpos( $content, 'data-hash="' . $url_hash . '"' ) !== false && strpos( $content, 'uwb-critical-extractor' ) !== false ) ) {
+                            // Strip any pre-existing uwb-manual-critical-css tag to prevent duplication
+                            $content = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-manual-critical-css[\'"][^>]*?>.*?</style>\s*#is', '', $content );
+
                             // 1. Fill Critical CSS into matching placeholder
                             if ( ! empty( $style_replacement ) ) {
                                 $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
@@ -169,6 +172,9 @@ class ViewportScreen {
                 if ( file_exists( $f ) && filesize( $f ) > 100 ) {
                     $content = @file_get_contents( $f );
                     if ( preg_match( $placeholder_pattern, $content ) || ( strpos( $content, 'data-hash="' . $url_hash . '"' ) !== false && strpos( $content, 'uwb-critical-extractor' ) !== false ) ) {
+                        // Strip any pre-existing uwb-manual-critical-css tag to prevent duplication
+                        $content = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-manual-critical-css[\'"][^>]*?>.*?</style>\s*#is', '', $content );
+
                         if ( ! empty( $style_replacement ) ) {
                             $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
                             $content = preg_replace( $fallback_pattern, $style_replacement, $content );
