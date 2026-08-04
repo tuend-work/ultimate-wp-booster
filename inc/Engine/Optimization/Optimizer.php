@@ -489,35 +489,22 @@ class Optimizer {
         $css_excludes = array();
 
         // 1. Collect JS Exclusions from Minify/Combine, Defer, and Delay
-        if ( ! empty( $config['js_combine'] ) || ! empty( $config['js_minify'] ) ) {
-            $raw = isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '';
+        $raw_js_combine = ! empty( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : ( function_exists( 'get_option' ) ? get_option( 'uwb_tuning_js_excludes', '' ) : '' );
+        $raw_js_defer   = ! empty( $config['tuning_js_defer_excludes'] ) ? $config['tuning_js_defer_excludes'] : '';
+        $raw_js_delay   = ! empty( $config['delay_js_exclusions'] ) ? $config['delay_js_exclusions'] : ( function_exists( 'get_option' ) ? get_option( 'uwb_delay_js_exclusions', '' ) : '' );
+
+        foreach ( array( $raw_js_combine, $raw_js_defer, $raw_js_delay ) as $raw ) {
             if ( ! empty( $raw ) ) {
-                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
-                $js_excludes = array_merge( $js_excludes, $lines );
-            }
-        }
-        if ( ! empty( $config['js_load_defer'] ) ) {
-            $raw = isset( $config['tuning_js_defer_excludes'] ) ? $config['tuning_js_defer_excludes'] : ( isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '' );
-            if ( ! empty( $raw ) ) {
-                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
-                $js_excludes = array_merge( $js_excludes, $lines );
-            }
-        }
-        if ( ! empty( $config['delay_js'] ) ) {
-            $raw = isset( $config['delay_js_exclusions'] ) ? $config['delay_js_exclusions'] : '';
-            if ( ! empty( $raw ) ) {
-                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", (string) $raw ) ) ) );
                 $js_excludes = array_merge( $js_excludes, $lines );
             }
         }
 
         // 2. Collect CSS Exclusions
-        if ( ! empty( $config['css_combine'] ) || ! empty( $config['css_minify'] ) ) {
-            $raw = isset( $config['tuning_css_excludes'] ) ? $config['tuning_css_excludes'] : '';
-            if ( ! empty( $raw ) ) {
-                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
-                $css_excludes = array_merge( $css_excludes, $lines );
-            }
+        $raw_css = ! empty( $config['tuning_css_excludes'] ) ? $config['tuning_css_excludes'] : ( function_exists( 'get_option' ) ? get_option( 'uwb_tuning_css_excludes', '' ) : '' );
+        if ( ! empty( $raw_css ) ) {
+            $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", (string) $raw_css ) ) ) );
+            $css_excludes = array_merge( $css_excludes, $lines );
         }
 
         $js_excludes  = array_unique( array_filter( $js_excludes ) );
@@ -529,9 +516,9 @@ class Optimizer {
 
         $preload_urls = array();
 
-        // 3. Find matching JS <script src="..."> tags in HTML that match exclusions
+        // 3. Find matching JS <script> tags in HTML that match exclusions
         if ( ! empty( $js_excludes ) ) {
-            preg_match_all( '#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>#is', $html, $matches, PREG_SET_ORDER );
+            preg_match_all( '#<script\b[^>]*?(?:src|data-uwb-src|data-src)=([\'"])(.*?)\1[^>]*?>#is', $html, $matches, PREG_SET_ORDER );
             foreach ( $matches as $m ) {
                 $tag = $m[0];
                 $url = $m[2];
@@ -547,7 +534,7 @@ class Optimizer {
             }
         }
 
-        // 4. Find matching CSS <link rel="stylesheet" href="..."> tags in HTML that match exclusions
+        // 4. Find matching CSS <link rel="stylesheet"> tags in HTML that match exclusions
         if ( ! empty( $css_excludes ) ) {
             preg_match_all( '#<link\b[^>]*?href=([\'"])(.*?)\1[^>]*?>#is', $html, $matches, PREG_SET_ORDER );
             foreach ( $matches as $m ) {
@@ -575,8 +562,11 @@ class Optimizer {
 
         foreach ( $preload_urls as $url => $as_type ) {
             $escaped_url = esc_url( $url );
-            // Do not add duplicate preload if already present in HTML
-            if ( stripos( $html, 'rel="preload"' ) !== false && stripos( $html, $escaped_url ) !== false ) {
+            $url_clean_path = strtok( $escaped_url, '?' );
+            $url_pattern = preg_quote( $url_clean_path, '#' );
+            
+            // Only skip if a <link rel="preload"... href="..."> tag specifically for this asset already exists
+            if ( preg_match( '#<link\b[^>]*?rel=[\'"]preload[\'"][^>]*?href=[\'"][^\'"]*' . $url_pattern . '[^\'"]*[\'"]#i', $html ) ) {
                 continue;
             }
             $preload_tags .= "\n<link rel=\"preload\" href=\"{$escaped_url}\" as=\"{$as_type}\">";
