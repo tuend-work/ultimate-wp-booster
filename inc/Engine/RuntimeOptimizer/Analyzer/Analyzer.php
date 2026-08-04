@@ -50,6 +50,8 @@ class Analyzer {
 
         // Record after WP fully initialised
         add_action( 'wp_loaded', [ $this, 'record' ], 9999 );
+        add_action( 'wp_footer', [ $this, 'output_profile_data' ], 9999 );
+        add_action( 'admin_footer', [ $this, 'output_profile_data' ], 9999 );
     }
 
     /**
@@ -58,7 +60,7 @@ class Analyzer {
     public function hijack_dynamic_hooks( string $hook_name ): void {
         global $wp_filter;
         if ( isset( $wp_filter[ $hook_name ] ) && $wp_filter[ $hook_name ] instanceof \WP_Hook && ! ( $wp_filter[ $hook_name ] instanceof Uro_WP_Hook ) ) {
-            $wp_filter[ $hook_name ] = new Uro_WP_Hook( $wp_filter[ $hook_name ] );
+            $wp_filter[ $hook_name ] = new Uro_WP_Hook( $wp_filter[ $hook_name ], $hook_name );
         }
     }
 
@@ -72,7 +74,7 @@ class Analyzer {
         }
         foreach ( $wp_filter as $name => $hook ) {
             if ( $hook instanceof \WP_Hook && ! ( $hook instanceof Uro_WP_Hook ) ) {
-                $wp_filter[ $name ] = new Uro_WP_Hook( $hook );
+                $wp_filter[ $name ] = new Uro_WP_Hook( $hook, $name );
             }
         }
     }
@@ -294,9 +296,9 @@ class Analyzer {
     }
 
     /**
-     * Accumulates execution time of a hook callback under its parent plugin.
+     * Accumulates execution time of a hook callback under its parent plugin and hook name.
      */
-    public static function record_callback_time( $callback, float $duration_seconds ): void {
+    public static function record_callback_time_with_hook( $callback, string $hook_name, float $duration_seconds ): void {
         static $plugin_cache = [];
 
         $cb_key = '';
@@ -334,11 +336,55 @@ class Analyzer {
 
         $plugin = $plugin_cache[ $cb_key ];
         if ( $plugin !== 'core_or_other' ) {
+            $ms = round( $duration_seconds * 1000, 2 );
             if ( ! isset( $GLOBALS['_uro_plugin_times'][ $plugin ] ) ) {
                 $GLOBALS['_uro_plugin_times'][ $plugin ] = 0.0;
             }
-            $GLOBALS['_uro_plugin_times'][ $plugin ] += round( $duration_seconds * 1000, 2 );
+            $GLOBALS['_uro_plugin_times'][ $plugin ] += $ms;
+
+            if ( ! isset( $GLOBALS['_uro_plugin_hook_details'][ $plugin ][ $hook_name ] ) ) {
+                $GLOBALS['_uro_plugin_hook_details'][ $plugin ][ $hook_name ] = 0.0;
+            }
+            $GLOBALS['_uro_plugin_hook_details'][ $plugin ][ $hook_name ] += $ms;
         }
+    }
+
+    /**
+     * Outputs the gathered profiling data to the page footer as a secure JSON script tag.
+     */
+    public function output_profile_data(): void {
+        if ( ! isset( $_COOKIE['uwb_uro_profile'] ) || $_COOKIE['uwb_uro_profile'] !== '1' ) {
+            return;
+        }
+
+        $profile_data = [
+            'plugins' => []
+        ];
+
+        $times = $GLOBALS['_uro_plugin_times'] ?? [];
+        $hook_details = $GLOBALS['_uro_plugin_hook_details'] ?? [];
+
+        foreach ( $times as $plugin => $total_time ) {
+            $hooks = $hook_details[ $plugin ] ?? [];
+            arsort( $hooks );
+
+            $filtered_hooks = [];
+            foreach ( $hooks as $h => $t ) {
+                if ( $t >= 0.05 ) {
+                    $filtered_hooks[ $h ] = $t;
+                }
+            }
+
+            $profile_data['plugins'][ $plugin ] = [
+                'total_time' => $total_time,
+                'hooks'      => $filtered_hooks,
+            ];
+        }
+
+        echo "\n<!-- UWB Profiler Data -->\n";
+        echo "<script id='uwb-profiler-data-json' type='application/json'>";
+        echo json_encode( $profile_data );
+        echo "</script>\n";
     }
 
     /**
@@ -380,8 +426,12 @@ class Uro_WP_Hook implements \ArrayAccess, \IteratorAggregate, \Countable {
     /** @var \WP_Hook */
     private \WP_Hook $original;
 
-    public function __construct( \WP_Hook $original ) {
-        $this->original = $original;
+    /** @var string */
+    private string $hook_name;
+
+    public function __construct( \WP_Hook $original, string $hook_name = '' ) {
+        $this->original  = $original;
+        $this->hook_name = $hook_name;
     }
 
     public function __get( $name ) {
@@ -442,7 +492,7 @@ class Uro_WP_Hook implements \ArrayAccess, \IteratorAggregate, \Countable {
                     $res = call_user_func_array( $original_func, $cb_args );
                     
                     $duration = microtime( true ) - $start;
-                    Analyzer::record_callback_time( $original_func, $duration );
+                    Analyzer::record_callback_time_with_hook( $original_func, $this->hook_name, $duration );
                     
                     return $res;
                 };
@@ -485,7 +535,7 @@ class Uro_WP_Hook implements \ArrayAccess, \IteratorAggregate, \Countable {
                     $res = call_user_func_array( $original_func, $cb_args );
                     
                     $duration = microtime( true ) - $start;
-                    Analyzer::record_callback_time( $original_func, $duration );
+                    Analyzer::record_callback_time_with_hook( $original_func, $this->hook_name, $duration );
                     
                     return $res;
                 };

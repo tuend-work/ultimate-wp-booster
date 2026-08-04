@@ -510,12 +510,16 @@ class AdminBarSubscriber implements Subscriber_Interface {
                         </p>
                     </div>
                     <button id="uwb-quick-pm-close" style="background:none; border:none; cursor:pointer; font-size:20px; color:#94a3b8; font-weight:700; padding:4px; line-height:1;">✕</button>
-                </div>
-
-                <!-- Search -->
-                <div style="padding:12px 24px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:8px; background:#fff;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" id="uwb-quick-pm-search" placeholder="Tìm kiếm plugin..." style="border:none; outline:none; font-size:13px; width:100%; color:#0f172a; padding:6px 0;">
+                         <!-- Search & Profile -->
+                <div style="padding:12px 24px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; gap:16px; background:#fff; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:200px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="uwb-quick-pm-search" placeholder="Tìm kiếm plugin..." style="border:none; outline:none; font-size:13px; width:100%; color:#0f172a; padding:6px 0;">
+                    </div>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#475569; cursor:pointer; font-weight:500; user-select:none;">
+                        <input type="checkbox" id="uwb-quick-pm-profile-toggle" style="width:14px; height:14px; margin:0;">
+                        <span>Đo hiệu năng (Profile)</span>
+                    </label>
                 </div>
 
                 <!-- Body / Plugins List -->
@@ -527,29 +531,37 @@ class AdminBarSubscriber implements Subscriber_Interface {
                             $is_loaded = in_array( $p['file'], $currently_loaded, true );
                             $is_blocked = in_array( $p['file'], $blocked_on_this_url, true );
                             ?>
-                            <div class="uwb-quick-pm-item" data-name="<?php echo esc_attr( strtolower( $p['name'] ) ); ?>" style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid #f1f5f9; border-radius:10px; transition:all 0.2s; background:#f8fafc;">
-                                <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
-                                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1; min-width:0; user-select:none;">
-                                        <input type="checkbox" class="uwb-quick-pm-checkbox" value="<?php echo esc_attr( $p['file'] ); ?>" <?php checked( $is_blocked ); ?> style="width:16px; height:16px; border-radius:4px; border:1.5px solid #cbd5e1; cursor:pointer;">
-                                        <div style="min-width:0;">
-                                            <div style="font-size:13.5px; font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo esc_html( $p['name'] ); ?></div>
-                                            <div style="font-size:11px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:monospace;"><?php echo esc_html( $p['file'] ); ?></div>
-                                        </div>
-                                    </label>
+                            <div class="uwb-quick-pm-item" data-name="<?php echo esc_attr( strtolower( $p['name'] ) ); ?>" data-file="<?php echo esc_attr( $p['file'] ); ?>" style="display:flex; flex-direction:column; padding:12px; border:1px solid #f1f5f9; border-radius:10px; transition:all 0.2s; background:#f8fafc;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
+                                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1; min-width:0; user-select:none;">
+                                            <input type="checkbox" class="uwb-quick-pm-checkbox" value="<?php echo esc_attr( $p['file'] ); ?>" <?php checked( $is_blocked ); ?> style="width:16px; height:16px; border-radius:4px; border:1.5px solid #cbd5e1; cursor:pointer;">
+                                            <div style="min-width:0;">
+                                                <div style="display:flex; align-items:center; gap:6px;">
+                                                    <div style="font-size:13.5px; font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo esc_html( $p['name'] ); ?></div>
+                                                    <span class="uwb-quick-pm-time-badge" style="font-size:11px; font-weight:700; color:#dc2626; display:none;"></span>
+                                                </div>
+                                                <div style="font-size:11px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:monospace;"><?php echo esc_html( $p['file'] ); ?></div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span class="uwb-quick-pm-hooks-btn" style="font-size:10.5px; color:#4f46e5; font-weight:700; text-decoration:underline; cursor:pointer; display:none; user-select:none; margin-right:4px;">Hooks</span>
+                                        <?php if ( $is_loaded ) : ?>
+                                            <span style="background:#d1fae5; color:#065f46; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:99px; display:inline-flex; align-items:center; gap:4px;">
+                                                <span style="width:5px; height:5px; background:#10b981; border-radius:50%; display:inline-block;"></span>
+                                                LOADED
+                                            </span>
+                                        <?php else : ?>
+                                            <span style="background:#fee2e2; color:#b91c1c; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:99px; display:inline-flex; align-items:center; gap:4px;">
+                                                <span style="width:5px; height:5px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
+                                                BLOCKED
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <?php if ( $is_loaded ) : ?>
-                                        <span style="background:#d1fae5; color:#065f46; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:99px; display:inline-flex; align-items:center; gap:4px;">
-                                            <span style="width:5px; height:5px; background:#10b981; border-radius:50%; display:inline-block;"></span>
-                                            LOADED
-                                        </span>
-                                    <?php else : ?>
-                                        <span style="background:#fee2e2; color:#b91c1c; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:99px; display:inline-flex; align-items:center; gap:4px;">
-                                            <span style="width:5px; height:5px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
-                                            BLOCKED
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
+                                <!-- Hooks detail block -->
+                                <div class="uwb-quick-pm-hooks-box" style="display:none; margin-top:10px; padding:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:11.5px; flex-direction:column; gap:4px; max-height:150px; overflow-y:auto; width:100%; box-sizing:border-box;"></div>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -580,6 +592,64 @@ class AdminBarSubscriber implements Subscriber_Interface {
             // Close when clicking overlay background
             $('#uwb-quick-pm-modal').on('click', function() {
                 $(this).hide();
+            });
+
+            // Handle Profile Cookie
+            var hasProfileCookie = document.cookie.indexOf('uwb_uro_profile=1') !== -1;
+            $('#uwb-quick-pm-profile-toggle').prop('checked', hasProfileCookie);
+
+            $('#uwb-quick-pm-profile-toggle').on('change', function() {
+                if ($(this).is(':checked')) {
+                    var date = new Date();
+                    date.setTime(date.getTime() + (24*60*60*1000));
+                    document.cookie = "uwb_uro_profile=1; path=/; expires=" + date.toUTCString();
+                } else {
+                    document.cookie = "uwb_uro_profile=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+                }
+            });
+
+            // Parse Profiler JSON Data if present
+            var $profTag = $('#uwb-profiler-data-json');
+            if ($profTag.length) {
+                try {
+                    var profData = JSON.parse($profTag.text());
+                    var plugins = profData.plugins || {};
+
+                    $('.uwb-quick-pm-item').each(function() {
+                        var file = $(this).data('file');
+                        var data = plugins[file];
+                        if (data) {
+                            var tVal = data.total_time || 0;
+                            var $badge = $(this).find('.uwb-quick-pm-time-badge');
+                            $badge.text('(' + tVal.toFixed(1) + 'ms)').show();
+
+                            var hooks = data.hooks || {};
+                            var hookItems = [];
+                            for (var h in hooks) {
+                                hookItems.push('<div style="display:flex; justify-content:space-between; color:#475569; padding:2px 0; border-bottom:1px dashed #f1f5f9;">'
+                                    + '<span>' + h + '</span>'
+                                    + '<span style="font-weight:600; color:#ef4444;">' + hooks[h].toFixed(2) + 'ms</span>'
+                                    + '</div>');
+                            }
+
+                            if (hookItems.length) {
+                                var $box = $(this).find('.uwb-quick-pm-hooks-box');
+                                $box.html('<strong style="display:block; margin-bottom:4px; font-size:10px; color:#1e293b;">Callbacks Execution Breakdown:</strong>' + hookItems.join(''));
+                                $(this).find('.uwb-quick-pm-hooks-btn').show();
+                            }
+                        }
+                    });
+                } catch(e) {
+                    console.error('UWB Profiler parsing error:', e);
+                }
+            }
+
+            // Click listener for Hooks detail buttons
+            $(document).on('click', '.uwb-quick-pm-hooks-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var $box = $(this).closest('.uwb-quick-pm-item').find('.uwb-quick-pm-hooks-box');
+                $box.slideToggle(150);
             });
 
             // Real-time Search filter
