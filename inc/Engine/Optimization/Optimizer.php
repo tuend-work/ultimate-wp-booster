@@ -492,19 +492,22 @@ class Optimizer {
         if ( ! empty( $config['js_combine'] ) || ! empty( $config['js_minify'] ) ) {
             $raw = isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '';
             if ( ! empty( $raw ) ) {
-                $js_excludes = array_merge( $js_excludes, array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) ) );
+                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+                $js_excludes = array_merge( $js_excludes, $lines );
             }
         }
         if ( ! empty( $config['js_load_defer'] ) ) {
             $raw = isset( $config['tuning_js_defer_excludes'] ) ? $config['tuning_js_defer_excludes'] : ( isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '' );
             if ( ! empty( $raw ) ) {
-                $js_excludes = array_merge( $js_excludes, array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+                $js_excludes = array_merge( $js_excludes, $lines );
             }
         }
         if ( ! empty( $config['delay_js'] ) ) {
             $raw = isset( $config['delay_js_exclusions'] ) ? $config['delay_js_exclusions'] : '';
             if ( ! empty( $raw ) ) {
-                $js_excludes = array_merge( $js_excludes, array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+                $js_excludes = array_merge( $js_excludes, $lines );
             }
         }
 
@@ -512,7 +515,8 @@ class Optimizer {
         if ( ! empty( $config['css_combine'] ) || ! empty( $config['css_minify'] ) ) {
             $raw = isset( $config['tuning_css_excludes'] ) ? $config['tuning_css_excludes'] : '';
             if ( ! empty( $raw ) ) {
-                $css_excludes = array_merge( $css_excludes, array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+                $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+                $css_excludes = array_merge( $css_excludes, $lines );
             }
         }
 

@@ -540,6 +540,9 @@ function uwb_advanced_cache_shutdown() {
         return;
     }
 
+    $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+    $is_xml = ( stripos( $request_uri, 'sitemap' ) !== false || stripos( $request_uri, '.xml' ) !== false || ! empty( $GLOBALS['uwb_is_xml'] ) );
+
     // Re-read config
     $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
     $config_path = isset( $GLOBALS['uwb_config_path'] )
