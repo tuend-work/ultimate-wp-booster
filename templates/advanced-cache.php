@@ -242,6 +242,7 @@ function uwb_advanced_cache_run() {
                     return;
                 }
                 $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
+                $GLOBALS['uwb_logged_in_hash'] = $logged_in_cookie_hash;
             }
         }
     }
@@ -847,7 +848,8 @@ function uwb_advanced_cache_shutdown() {
             $optimizer_path = $plugin_dir . 'inc/Engine/Optimization/Optimizer.php';
         }
         // Skip Optimizer if user is logged in and cache_logged_in setting is 0 (None)
-        $is_user_logged_in_req = ( $logged_in_cookie_hash !== '' || ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) );
+        $logged_in_hash        = isset( $GLOBALS['uwb_logged_in_hash'] ) ? $GLOBALS['uwb_logged_in_hash'] : '';
+        $is_user_logged_in_req = ( $logged_in_hash !== '' || ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) );
         $skip_optimization     = ( $is_user_logged_in_req && intval( $cache_logged_in ) === 0 );
 
         if ( ! $skip_optimization && file_exists( $optimizer_path ) ) {
