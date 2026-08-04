@@ -256,6 +256,18 @@ class Compiler {
      * Strip compile-time data, keep only what Runtime needs.
      */
     private function build_runtime_rule( array $rule ): array {
+        $queryParams = [];
+        foreach ( $rule['conditions']['url'] ?? [] as $pattern ) {
+            $path  = strtolower( trim( parse_url( $pattern, PHP_URL_PATH ) ?? $pattern, '/' ) );
+            $query = parse_url( $pattern, PHP_URL_QUERY );
+            if ( $query ) {
+                parse_str( strtolower( $query ), $args );
+                if ( ! empty( $args ) ) {
+                    $queryParams[ $path ][] = $args;
+                }
+            }
+        }
+
         return [
             'action'       => $rule['action'],
             'mask_id'      => $rule['mask_id'],
@@ -266,6 +278,7 @@ class Compiler {
             'is_rest'      => $rule['conditions']['is_rest'],
             'callback'     => $rule['conditions']['callback'],
             'plugin_files' => $rule['plugins'],
+            'query_params' => $queryParams,
         ];
     }
 

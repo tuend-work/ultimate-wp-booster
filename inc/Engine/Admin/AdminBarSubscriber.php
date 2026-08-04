@@ -457,6 +457,23 @@ class AdminBarSubscriber implements Subscriber_Interface {
             $current_path_clean = '/';
         }
 
+        // For wp-admin pages, include critical query parameters (page, post_type, taxonomy)
+        if ( is_admin() ) {
+            $query = parse_url( $uri, PHP_URL_QUERY );
+            if ( $query ) {
+                parse_str( $query, $query_args );
+                $keep_args = array();
+                foreach ( array( 'page', 'post_type', 'taxonomy' ) as $arg ) {
+                    if ( isset( $query_args[ $arg ] ) ) {
+                        $keep_args[ $arg ] = $query_args[ $arg ];
+                    }
+                }
+                if ( ! empty( $keep_args ) ) {
+                    $current_path_clean .= '?' . http_build_query( $keep_args );
+                }
+            }
+        }
+
         $rules = json_decode( get_option( 'uwb_uro_rules', '[]' ), true );
         $blocked_on_this_url = array();
         if ( is_array( $rules ) ) {

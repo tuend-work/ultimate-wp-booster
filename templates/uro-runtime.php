@@ -210,6 +210,29 @@ function _uro_apply( array $plugins, array $data ): array {
             continue;
         }
 
+        // Query parameters check (if specified for the matched path)
+        $qp_rules = $rule['query_params'] ?? [];
+        if ( ! empty( $qp_rules ) && isset( $qp_rules[ $path ] ) ) {
+            $matched_qp = false;
+            foreach ( $qp_rules[ $path ] as $required_args ) {
+                $all_match = true;
+                foreach ( $required_args as $k => $v ) {
+                    $current_val = isset( $_GET[ $k ] ) ? strtolower( $_GET[ $k ] ) : null;
+                    if ( $current_val !== $v ) {
+                        $all_match = false;
+                        break;
+                    }
+                }
+                if ( $all_match ) {
+                    $matched_qp = true;
+                    break;
+                }
+            }
+            if ( ! $matched_qp ) {
+                continue; // Query params didn't match, skip this rule
+            }
+        }
+
         // Apply rule
         if ( $rule['action'] === 'deny' ) {
             foreach ( $rule['plugin_files'] as $pf ) {
