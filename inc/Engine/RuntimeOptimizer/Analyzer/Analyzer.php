@@ -61,8 +61,10 @@ class Analyzer {
         $this->wrap_all_existing_hooks();
         add_action( 'all', [ $this, 'wrap_hook_callbacks_dynamically' ] );
 
-        // Record after WP fully initialised
-        add_action( 'wp_loaded', [ $this, 'record' ], 9999 );
+        // Record request log to file (only when global Analyzer is enabled in Settings)
+        if ( (bool) get_option( 'uwb_uro_analyzer_enabled', false ) ) {
+            add_action( 'wp_loaded', [ $this, 'record' ], 9999 );
+        }
         add_action( 'wp_footer', [ $this, 'output_profile_data' ], 9999 );
         add_action( 'admin_footer', [ $this, 'output_profile_data' ], 9999 );
     }
