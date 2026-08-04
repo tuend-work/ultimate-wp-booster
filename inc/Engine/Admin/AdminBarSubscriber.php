@@ -43,7 +43,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
         // ── Main Node ──────────────────────────────────────────────────────────
         $wp_admin_bar->add_node( array(
             'id'    => 'uwb-admin-bar',
-            'title' => '<span class="ab-icon dashicons dashicons-performance" style="margin-top:2px;"></span> WP Booster',
+            'title' => 'WP Booster',
             'href'  => $can_manage ? admin_url( 'admin.php?page=ultimate-wp-booster' ) : null,
         ) );
 
@@ -60,7 +60,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
             $wp_admin_bar->add_node( array(
                 'id'     => 'uwb-purge-url',
                 'parent' => 'uwb-admin-bar',
-                'title'  => '🗑 Purge This URL',
+                'title'  => 'Purge This URL',
                 'href'   => $purge_url,
             ) );
         }
@@ -78,7 +78,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
             $wp_admin_bar->add_node( array(
                 'id'     => 'uwb-add-url',
                 'parent' => 'uwb-admin-bar',
-                'title'  => '➕ Add This URL',
+                'title'  => 'Add This URL',
                 'href'   => '#',
             ) );
 
@@ -109,7 +109,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-clear-all-cache',
             'parent' => 'uwb-admin-bar',
-            'title'  => '🧹 Clear All Cache',
+            'title'  => 'Clear All Cache',
             'href'   => $clear_cache_page_url,
         ) );
 
@@ -178,7 +178,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-flush-all-preload',
             'parent' => 'uwb-admin-bar',
-            'title'  => '🚀 Flush All & Preload',
+            'title'  => 'Flush All & Preload',
             'href'   => $flush_all_preload_url,
         ) );
 
@@ -201,14 +201,14 @@ class AdminBarSubscriber implements Subscriber_Interface {
             $wp_admin_bar->add_node( array(
                 'id'     => 'uwb-bar-advanced',
                 'parent' => 'uwb-admin-bar',
-                'title'  => '⚙ Advanced',
+                'title'  => 'Advanced',
                 'href'   => '#',
             ) );
 
             $wp_admin_bar->add_node( array(
                 'id'     => 'uwb-plugin-manager',
                 'parent' => 'uwb-bar-advanced',
-                'title'  => '⚡ Plugin Control',
+                'title'  => 'Plugin Control',
                 'href'   => '#',
                 'meta'   => array(
                     'onclick' => 'jQuery("#uwb-quick-pm-modal").css("display", "flex"); return false;',
@@ -220,7 +220,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-settings',
             'parent' => 'uwb-admin-bar',
-            'title'  => '🛠 Settings',
+            'title'  => 'Settings',
             'href'   => admin_url( 'admin.php?page=ultimate-wp-booster' ),
         ) );
 
@@ -228,7 +228,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-docs',
             'parent' => 'uwb-admin-bar',
-            'title'  => '📖 Docs & Help',
+            'title'  => 'Docs & Help',
             'href'   => 'https://github.com/tuend-work/ultimate-wp-booster',
             'meta'   => array( 'target' => '_blank' ),
         ) );

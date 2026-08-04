@@ -3523,20 +3523,31 @@ js-(before|after)
                             <h2 style="margin-top:0;">Dashboard</h2>
                             <!-- Horizontal Cache Pipeline Widget -->
                             <?php
-                            // 1. Opcode Cache
+                            // 1. OPCache
                             $opcode_active = false;
-                            $opcode_details = 'OPcache is not active or enabled.';
+                            $opcode_details = 'PHP OPcache extension not enabled.';
                             if ( function_exists( 'opcache_get_status' ) ) {
                                 $opcache_status = @opcache_get_status( false );
                                 if ( ! empty( $opcache_status['opcache_enabled'] ) ) {
                                     $opcode_active = true;
-                                    if ( isset( $opcache_status['memory_usage']['used_memory'] ) && isset( $opcache_status['memory_usage']['free_memory'] ) ) {
-                                        $used = round( $opcache_status['memory_usage']['used_memory'] / 1024 / 1024, 1 );
-                                        $free = round( $opcache_status['memory_usage']['free_memory'] / 1024 / 1024, 1 );
-                                        $opcode_details = "OPcache Active ({$used}MB used, {$free}MB free)";
-                                    } else {
-                                        $opcode_details = 'OPcache Active';
-                                    }
+                                    $mem = $opcache_status['memory_usage'] ?? [];
+                                    $stats = $opcache_status['opcache_statistics'] ?? [];
+
+                                    $used_mb  = isset( $mem['used_memory'] )  ? round( $mem['used_memory'] / 1048576, 1 )  : 0;
+                                    $total_mem = isset( $mem['used_memory'], $mem['free_memory'], $mem['wasted_memory'] )
+                                        ? round( ( $mem['used_memory'] + $mem['free_memory'] + $mem['wasted_memory'] ) / 1048576, 0 )
+                                        : 0;
+
+                                    $op_hits   = isset( $stats['hits'] )   ? intval( $stats['hits'] )   : 0;
+                                    $op_misses = isset( $stats['misses'] ) ? intval( $stats['misses'] ) : 0;
+                                    $op_total  = $op_hits + $op_misses;
+                                    $op_hit_pct = $op_total > 0 ? round( ( $op_hits / $op_total ) * 100, 1 ) : 0;
+
+                                    $cached_keys  = isset( $stats['num_cached_scripts'] ) ? intval( $stats['num_cached_scripts'] ) : 0;
+                                    $max_keys     = isset( $stats['max_cached_keys'] )    ? intval( $stats['max_cached_keys'] )    : 0;
+                                    $keys_pct = $max_keys > 0 ? round( ( $cached_keys / $max_keys ) * 100, 1 ) : 0;
+
+                                    $opcode_details = "Mem: {$used_mb}MB / {$total_mem}MB | Hit: {$op_hit_pct}% | Keys: {$cached_keys}/{$max_keys} ({$keys_pct}%)";
                                 }
                             }
 
@@ -3545,29 +3556,84 @@ js-(before|after)
                             $obj_details = 'No external persistent cache detected.';
                             if ( $obj_active ) {
                                 $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
-                                if ( $oc_type === 2 ) {
-                                    $obj_details = 'Memcached Object Cache Active';
-                                } else {
-                                    $obj_details = 'Redis Object Cache Active';
-                                }
+                                $oc_label = $oc_type === 2 ? 'Memcached' : 'Redis';
+
+                                global $wp_object_cache;
+                                $oc_hits   = isset( $wp_object_cache->cache_hits )   ? intval( $wp_object_cache->cache_hits )   : 0;
+                                $oc_misses = isset( $wp_object_cache->cache_misses ) ? intval( $wp_object_cache->cache_misses ) : 0;
+                                $oc_total  = $oc_hits + $oc_misses;
+                                $oc_hit_pct = $oc_total > 0 ? round( ( $oc_hits / $oc_total ) * 100, 1 ) : 0;
+
+                                // Try to get memory info from Redis
+                                $oc_mem_str = '';
+                                try {
+                                    $oc_redis_host = get_option( 'uwb_redis_host', '127.0.0.1' );
+                                    $oc_redis_port = intval( get_option( 'uwb_redis_port', 6379 ) );
+                                    $oc_redis_pw   = get_option( 'uwb_redis_password', '' );
+                                    $oc_redis_db   = intval( get_option( 'uwb_redis_db', 0 ) );
+                                    if ( class_exists( 'Redis' ) ) {
+                                        $r = new Redis();
+                                        if ( @$r->connect( $oc_redis_host, $oc_redis_port, 1 ) ) {
+                                            if ( $oc_redis_pw ) @$r->auth( $oc_redis_pw );
+                                            if ( $oc_redis_db ) @$r->select( $oc_redis_db );
+                                            $info = $r->info( 'memory' );
+                                            if ( isset( $info['used_memory'], $info['maxmemory'] ) ) {
+                                                $used_mb  = round( $info['used_memory'] / 1048576, 1 );
+                                                $max_mb   = $info['maxmemory'] > 0 ? round( $info['maxmemory'] / 1048576, 0 ) . 'MB' : 'unlimited';
+                                                $oc_mem_str = " — {$used_mb}MB / {$max_mb}";
+                                            }
+                                        }
+                                    }
+                                } catch ( \Exception $e ) { /* ignore */ }
+
+                                $obj_details = "{$oc_label} Active{$oc_mem_str} | Hit rate: {$oc_hit_pct}%";
                             }
 
                             // 3. Page Cache Full
                             $page_cache_active = defined( 'WP_CACHE' ) && WP_CACHE;
                             $page_cache_details = 'WP_CACHE constant is not enabled.';
                             if ( $page_cache_active ) {
-                                $cache_dir = WP_CONTENT_DIR . '/cache/wp-rocket';
+                                $active_opts = [];
+
+                                // HTML
+                                if ( intval( get_option( 'uwb_minify_html', 0 ) ) ) $active_opts[] = 'Minify HTML';
+                                if ( intval( get_option( 'uwb_gzip_enabled', 0 ) ) ) $active_opts[] = 'Gzip/Brotli';
+
+                                // CSS
+                                if ( intval( get_option( 'uwb_minify_css', 0 ) ) ) $active_opts[] = 'Minify CSS';
+                                if ( intval( get_option( 'uwb_combine_css', 0 ) ) ) $active_opts[] = 'Combine CSS';
+                                if ( intval( get_option( 'uwb_defer_css', 0 ) ) )   $active_opts[] = 'Defer CSS';
+
+                                // JS
+                                if ( intval( get_option( 'uwb_minify_js', 0 ) ) )  $active_opts[] = 'Minify JS';
+                                if ( intval( get_option( 'uwb_combine_js', 0 ) ) )  $active_opts[] = 'Combine JS';
+                                if ( intval( get_option( 'uwb_defer_js', 0 ) ) )    $active_opts[] = 'Defer JS';
+
+                                // Media & Files
+                                if ( intval( get_option( 'uwb_lazyload_enabled', 0 ) ) ) $active_opts[] = 'Lazy Load Images';
+                                if ( intval( get_option( 'uwb_webp_enabled', 0 ) ) )     $active_opts[] = 'WebP';
+
+                                // Fonts
+                                if ( intval( get_option( 'uwb_preload_fonts', 0 ) ) )    $active_opts[] = 'Font Preload';
+                                if ( intval( get_option( 'uwb_font_display_swap', 0 ) ) ) $active_opts[] = 'Font Display Swap';
+
+                                // Count cached files
+                                $cache_dirs = [ WP_CONTENT_DIR . '/cache/uwb', WP_CONTENT_DIR . '/cache/wp-rocket' ];
                                 $file_count = 0;
-                                if ( is_dir( $cache_dir ) ) {
-                                    $di = new \RecursiveDirectoryIterator( $cache_dir, \RecursiveDirectoryIterator::SKIP_DOTS );
-                                    $it = new \RecursiveIteratorIterator( $di );
-                                    foreach ( $it as $file ) {
-                                        if ( $file->isFile() && ( $file->getExtension() === 'html' || $file->getExtension() === 'html_gzip' ) ) {
-                                            $file_count++;
+                                foreach ( $cache_dirs as $cache_dir ) {
+                                    if ( is_dir( $cache_dir ) ) {
+                                        $di = new \RecursiveDirectoryIterator( $cache_dir, \RecursiveDirectoryIterator::SKIP_DOTS );
+                                        $it = new \RecursiveIteratorIterator( $di );
+                                        foreach ( $it as $f ) {
+                                            if ( $f->isFile() && in_array( $f->getExtension(), ['html', 'html_gzip'], true ) ) {
+                                                $file_count++;
+                                            }
                                         }
                                     }
                                 }
-                                $page_cache_details = "Page Cache Active ({$file_count} static files)";
+
+                                $opts_str = ! empty( $active_opts ) ? implode( ', ', $active_opts ) : 'No extra optimizations enabled';
+                                $page_cache_details = "Active ({$file_count} files) — {$opts_str}";
                             }
 
                             // 4. CDN Cache
@@ -3582,7 +3648,14 @@ js-(before|after)
                             $browser_active = intval( get_option( 'uwb_browser_cache_enabled', 1 ) ) === 1;
                             if ( $browser_active ) {
                                 $browser_lifespan = intval( get_option( 'uwb_browser_cache_lifespan', 10 ) );
-                                $browser_details = "Browser cache enabled ({$browser_lifespan} minutes)";
+                                if ( $browser_lifespan >= 1440 ) {
+                                    $browser_display = round( $browser_lifespan / 1440, 1 ) . ' day(s)';
+                                } elseif ( $browser_lifespan >= 60 ) {
+                                    $browser_display = round( $browser_lifespan / 60, 1 ) . ' hour(s)';
+                                } else {
+                                    $browser_display = $browser_lifespan . ' minute(s)';
+                                }
+                                $browser_details = "Browser cache enabled — {$browser_display}";
                             } else {
                                 $browser_details = 'Local browser caching is disabled.';
                             }
@@ -3646,7 +3719,7 @@ js-(before|after)
                                             </div>
                                         </div>
                                         <div class="node-action-right" style="display:flex; gap:6px;">
-                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" class="uwb-btn-mini">Settings</button>
+                                            <button type="button" onclick="jQuery('.uwb-nav-item[data-tab=\'cache_settings\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'cdn_cache\']').trigger('click');" class="uwb-btn-mini">Settings</button>
                                             <button type="button" class="uwb-btn-mini uwb-btn-mini-danger btn-trigger-clear-cdn-cache">Clear CDN Cache</button>
                                         </div>
                                     </div>
