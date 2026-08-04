@@ -421,49 +421,86 @@ class Uro_WP_Hook implements \ArrayAccess, \IteratorAggregate, \Countable {
     }
 
     public function apply_filters( $value, $args ) {
-        $callbacks = $this->original->callbacks;
-        if ( ! $callbacks ) {
-            return $value;
+        $original_callbacks = $this->original->callbacks;
+        if ( ! $original_callbacks ) {
+            return $this->original->apply_filters( $value, $args );
         }
 
-        $this->original->nesting_level++;
-        $this->original->iterations[ $this->original->nesting_level ] = array_keys( $callbacks );
-
-        do {
-            $priority = current( $this->original->iterations[ $this->original->nesting_level ] );
-            if ( false === $priority ) {
-                break;
-            }
-
-            $current_iteration = $callbacks[ $priority ];
-            foreach ( $current_iteration as $idx => $the_ ) {
+        $wrapped_callbacks = [];
+        foreach ( $original_callbacks as $priority => $callbacks ) {
+            foreach ( $callbacks as $idx => $the_ ) {
                 if ( empty( $the_['function'] ) ) {
                     continue;
                 }
 
-                $start = microtime( true );
+                $original_func = $the_['function'];
+                
+                // Wrap callback dynamically and safely
+                $the_['function'] = function( &...$cb_args ) use ( $original_func ) {
+                    $start = microtime( true );
+                    
+                    $res = call_user_func_array( $original_func, $cb_args );
+                    
+                    $duration = microtime( true ) - $start;
+                    Analyzer::record_callback_time( $original_func, $duration );
+                    
+                    return $res;
+                };
 
-                if ( ! $this->original->doing_action ) {
-                    $value = call_user_func_array( $the_['function'], array_slice( $args, 0, $the_['accepted_args'] ) );
-                } else {
-                    call_user_func_array( $the_['function'], array_slice( $args, 0, $the_['accepted_args'] ) );
-                }
-
-                $duration = microtime( true ) - $start;
-                Analyzer::record_callback_time( $the_['function'], $duration );
+                $wrapped_callbacks[ $priority ][ $idx ] = $the_;
             }
-        } while ( next( $this->original->iterations[ $this->original->nesting_level ] ) !== false );
+        }
 
-        unset( $this->original->iterations[ $this->original->nesting_level ] );
-        $this->original->nesting_level--;
+        $this->original->callbacks = $wrapped_callbacks;
+
+        try {
+            $value = $this->original->apply_filters( $value, $args );
+        } finally {
+            $this->original->callbacks = $original_callbacks;
+        }
 
         return $value;
     }
 
     public function do_action( $args ) {
-        $this->original->doing_action = true;
-        $this->apply_filters( '', $args );
-        $this->original->doing_action = false;
+        $original_callbacks = $this->original->callbacks;
+        if ( ! $original_callbacks ) {
+            $this->original->do_action( $args );
+            return;
+        }
+
+        $wrapped_callbacks = [];
+        foreach ( $original_callbacks as $priority => $callbacks ) {
+            foreach ( $callbacks as $idx => $the_ ) {
+                if ( empty( $the_['function'] ) ) {
+                    continue;
+                }
+
+                $original_func = $the_['function'];
+                
+                // Wrap callback dynamically and safely
+                $the_['function'] = function( &...$cb_args ) use ( $original_func ) {
+                    $start = microtime( true );
+                    
+                    $res = call_user_func_array( $original_func, $cb_args );
+                    
+                    $duration = microtime( true ) - $start;
+                    Analyzer::record_callback_time( $original_func, $duration );
+                    
+                    return $res;
+                };
+
+                $wrapped_callbacks[ $priority ][ $idx ] = $the_;
+            }
+        }
+
+        $this->original->callbacks = $wrapped_callbacks;
+
+        try {
+            $this->original->do_action( $args );
+        } finally {
+            $this->original->callbacks = $original_callbacks;
+        }
     }
 
     // ── Interface Implementations ────────────────────────────────────────────
