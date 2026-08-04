@@ -4677,7 +4677,7 @@ js-(before|after)
                 localStorage.setItem('uwb_active_tab', tabId);
 
                 // Hide submit row on non-settings tabs (these tabs have their own forms)
-                if (['url_status', 'import_export'].indexOf(tabId) !== -1) {
+                if (['url_status', 'import_export', 'runtime_optimizer'].indexOf(tabId) !== -1) {
                     $('#uwb-submit-row').hide();
                 } else {
                     $('#uwb-submit-row').show();
@@ -5889,7 +5889,7 @@ js-(before|after)
                 $('.uwb-tab-content').removeClass('active');
                 $('#tab-' + savedTab).addClass('active');
                 
-                if (['url_status', 'import_export'].indexOf(savedTab) !== -1) {
+                if (['url_status', 'import_export', 'runtime_optimizer'].indexOf(savedTab) !== -1) {
                     $('#uwb-submit-row').hide();
                 } else {
                     $('#uwb-submit-row').show();
