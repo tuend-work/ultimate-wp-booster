@@ -90,9 +90,22 @@ class ViewportScreen {
             return 0;
         }
 
-        $style_replacement   = ! empty( $critical_css ) ? '<style id="uwb-critical-css" data-hash="' . $url_hash . '">' . trim( $critical_css ) . '</style>' : '';
-        $placeholder_pattern = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?data-hash=[\'"]' . preg_quote( $url_hash, '#' ) . '[\'"][^>]*?>\s*</style>#is';
-        $fallback_pattern    = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>\s*</style>#is';
+        // Combine Auto-Generated Critical CSS with Manual Override CSS (giving manual CSS higher priority)
+        $manual_raw   = get_option( 'uwb_tuning_critical_css', '' );
+        $manual_clean = ! empty( $manual_raw ) ? CriticalCSS::minify_css( CriticalCSS::sanitize_critical_css( $manual_raw ) ) : '';
+
+        $final_css = '';
+        if ( ! empty( $critical_css ) && ! empty( $manual_clean ) ) {
+            $final_css = trim( $critical_css ) . "\n/* Manual Override (Priority) */\n" . trim( $manual_clean );
+        } elseif ( ! empty( $critical_css ) ) {
+            $final_css = trim( $critical_css );
+        } elseif ( ! empty( $manual_clean ) ) {
+            $final_css = trim( $manual_clean );
+        }
+
+        $style_replacement   = ! empty( $final_css ) ? '<style id="uwb-critical-css" data-hash="' . $url_hash . '">' . $final_css . '</style>' : '';
+        $placeholder_pattern = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?data-hash=[\'"]' . preg_quote( $url_hash, '#' ) . '[\'"][^>]*?>.*?</style>#is';
+        $fallback_pattern    = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>.*?</style>#is';
         $updated_count       = 0;
 
         try {
