@@ -90,6 +90,9 @@ class ViewportScreen {
             return 0;
         }
 
+        $host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( explode( ':', $_SERVER['HTTP_HOST'] )[0] ) : '';
+        $target_dir = ( ! empty( $host ) && is_dir( $wp_rocket_dir . '/' . $host ) ) ? $wp_rocket_dir . '/' . $host : $wp_rocket_dir;
+
         // Output Auto-Generated Critical CSS and Custom Manual Critical CSS into separate style tags
         $manual_raw   = get_option( 'uwb_tuning_critical_css', '' );
         $manual_clean = ! empty( $manual_raw ) ? CriticalCSS::minify_css( CriticalCSS::sanitize_critical_css( $manual_raw ) ) : '';
@@ -111,7 +114,7 @@ class ViewportScreen {
 
         try {
             $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator( $wp_rocket_dir, \RecursiveDirectoryIterator::SKIP_DOTS ),
+                new \RecursiveDirectoryIterator( $target_dir, \RecursiveDirectoryIterator::SKIP_DOTS ),
                 \RecursiveIteratorIterator::SELF_FIRST
             );
 

@@ -208,10 +208,17 @@ class CriticalCSS {
             payload.append('token', '<?php echo esc_js( $token ); ?>');
             payload.append('viewport_data', JSON.stringify(viewportData));
 
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon('<?php echo esc_url( $ajax_url ); ?>', payload);
-            } else if (window.fetch) {
-                fetch('<?php echo esc_url( $ajax_url ); ?>', { method: 'POST', body: payload });
+            var sendUrl = '<?php echo esc_url( $ajax_url ); ?>';
+            if (window.fetch) {
+                fetch(sendUrl, { method: 'POST', body: payload, credentials: 'same-origin' }).catch(function(){});
+            } else if (navigator.sendBeacon) {
+                navigator.sendBeacon(sendUrl, payload);
+            } else {
+                try {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', sendUrl, true);
+                    xhr.send(payload);
+                } catch(e){}
             }
         } catch(e){}
     }
