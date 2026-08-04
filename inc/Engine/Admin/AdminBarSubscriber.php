@@ -646,8 +646,8 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 }
             }
 
-            // Click listener for Hooks detail buttons
-            $(document).on('click', '.uwb-quick-pm-hooks-btn', function(e) {
+            // Click listener for Hooks detail buttons (bound to #uwb-quick-pm-list to bypass stopPropagation)
+            $('#uwb-quick-pm-list').on('click', '.uwb-quick-pm-hooks-btn', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $box = $(this).closest('.uwb-quick-pm-item').find('.uwb-quick-pm-hooks-box');
