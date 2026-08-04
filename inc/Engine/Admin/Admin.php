@@ -1737,10 +1737,15 @@ class Admin {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         <span>Advanced</span>
                     </div>
+                    <div class="uwb-nav-item" data-tab="runtime_optimizer" title="Runtime Optimizer">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        <span>Runtime Optimizer</span>
+                    </div>
                     <div class="uwb-nav-item" data-tab="import_export" title="Import / Export">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         <span>Import / Export</span>
                     </div>
+
 
                 </div>
 
@@ -3967,11 +3972,544 @@ js-(before|after)
                         </form>
                     </div>
 
+                    <!-- TAB: Runtime Optimizer -->
+                    <div id="tab-runtime_optimizer" class="uwb-tab-content">
+                        <h2 style="margin-top:0; display:flex; align-items:center; gap:10px;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--uwb-primary)" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            Ultimate Runtime Optimizer
+                        </h2>
+                        <p style="color:var(--uwb-text-muted); margin-bottom:24px;">Giảm thời gian bootstrap WordPress bằng cách kiểm soát chính xác plugin nào được load theo ngữ cảnh request (URL, UserRole, Device, WooCommerce, AJAX/REST). Rule được biên dịch thành Lookup Table — Runtime chỉ mất vài micro giây.</p>
+
+                        <!-- Status Bar -->
+                        <div id="uro-status-bar" style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:20px; margin-bottom:24px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
+                            <div style="flex:1; min-width:200px;">
+                                <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">RUNTIME STATUS</div>
+                                <div id="uro-status-runtime" style="font-weight:700; font-size:14px;">⏳ Loading...</div>
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">COMPILED</div>
+                                <div id="uro-status-compiled" style="font-weight:700; font-size:14px;">—</div>
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">RULES</div>
+                                <div id="uro-status-rules" style="font-weight:700; font-size:14px;">—</div>
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <div style="font-size:12px; color:var(--uwb-text-muted); margin-bottom:4px;">COMPILE TIME</div>
+                                <div id="uro-status-time" style="font-weight:700; font-size:14px;">—</div>
+                            </div>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <button id="btn-uro-enable" class="button button-primary" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">⚡ Enable Runtime</button>
+                                <button id="btn-uro-disable" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; display:none;">🔴 Disable Runtime</button>
+                                <button id="btn-uro-rebuild" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">🔨 Rebuild</button>
+                            </div>
+                        </div>
+
+                        <div id="uro-result-msg" style="display:none; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:600; font-size:13px;"></div>
+
+                        <!-- Sub-tabs -->
+                        <div class="uwb-sub-tabs-nav" style="margin-bottom:24px;">
+                            <div class="uwb-sub-tab-item active" data-subtab="uro_rules">Rules Editor</div>
+                            <div class="uwb-sub-tab-item" data-subtab="uro_plugins">Plugin List</div>
+                            <div class="uwb-sub-tab-item" data-subtab="uro_analyzer">Analyzer</div>
+                        </div>
+
+                        <!-- SUB-TAB: Rules Editor -->
+                        <div id="subtab-uro_rules" class="uwb-subtab-content active">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                                <div>
+                                    <strong style="font-size:14px;">Rule Editor</strong>
+                                    <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Tạo rules để disable plugin trên từng loại trang. Thứ tự = Priority (nhỏ = ưu tiên cao).</p>
+                                </div>
+                                <button id="btn-uro-add-rule" class="button button-primary" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">+ Add Rule</button>
+                            </div>
+                            <div id="uro-rules-list" style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
+                                <div style="text-align:center; padding:40px; color:var(--uwb-text-muted); border:2px dashed var(--uwb-border); border-radius:12px;" id="uro-no-rules">
+                                    ⚡ Chưa có rule nào. Bấm <strong>Add Rule</strong> để bắt đầu.
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                <button id="btn-uro-save-rules" class="button button-primary" style="padding:10px 24px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">💾 Save &amp; Compile</button>
+                                <button id="btn-uro-scan-plugins" class="button" style="padding:10px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">🔍 Refresh Plugin List</button>
+                            </div>
+                        </div>
+
+                        <!-- SUB-TAB: Plugin List -->
+                        <div id="subtab-uro_plugins" class="uwb-subtab-content">
+                            <div style="margin-bottom:16px;">
+                                <strong style="font-size:14px;">Installed Plugins (Stable IDs)</strong>
+                                <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Plugin ID được gán cố định theo thứ tự alphabet. ID không thay đổi khi bạn activate/deactivate plugin khác.</p>
+                            </div>
+                            <div id="uro-plugin-list-table" style="overflow:auto;">
+                                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                                    <thead><tr style="background:var(--uwb-bg); border-bottom:2px solid var(--uwb-border);">
+                                        <th style="padding:10px 12px; text-align:left; font-weight:700;">ID</th>
+                                        <th style="padding:10px 12px; text-align:left; font-weight:700;">Plugin Name</th>
+                                        <th style="padding:10px 12px; text-align:left; font-weight:700;">File</th>
+                                        <th style="padding:10px 12px; text-align:left; font-weight:700;">Version</th>
+                                    </tr></thead>
+                                    <tbody id="uro-plugin-tbody"><tr><td colspan="4" style="padding:20px; text-align:center; color:var(--uwb-text-muted);">Loading...</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- SUB-TAB: Analyzer -->
+                        <div id="subtab-uro_analyzer" class="uwb-subtab-content">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                                <div>
+                                    <strong style="font-size:14px;">Page Load Analyzer</strong>
+                                    <p style="margin:4px 0 0; color:var(--uwb-text-muted); font-size:12.5px;">Phân tích plugin nào đang load trên từng trang — hooks, memory, execution time.</p>
+                                </div>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                                        <input type="checkbox" id="uro-analyzer-toggle" style="width:16px; height:16px;"> Enable Analyzer
+                                    </label>
+                                    <button id="btn-uro-get-log" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">📊 Refresh Log</button>
+                                    <button id="btn-uro-clear-log" class="button" style="padding:9px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; color:#dc2626;">🗑 Clear</button>
+                                </div>
+                            </div>
+                            <div id="uro-analyzer-recs" style="display:none; background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; padding:16px; margin-bottom:20px;">
+                                <strong style="font-size:13px;">💡 Recommendations:</strong>
+                                <ul id="uro-analyzer-recs-list" style="margin:8px 0 0; padding-left:20px; font-size:13px;"></ul>
+                            </div>
+                            <div id="uro-analyzer-log" style="font-size:12.5px; max-height:500px; overflow:auto;">
+                                <p style="color:var(--uwb-text-muted);">Enable Analyzer và duyệt web để thu thập dữ liệu.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Rule Modal Template -->
+        <div id="uro-rule-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center;">
+            <div style="background:#fff; border-radius:16px; width:90%; max-width:720px; max-height:90vh; overflow:auto; padding:32px; box-shadow:0 25px 60px rgba(0,0,0,0.35);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                    <h3 style="margin:0; font-size:18px;" id="uro-modal-title">Edit Rule</h3>
+                    <button id="uro-modal-close" style="background:none; border:none; cursor:pointer; font-size:22px; color:var(--uwb-text-muted);">✕</button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    <div><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Rule Name</label>
+                        <input id="uro-rule-name" type="text" style="width:100%; padding:10px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;" placeholder="e.g. Disable Elementor on non-editor pages">
+                    </div>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:150px;"><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Action</label>
+                            <select id="uro-rule-action" style="width:100%; padding:10px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;">
+                                <option value="deny">🔴 Deny (Disable plugins)</option>
+                                <option value="allow">🟢 Allow (Keep plugins)</option>
+                            </select>
+                        </div>
+                        <div style="flex:1; min-width:150px;"><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Priority</label>
+                            <input id="uro-rule-priority" type="number" value="10" min="1" max="100" style="width:100%; padding:10px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;">
+                        </div>
+                        <div style="flex:1; min-width:150px; display:flex; align-items:flex-end; padding-bottom:2px;">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                                <input type="checkbox" id="uro-rule-enabled" checked style="width:16px; height:16px;"> Enabled
+                            </label>
+                        </div>
+                    </div>
+                    <div><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Plugins to Apply</label>
+                        <div id="uro-rule-plugins-list" style="border:1px solid var(--uwb-border); border-radius:8px; max-height:220px; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:6px;">
+                            <span style="color:var(--uwb-text-muted); font-size:12px;">Loading plugin list...</span>
+                        </div>
+                    </div>
+                    <hr style="border:none; border-top:1px solid var(--uwb-border);">
+                    <strong style="font-size:13px;">Conditions <span style="font-weight:400; color:var(--uwb-text-muted);">(bỏ trống = áp dụng mọi điều kiện)</span></strong>
+                    <div><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">URL Patterns <span style="font-weight:400;">(mỗi dòng 1 pattern, hỗ trợ /shop/*, /blog/)</span></label>
+                        <textarea id="uro-rule-url" style="width:100%; padding:10px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px; height:70px;" placeholder="/shop/*&#10;/blog/"></textarea>
+                    </div>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:150px;"><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">User Role</label>
+                            <select id="uro-rule-role" multiple style="width:100%; padding:8px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px; height:100px;">
+                                <option value="any">Any (all)</option>
+                                <option value="guest">Guest (not logged in)</option>
+                                <option value="logged_in">Logged In</option>
+                                <option value="administrator">Administrator</option>
+                                <option value="editor">Editor</option>
+                                <option value="author">Author</option>
+                                <option value="subscriber">Subscriber</option>
+                            </select>
+                        </div>
+                        <div style="flex:1; min-width:150px;"><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Device</label>
+                            <select id="uro-rule-device" multiple style="width:100%; padding:8px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px; height:100px;">
+                                <option value="any">Any</option>
+                                <option value="desktop">Desktop</option>
+                                <option value="tablet">Tablet</option>
+                                <option value="mobile">Mobile</option>
+                            </select>
+                        </div>
+                        <div style="flex:1; min-width:150px;"><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">WooCommerce</label>
+                            <select id="uro-rule-woo" multiple style="width:100%; padding:8px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px; height:100px;">
+                                <option value="any">Any</option>
+                                <option value="shop">Shop</option>
+                                <option value="product">Product</option>
+                                <option value="cart">Cart</option>
+                                <option value="checkout">Checkout</option>
+                                <option value="account">My Account</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:150px;"><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Post Types <span style="font-weight:400;">(comma-separated)</span></label>
+                            <input id="uro-rule-post-type" type="text" style="width:100%; padding:10px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;" placeholder="product, post">
+                        </div>
+                        <div style="flex:1; min-width:150px;"><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Taxonomies <span style="font-weight:400;">(comma-separated)</span></label>
+                            <input id="uro-rule-taxonomy" type="text" style="width:100%; padding:10px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;" placeholder="product_cat, category">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px;">
+                                <select id="uro-rule-is-ajax" style="padding:8px 12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;">
+                                    <option value="">AJAX: Any</option>
+                                    <option value="1">AJAX Only</option>
+                                    <option value="0">Non-AJAX Only</option>
+                                </select>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px;">
+                                <select id="uro-rule-is-rest" style="padding:8px 12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;">
+                                    <option value="">REST: Any</option>
+                                    <option value="1">REST API Only</option>
+                                    <option value="0">Non-REST Only</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                    <div><label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Callback <span style="font-weight:400;">(optional PHP function name)</span></label>
+                        <input id="uro-rule-callback" type="text" style="width:100%; padding:10px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;" placeholder="my_custom_check_function">
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
+                    <button id="uro-modal-cancel" class="button" style="padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">Cancel</button>
+                    <button id="uro-modal-save" class="button button-primary" style="padding:10px 24px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">Save Rule</button>
                 </div>
             </div>
         </div>
 
         <script>
+        (function($) {
+            var uroNonce = '<?php echo esc_js( wp_create_nonce( "uwb_uro_nonce" ) ); ?>';
+            var uroRules = [];
+            var uroPlugins = [];
+            var editingRuleIdx = -1;
+
+            // ── Status Loader ────────────────────────────────────────────────
+            function uroLoadStatus() {
+                $.post(ajaxurl, { action: 'uwb_uro_get_status', nonce: uroNonce }, function(r) {
+                    if (!r.success) return;
+                    var d = r.data;
+                    var runtimeOn = d.mu_plugin && d.mu_plugin.installed;
+                    $('#uro-status-runtime').html(runtimeOn
+                        ? '<span style="color:#16a34a;">✅ Active (MU Plugin installed)</span>'
+                        : '<span style="color:#dc2626;">🔴 Inactive</span>');
+                    $('#uro-status-compiled').text(d.compiled ? '✅ compiled.php exists' : '❌ Not compiled');
+                    $('#uro-status-rules').text(d.metadata ? d.metadata.rule_count + ' rule(s)' : '—');
+                    var ts = d.metadata ? new Date(d.metadata.compile_time * 1000).toLocaleString() : '—';
+                    $('#uro-status-time').text(ts);
+                    if (runtimeOn) { $('#btn-uro-enable').hide(); $('#btn-uro-disable').show(); }
+                    else { $('#btn-uro-enable').show(); $('#btn-uro-disable').hide(); }
+                    // Parse saved rules
+                    try {
+                        var raw = JSON.parse(d.rules_json || '[]');
+                        if (Array.isArray(raw)) { uroRules = raw; renderRulesList(); }
+                    } catch(e) {}
+                    // Analyzer toggle
+                    $('#uro-analyzer-toggle').prop('checked', d.analyzer_on);
+                });
+            }
+
+            // ── Scan Plugins ─────────────────────────────────────────────────
+            function uroLoadPlugins(cb) {
+                $.post(ajaxurl, { action: 'uwb_uro_scan_plugins', nonce: uroNonce }, function(r) {
+                    if (r.success && Array.isArray(r.data)) {
+                        uroPlugins = r.data;
+                        renderPluginTable();
+                        if (cb) cb(uroPlugins);
+                    }
+                });
+            }
+
+            function renderPluginTable() {
+                var html = '';
+                uroPlugins.forEach(function(p, i) {
+                    html += '<tr style="border-bottom:1px solid var(--uwb-border);">'
+                        + '<td style="padding:8px 12px; font-weight:600; color:var(--uwb-primary);">' + i + '</td>'
+                        + '<td style="padding:8px 12px;">' + $('<span>').text(p.name).html() + '</td>'
+                        + '<td style="padding:8px 12px; font-family:monospace; font-size:12px; color:var(--uwb-text-muted);">' + $('<span>').text(p.file).html() + '</td>'
+                        + '<td style="padding:8px 12px; font-size:12px;">' + $('<span>').text(p.version || '—').html() + '</td>'
+                        + '</tr>';
+                });
+                $('#uro-plugin-tbody').html(html || '<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--uwb-text-muted);">No plugins found.</td></tr>');
+            }
+
+            // ── Rules List ───────────────────────────────────────────────────
+            function renderRulesList() {
+                if (uroRules.length === 0) {
+                    $('#uro-no-rules').show();
+                    $('#uro-rules-list > .uro-rule-card').remove();
+                    return;
+                }
+                $('#uro-no-rules').hide();
+                var html = '';
+                uroRules.forEach(function(rule, i) {
+                    var pluginCount = (rule.plugins || []).length;
+                    var statusColor = rule.enabled !== false ? '#16a34a' : '#dc2626';
+                    var statusText  = rule.enabled !== false ? 'Enabled' : 'Disabled';
+                    var actionBadge = rule.action === 'deny'
+                        ? '<span style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:700;">DENY</span>'
+                        : '<span style="background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:700;">ALLOW</span>';
+                    html += '<div class="uro-rule-card" style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">'
+                        + '<div style="flex:1; min-width:200px;">'
+                        + '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">'
+                        + actionBadge
+                        + '<strong style="font-size:14px;">' + $('<span>').text(rule.name || 'Rule #' + (i+1)).html() + '</strong>'
+                        + '</div>'
+                        + '<div style="font-size:12px; color:var(--uwb-text-muted);">Priority: ' + (rule.priority || 10) + ' · ' + pluginCount + ' plugin(s) · <span style="color:' + statusColor + ';">' + statusText + '</span></div>'
+                        + '</div>'
+                        + '<div style="display:flex; gap:8px;">'
+                        + '<button class="button uro-btn-edit-rule" data-idx="' + i + '" style="padding:7px 14px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; font-size:12px;">✏️ Edit</button>'
+                        + '<button class="button uro-btn-delete-rule" data-idx="' + i + '" style="padding:7px 14px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; font-size:12px; color:#dc2626;">🗑 Delete</button>'
+                        + '</div>'
+                        + '</div>';
+                });
+                $('#uro-rules-list').html(html);
+            }
+
+            // ── Show Result Message ──────────────────────────────────────────
+            function uroMsg(txt, ok) {
+                var $el = $('#uro-result-msg');
+                $el.css({ background: ok ? '#d1fae5' : '#fee2e2', color: ok ? '#065f46' : '#b91c1c', border: '1px solid ' + (ok ? '#6ee7b7' : '#fca5a5') })
+                    .html(txt).slideDown();
+                setTimeout(function() { $el.slideUp(); }, 6000);
+            }
+
+            // ── Modal ────────────────────────────────────────────────────────
+            function openModal(idx) {
+                editingRuleIdx = idx;
+                var rule = idx >= 0 ? uroRules[idx] : {};
+                $('#uro-modal-title').text(idx >= 0 ? 'Edit Rule' : 'Add New Rule');
+                $('#uro-rule-name').val(rule.name || '');
+                $('#uro-rule-action').val(rule.action || 'deny');
+                $('#uro-rule-priority').val(rule.priority || 10);
+                $('#uro-rule-enabled').prop('checked', rule.enabled !== false);
+
+                // URL
+                var urls = (rule.conditions && rule.conditions.url) ? rule.conditions.url : [];
+                $('#uro-rule-url').val(urls.join('\n'));
+
+                // Post Type / Taxonomy
+                $('#uro-rule-post-type').val( ((rule.conditions || {}).post_type || []).join(', ') );
+                $('#uro-rule-taxonomy').val( ((rule.conditions || {}).taxonomy || []).join(', ') );
+
+                // Role (multi-select)
+                var roles = (rule.conditions || {}).user_role || [];
+                $('#uro-rule-role option').each(function() {
+                    $(this).prop('selected', roles.indexOf($(this).val()) !== -1);
+                });
+
+                // Device
+                var devs = (rule.conditions || {}).device || [];
+                $('#uro-rule-device option').each(function() {
+                    $(this).prop('selected', devs.indexOf($(this).val()) !== -1);
+                });
+
+                // WooCommerce
+                var woos = (rule.conditions || {}).woocommerce || [];
+                $('#uro-rule-woo option').each(function() {
+                    $(this).prop('selected', woos.indexOf($(this).val()) !== -1);
+                });
+
+                // AJAX / REST
+                var ajax = (rule.conditions || {}).is_ajax;
+                $('#uro-rule-is-ajax').val(ajax === true ? '1' : ajax === false ? '0' : '');
+                var rest = (rule.conditions || {}).is_rest;
+                $('#uro-rule-is-rest').val(rest === true ? '1' : rest === false ? '0' : '');
+
+                // Callback
+                $('#uro-rule-callback').val( (rule.conditions || {}).callback || '' );
+
+                // Plugins checkboxes
+                var selPlugins = rule.plugins || [];
+                var plugHtml = '';
+                uroPlugins.forEach(function(p) {
+                    var chk = selPlugins.indexOf(p.file) !== -1 ? 'checked' : '';
+                    plugHtml += '<label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:4px 0; border-bottom:1px solid #f1f5f9;">'
+                        + '<input type="checkbox" class="uro-plugin-chk" value="' + $('<span>').text(p.file).html() + '" ' + chk + ' style="width:15px; height:15px;">'
+                        + '<span style="font-size:12.5px;"><strong>' + $('<span>').text(p.name).html() + '</strong> <span style="color:var(--uwb-text-muted);">(' + $('<span>').text(p.file).html() + ')</span></span>'
+                        + '</label>';
+                });
+                $('#uro-rule-plugins-list').html(plugHtml || '<span style="color:var(--uwb-text-muted); font-size:12px;">No plugins scanned yet. Use "Refresh Plugin List" button.</span>');
+
+                $('#uro-rule-modal').css('display', 'flex');
+            }
+
+            function closeModal() { $('#uro-rule-modal').hide(); }
+
+            function collectRule() {
+                var urls = $('#uro-rule-url').val().split('\n').map(function(u) { return u.trim(); }).filter(Boolean);
+                var ptRaw = $('#uro-rule-post-type').val().trim();
+                var taxRaw = $('#uro-rule-taxonomy').val().trim();
+                var plugins = [];
+                $('.uro-plugin-chk:checked').each(function() { plugins.push($(this).val()); });
+                var roles = [], devs = [], woos = [];
+                $('#uro-rule-role option:selected').each(function() { roles.push($(this).val()); });
+                $('#uro-rule-device option:selected').each(function() { devs.push($(this).val()); });
+                $('#uro-rule-woo option:selected').each(function() { woos.push($(this).val()); });
+                var ajaxVal = $('#uro-rule-is-ajax').val();
+                var restVal = $('#uro-rule-is-rest').val();
+                return {
+                    id: (editingRuleIdx >= 0 && uroRules[editingRuleIdx].id) ? uroRules[editingRuleIdx].id : 'rule-' + Date.now(),
+                    name: $('#uro-rule-name').val() || 'Rule',
+                    enabled: $('#uro-rule-enabled').is(':checked'),
+                    priority: parseInt($('#uro-rule-priority').val()) || 10,
+                    action: $('#uro-rule-action').val(),
+                    plugins: plugins,
+                    conditions: {
+                        url: urls,
+                        post_type: ptRaw ? ptRaw.split(',').map(function(s) { return s.trim(); }) : [],
+                        taxonomy: taxRaw ? taxRaw.split(',').map(function(s) { return s.trim(); }) : [],
+                        woocommerce: woos,
+                        user_role: roles,
+                        device: devs,
+                        is_ajax: ajaxVal === '1' ? true : ajaxVal === '0' ? false : null,
+                        is_rest: restVal === '1' ? true : restVal === '0' ? false : null,
+                        callback: $('#uro-rule-callback').val().trim() || null,
+                    }
+                };
+            }
+
+            // ── Event Listeners ──────────────────────────────────────────────
+            $(document).ready(function() {
+                uroLoadStatus();
+
+                // Load plugins when switching to that sub-tab
+                $('[data-subtab="uro_plugins"]').on('click', function() { uroLoadPlugins(); });
+                $('[data-subtab="uro_analyzer"]').on('click', function() { uroFetchAnalyzerLog(); });
+
+                // Enable / Disable Runtime
+                $('#btn-uro-enable').on('click', function() {
+                    $(this).prop('disabled', true).text('Installing...');
+                    $.post(ajaxurl, { action: 'uwb_uro_toggle_runtime', nonce: uroNonce, enable: 1 }, function(r) {
+                        $('#btn-uro-enable').prop('disabled', false).text('⚡ Enable Runtime');
+                        if (r.success || r.runtime_enabled) { uroMsg('✅ Runtime enabled! MU Plugin installed & compiled.', true); uroLoadStatus(); }
+                        else { uroMsg('❌ ' + (r.message || r.data || 'Error'), false); }
+                    });
+                });
+                $('#btn-uro-disable').on('click', function() {
+                    if (!confirm('Disable Runtime Optimizer? MU Plugin sẽ bị xóa.')) return;
+                    $.post(ajaxurl, { action: 'uwb_uro_toggle_runtime', nonce: uroNonce, enable: 0 }, function(r) {
+                        uroMsg('Runtime Optimizer disabled.', true); uroLoadStatus();
+                    });
+                });
+
+                // Rebuild
+                $('#btn-uro-rebuild').on('click', function() {
+                    var $btn = $(this).prop('disabled', true).text('🔨 Compiling...');
+                    $.post(ajaxurl, { action: 'uwb_uro_rebuild', nonce: uroNonce }, function(r) {
+                        $btn.prop('disabled', false).text('🔨 Rebuild');
+                        uroMsg(r.success ? '✅ ' + r.message : '❌ ' + (r.message || r.data), r.success);
+                        if (r.success) uroLoadStatus();
+                    });
+                });
+
+                // Save & Compile
+                $('#btn-uro-save-rules').on('click', function() {
+                    var $btn = $(this).prop('disabled', true).text('⏳ Saving...');
+                    $.post(ajaxurl, { action: 'uwb_uro_save_rules', nonce: uroNonce, rules: JSON.stringify(uroRules) }, function(r) {
+                        $btn.prop('disabled', false).text('💾 Save & Compile');
+                        uroMsg(r.success ? '✅ ' + r.message : '❌ ' + (r.message || r.data), r.success);
+                        if (r.success) uroLoadStatus();
+                    });
+                });
+
+                // Scan Plugins
+                $('#btn-uro-scan-plugins').on('click', function() {
+                    $(this).prop('disabled', true).text('Scanning...');
+                    var $btn = $(this);
+                    uroLoadPlugins(function() { $btn.prop('disabled', false).text('🔍 Refresh Plugin List'); });
+                });
+
+                // Add Rule
+                $('#btn-uro-add-rule').on('click', function() {
+                    if (uroPlugins.length === 0) {
+                        uroLoadPlugins(function() { openModal(-1); });
+                    } else { openModal(-1); }
+                });
+
+                // Edit Rule
+                $(document).on('click', '.uro-btn-edit-rule', function() {
+                    var idx = parseInt($(this).data('idx'));
+                    if (uroPlugins.length === 0) { uroLoadPlugins(function() { openModal(idx); }); }
+                    else { openModal(idx); }
+                });
+
+                // Delete Rule
+                $(document).on('click', '.uro-btn-delete-rule', function() {
+                    var idx = parseInt($(this).data('idx'));
+                    if (!confirm('Delete this rule?')) return;
+                    uroRules.splice(idx, 1);
+                    renderRulesList();
+                });
+
+                // Modal Save
+                $('#uro-modal-save').on('click', function() {
+                    var rule = collectRule();
+                    if (!rule.plugins.length) { alert('Please select at least one plugin for this rule.'); return; }
+                    if (editingRuleIdx >= 0) { uroRules[editingRuleIdx] = rule; }
+                    else { uroRules.push(rule); }
+                    closeModal(); renderRulesList();
+                });
+
+                $('#uro-modal-close, #uro-modal-cancel').on('click', closeModal);
+                $('#uro-rule-modal').on('click', function(e) { if ($(e.target).is('#uro-rule-modal')) closeModal(); });
+
+                // Analyzer
+                $('#uro-analyzer-toggle').on('change', function() {
+                    $.post(ajaxurl, { action: 'uwb_uro_toggle_analyzer', nonce: uroNonce, enable: $(this).is(':checked') ? 1 : 0 });
+                });
+                $('#btn-uro-get-log').on('click', uroFetchAnalyzerLog);
+                $('#btn-uro-clear-log').on('click', function() {
+                    if (!confirm('Clear all analyzer logs?')) return;
+                    $.post(ajaxurl, { action: 'uwb_uro_clear_analyzer', nonce: uroNonce }, function() { uroFetchAnalyzerLog(); });
+                });
+            });
+
+            function uroFetchAnalyzerLog() {
+                $('#uro-analyzer-log').html('<p style="color:var(--uwb-text-muted);">Loading...</p>');
+                $.post(ajaxurl, { action: 'uwb_uro_get_analyzer_log', nonce: uroNonce }, function(r) {
+                    if (!r.success) return;
+                    var log = r.data.log || [];
+                    var recs = r.data.recommendations || [];
+                    // Recommendations
+                    if (recs.length) {
+                        var rHtml = '';
+                        recs.forEach(function(rec) { rHtml += '<li>' + $('<span>').text(rec).html() + '</li>'; });
+                        $('#uro-analyzer-recs-list').html(rHtml);
+                        $('#uro-analyzer-recs').slideDown();
+                    } else { $('#uro-analyzer-recs').hide(); }
+                    // Log table
+                    if (!log.length) { $('#uro-analyzer-log').html('<p style="color:var(--uwb-text-muted);">No data yet.</p>'); return; }
+                    var html = '<table style="width:100%; border-collapse:collapse; font-size:12px;">'
+                        + '<thead><tr style="background:var(--uwb-bg); border-bottom:2px solid var(--uwb-border);">'
+                        + '<th style="padding:8px; text-align:left;">URL</th><th style="padding:8px;">Time (ms)</th><th style="padding:8px;">Peak Mem</th><th style="padding:8px;">Plugins</th><th style="padding:8px;">PostType</th>'
+                        + '</tr></thead><tbody>';
+                    log.forEach(function(entry) {
+                        html += '<tr style="border-bottom:1px solid var(--uwb-border);">'
+                            + '<td style="padding:8px; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + $('<span>').text(entry.url || '').html() + '</td>'
+                            + '<td style="padding:8px; text-align:center;">' + (entry.duration_ms || '—') + '</td>'
+                            + '<td style="padding:8px; text-align:center;">' + ((entry.peak_memory || 0) / 1048576).toFixed(1) + ' MB</td>'
+                            + '<td style="padding:8px; text-align:center;">' + (entry.plugins_loaded || 0) + '</td>'
+                            + '<td style="padding:8px; text-align:center;">' + $('<span>').text(entry.post_type || '—').html() + '</td>'
+                            + '</tr>';
+                    });
+                    html += '</tbody></table>';
+                    $('#uro-analyzer-log').html(html);
+                });
+            }
+        })(jQuery);
+        </script>
+
         jQuery(document).ready(function($) {
             $('#uwb_auto_collect_params').on('change', function() {
                 if ($(this).is(':checked')) {

@@ -7,6 +7,8 @@ use Ultimate_WP_Booster\Engine\Admin\PostRowActionsSubscriber;
 use Ultimate_WP_Booster\Engine\Heartbeat\HeartbeatSubscriber;
 use Ultimate_WP_Booster\Engine\Optimization\BufferSubscriber;
 use Ultimate_WP_Booster\Engine\CLI\PreloadCommand;
+use Ultimate_WP_Booster\Engine\RuntimeOptimizer\Runtime\RuntimeManager;
+use Ultimate_WP_Booster\Engine\RuntimeOptimizer\Analyzer\Analyzer;
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
@@ -86,6 +88,21 @@ class Plugin {
      * @return void
      */
     private function init_engines() {
+        // RuntimeOptimizer: register compile triggers and AJAX handlers (always)
+        $runtime_manager = new RuntimeManager();
+        $runtime_manager->register_hooks();
+
+        // Hook: deferred recompile via WP Cron
+        add_action( 'uwb_uro_recompile_event', static function () {
+            ( new RuntimeManager() )->recompile();
+        } );
+
+        // Analyzer: collect frontend page data (when enabled)
+        if ( ! is_admin() ) {
+            $analyzer = new Analyzer();
+            $analyzer->init();
+        }
+
         if ( is_admin() ) {
             new \Ultimate_WP_Booster\Engine\Admin\Admin();
 
