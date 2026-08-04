@@ -4277,11 +4277,21 @@ js-(before|after)
             }
 
             // ── Show Result Message ──────────────────────────────────────────
-            function uroMsg(txt, ok) {
+            function uroMsg(txt, ok, errors) {
                 var $el = $('#uro-result-msg');
+                var content = txt;
+                if (!ok && Array.isArray(errors) && errors.length > 0) {
+                    content += '<ul style="margin:8px 0 0 16px; padding:0; list-style-type:disc; font-size:12px; font-weight:normal; text-align:left; line-height:1.4;">';
+                    errors.forEach(function(err) {
+                        content += '<li>' + $('<span>').text(err).html() + '</li>';
+                    });
+                    content += '</ul>';
+                }
                 $el.css({ background: ok ? '#d1fae5' : '#fee2e2', color: ok ? '#065f46' : '#b91c1c', border: '1px solid ' + (ok ? '#6ee7b7' : '#fca5a5') })
-                    .html(txt).slideDown();
-                setTimeout(function() { $el.slideUp(); }, 6000);
+                    .html(content).slideDown();
+                var delay = ok ? 6000 : 15000;
+                if (window.uroMsgTimeout) clearTimeout(window.uroMsgTimeout);
+                window.uroMsgTimeout = setTimeout(function() { $el.slideUp(); }, delay);
             }
 
             // ── Modal ────────────────────────────────────────────────────────
@@ -4393,7 +4403,7 @@ js-(before|after)
                     $.post(ajaxurl, { action: 'uwb_uro_toggle_runtime', nonce: uroNonce, enable: 1 }, function(r) {
                         $('#btn-uro-enable').prop('disabled', false).text('⚡ Enable Runtime');
                         if (r.success || r.runtime_enabled) { uroMsg('✅ Runtime enabled! MU Plugin installed & compiled.', true); uroLoadStatus(); }
-                        else { uroMsg('❌ ' + (r.message || r.data || 'Error'), false); }
+                        else { uroMsg('❌ ' + (r.message || r.data || 'Error'), false, r.errors); }
                     });
                 });
                 $('#btn-uro-disable').on('click', function() {
@@ -4408,7 +4418,7 @@ js-(before|after)
                     var $btn = $(this).prop('disabled', true).text('🔨 Compiling...');
                     $.post(ajaxurl, { action: 'uwb_uro_rebuild', nonce: uroNonce }, function(r) {
                         $btn.prop('disabled', false).text('🔨 Rebuild');
-                        uroMsg(r.success ? '✅ ' + r.message : '❌ ' + (r.message || r.data), r.success);
+                        uroMsg(r.success ? '✅ ' + r.message : '❌ ' + (r.message || r.data), r.success, r.errors);
                         if (r.success) uroLoadStatus();
                     });
                 });
@@ -4418,7 +4428,7 @@ js-(before|after)
                     var $btn = $(this).prop('disabled', true).text('⏳ Saving...');
                     $.post(ajaxurl, { action: 'uwb_uro_save_rules', nonce: uroNonce, rules: JSON.stringify(uroRules) }, function(r) {
                         $btn.prop('disabled', false).text('💾 Save & Compile');
-                        uroMsg(r.success ? '✅ ' + r.message : '❌ ' + (r.message || r.data), r.success);
+                        uroMsg(r.success ? '✅ ' + r.message : '❌ ' + (r.message || r.data), r.success, r.errors);
                         if (r.success) uroLoadStatus();
                     });
                 });
