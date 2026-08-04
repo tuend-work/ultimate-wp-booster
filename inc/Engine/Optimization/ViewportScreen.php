@@ -135,6 +135,8 @@ class ViewportScreen {
                             // 3. Multi-layer REMOVAL of extractor script tag from static HTML cache
                             $content = preg_replace( '#<!--UWB_CRIT_START-->.*?<!--UWB_CRIT_END-->#is', '', $content );
                             $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
+                            $content = preg_replace( '#<script\b[^>]*?>[^<]*?__uwb_crit_ran[^<]*?</script>#is', '', $content );
+                            $content = preg_replace( '#<script\b[^>]*?>[^<]*?uwb_save_viewport_data[^<]*?</script>#is', '', $content );
                             
                             $start_pos = strpos( $content, '<!--UWB_CRIT_START-->' );
                             $end_pos   = strpos( $content, '<!--UWB_CRIT_END-->' );

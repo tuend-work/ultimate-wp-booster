@@ -55,16 +55,19 @@ class JS {
                 }
             }
 
-            // Automatic Hardcoded Safety Exclusions for Specific Critical Inline Variables (flatsomeVars, WooCommerce params)
+            // Automatic Hardcoded Safety Exclusions for Specific Critical Inline Variables & Critical CSS Extractor JS
             if ( ! $is_excluded ) {
                 if ( stripos( $tag, 'flatsomeVars' ) !== false ||
+                     stripos( $tag, 'uwb-critical-extractor' ) !== false ||
                      stripos( $inline_content, 'flatsomeVars' ) !== false ||
+                     stripos( $inline_content, '__uwb_crit_ran' ) !== false ||
+                     stripos( $inline_content, 'uwb_save_viewport_data' ) !== false ||
                      stripos( $inline_content, 'wc_add_to_cart_params' ) !== false ||
                      stripos( $inline_content, 'woocommerce_params' ) !== false ) {
                     $is_excluded = true;
                     if ( is_array( $logs ) ) {
                         $label = preg_match( '/src=([\'"])(.*?)\1/i', $attrs, $src_m ) ? $src_m[2] : 'Inline Script';
-                        $logs[] = "JS Combine: Excluded {$label} (Automatic safety rule: Contains flatsomeVars or WooCommerce inline variables)";
+                        $logs[] = "JS Combine: Excluded {$label} (Automatic safety rule: Contains flatsomeVars, Critical CSS Extractor, or WooCommerce inline variables)";
                     }
                 }
             }
@@ -291,6 +294,9 @@ class JS {
             $attrs = $matches[1];
             $js = $matches[2];
             if ( stripos( $attrs, 'src=' ) !== false ) {
+                return $matches[0];
+            }
+            if ( stripos( $attrs, 'uwb-critical-extractor' ) !== false || stripos( $js, '__uwb_crit_ran' ) !== false || stripos( $js, 'uwb_save_viewport_data' ) !== false ) {
                 return $matches[0];
             }
             if ( ! empty( $attrs ) && stripos( $attrs, 'type=' ) !== false && stripos( $attrs, 'javascript' ) === false && stripos( $attrs, 'module' ) === false ) {
