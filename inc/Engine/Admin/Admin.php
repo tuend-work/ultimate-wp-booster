@@ -4509,8 +4509,8 @@ js-(before|after)
                         + '<thead><tr style="background:var(--uwb-bg); border-bottom:2px solid var(--uwb-border);">'
                         + '<th style="padding:8px; text-align:left;">URL</th><th style="padding:8px;">Time (ms)</th><th style="padding:8px;">Peak Mem</th><th style="padding:8px;">Plugins</th><th style="padding:8px;">PostType</th>'
                         + '</tr></thead><tbody>';
-                    log.forEach(function(entry) {
-                        html += '<tr style="border-bottom:1px solid var(--uwb-border);">'
+                    log.forEach(function(entry, idx) {
+                        html += '<tr class="uro-analyzer-row" data-idx="' + idx + '" style="border-bottom:1px solid var(--uwb-border); cursor:pointer;" title="Click to view details">'
                             + '<td style="padding:8px; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + $('<span>').text(entry.url || '').html() + '</td>'
                             + '<td style="padding:8px; text-align:center;">' + (entry.duration_ms || '—') + '</td>'
                             + '<td style="padding:8px; text-align:center;">' + ((entry.peak_memory || 0) / 1048576).toFixed(1) + ' MB</td>'
@@ -4520,6 +4520,57 @@ js-(before|after)
                     });
                     html += '</tbody></table>';
                     $('#uro-analyzer-log').html(html);
+
+                    // Click handler to toggle individual plugin load times
+                    $(document).off('click', '.uro-analyzer-row').on('click', '.uro-analyzer-row', function() {
+                        var idx = $(this).data('idx');
+                        var entry = log[idx];
+                        var $next = $(this).next();
+                        if ($next.hasClass('uro-details-row')) {
+                            $next.toggle();
+                            return;
+                        }
+
+                        var pTimes = entry.plugin_load_times || {};
+                        var pList = entry.plugin_list || [];
+
+                        // Map and sort plugins by load duration (slowest first)
+                        var sortedPlugins = pList.map(function(p) {
+                            return { file: p, time: pTimes[p] || 0 };
+                        });
+                        sortedPlugins.sort(function(a, b) { return b.time - a.time; });
+
+                        var listHtml = '';
+                        sortedPlugins.forEach(function(p) {
+                            var tStr = p.time > 0 ? ' <span style="color:#ef4444; font-weight:600; float:right;">' + p.time.toFixed(1) + 'ms</span>' : ' <span style="color:#94a3b8; float:right;">—</span>';
+                            listHtml += '<div style="padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; margin-bottom:6px; overflow:hidden; zoom:1;">'
+                                     + '<span style="font-weight:600; color:#0f172a;">' + p.file + '</span>'
+                                     + tStr
+                                     + '</div>';
+                        });
+
+                        var detailsHtml = '<tr class="uro-details-row" style="background:#f8fafc;"><td colspan="5" style="padding:20px; border-bottom:1px solid var(--uwb-border);">'
+                                        + '<div style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap:24px;">'
+                                        + '<div>'
+                                        + '<strong style="font-size:13px; display:block; margin-bottom:12px; color:#1e293b;">Loaded Plugins &amp; Individual Load Times:</strong>'
+                                        + '<div style="max-height:280px; overflow-y:auto; padding-right:8px;">' 
+                                        + (listHtml || '<p style="color:#64748b;">No plugins detected.</p>')
+                                        + '</div>'
+                                        + '</div>'
+                                        + '<div>'
+                                        + '<strong style="font-size:13px; display:block; margin-bottom:12px; color:#1e293b;">Request Profile Details:</strong>'
+                                        + '<div style="display:flex; flex-direction:column; gap:10px; font-size:12.5px; color:#475569;">'
+                                        + '<div><strong>Requested At:</strong> ' + entry.time + '</div>'
+                                        + '<div><strong>Total Initialisation:</strong> ' + entry.duration_ms + ' ms</div>'
+                                        + '<div><strong>Peak Memory Usage:</strong> ' + ((entry.peak_memory || 0) / 1048576).toFixed(2) + ' MB</div>'
+                                        + '<div><strong>Post Type / Context:</strong> ' + (entry.post_type || '—') + '</div>'
+                                        + '</div>'
+                                        + '</div>'
+                                        + '</div>'
+                                        + '</td></tr>';
+
+                        $(this).after(detailsHtml);
+                    });
                 });
             }
         })(jQuery);

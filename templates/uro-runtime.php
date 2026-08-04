@@ -16,6 +16,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// Initialize plugin load timer tracking
+$GLOBALS['_uro_last_ts'] = microtime( true );
+$GLOBALS['_uro_plugin_times'] = [];
+
+add_action( 'plugin_loaded', static function ( $plugin ) {
+    $now = microtime( true );
+    $diff = $now - $GLOBALS['_uro_last_ts'];
+    $GLOBALS['_uro_plugin_times'][ plugin_basename( $plugin ) ] = round( $diff * 1000, 2 ); // Convert to ms
+    $GLOBALS['_uro_last_ts'] = $now;
+}, 1 );
+
 // ── 1. Resolve compiled lookup data ──────────────────────────────────────────
 $_uro = _uro_data();
 

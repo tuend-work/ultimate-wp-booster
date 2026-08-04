@@ -85,20 +85,21 @@ class Analyzer {
         $active_plugins = get_option( 'active_plugins', [] );
 
         $entry = [
-            'url'             => ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http' )
+            'url'               => ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http' )
                 . '://' . ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' ),
-            'time'            => gmdate( 'Y-m-d H:i:s' ),
-            'duration_ms'     => $duration,
-            'peak_memory'     => $memory,
-            'plugins_loaded'  => count( $active_plugins ),
-            'plugin_list'     => $active_plugins,
-            'hook_counts'     => $hook_counts,
-            'rest_routes'     => $rest_routes,
-            'shortcodes'      => $shortcodes,
-            'post_type'       => ( function_exists( 'get_post_type' ) ) ? get_post_type() ?: '' : '',
-            'is_archive'      => function_exists( 'is_archive' ) && is_archive(),
-            'is_singular'     => function_exists( 'is_singular' ) && is_singular(),
-            'is_front_page'   => function_exists( 'is_front_page' ) && is_front_page(),
+            'time'              => gmdate( 'Y-m-d H:i:s' ),
+            'duration_ms'       => $duration,
+            'peak_memory'       => $memory,
+            'plugins_loaded'    => count( $active_plugins ),
+            'plugin_list'       => $active_plugins,
+            'plugin_load_times' => $GLOBALS['_uro_plugin_times'] ?? [],
+            'hook_counts'       => $hook_counts,
+            'rest_routes'       => $rest_routes,
+            'shortcodes'        => $shortcodes,
+            'post_type'         => ( function_exists( 'get_post_type' ) ) ? get_post_type() ?: '' : '',
+            'is_archive'        => function_exists( 'is_archive' ) && is_archive(),
+            'is_singular'       => function_exists( 'is_singular' ) && is_singular(),
+            'is_front_page'     => function_exists( 'is_front_page' ) && is_front_page(),
         ];
 
         $this->append_log( $entry );
