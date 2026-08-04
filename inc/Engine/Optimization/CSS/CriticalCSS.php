@@ -121,6 +121,10 @@ class CriticalCSS {
             var sheets = document.styleSheets;
             for (var s = 0; s < sheets.length; s++) {
                 try {
+                    var sheetNode = sheets[s].ownerNode;
+                    if (sheetNode && (sheetNode.id === 'uwb-manual-critical-css' || sheetNode.id === 'uwb-critical-css')) {
+                        continue;
+                    }
                     var rules = sheets[s].cssRules || sheets[s].rules;
                     if (!rules) continue;
                     for (var r = 0; r < rules.length; r++) {
