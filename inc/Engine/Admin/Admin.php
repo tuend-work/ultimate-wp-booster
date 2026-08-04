@@ -2356,7 +2356,8 @@ class Admin {
                                 }
                                 ?>
                                 
-                                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:24px; align-items:stretch;">
+                                <!-- Object Cache Status Panel: Full Width -->
+                                <div style="margin-bottom:20px; width:100%;">
                                     <!-- Cache Status & Connection Test Block -->
                                     <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:0;">
                                         <div>
@@ -2459,8 +2460,11 @@ class Admin {
                                             <button type="button" id="btn-flush-redis" class="button" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; padding:8px 16px; border-radius:6px; font-weight:600; font-size:12.5px; cursor:pointer; transition:all 0.2s; flex:1;">Flush Cache</button>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <?php if ( $oc_active && ! empty( $stats_data ) ) : ?>
+                                <?php if ( $oc_active && ! empty( $stats_data ) ) : ?>
+                                    <!-- Gauges Grid: 2 Columns side-by-side -->
+                                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:24px; align-items:stretch;">
                                         <!-- Gauge 1: Memory -->
                                         <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center;">
                                             <strong style="font-size:14px; color:var(--uwb-text); margin-bottom:12px; display:block;">Memory Usage</strong>
@@ -2484,8 +2488,8 @@ class Admin {
                                                 <span style="position:absolute; font-size:20px; font-weight:700; color:var(--uwb-text);"><?php echo $stats_data['hit_ratio']; ?>%</span>
                                             </div>
                                         </div>
-                                    <?php endif; ?>
-                                </div>
+                                    </div>
+                                <?php endif; ?>
 
                                 <?php if ( $oc_active && ! empty( $stats_data ) ) : ?>
                                     <!-- Stats details row: 2 Cards -->
