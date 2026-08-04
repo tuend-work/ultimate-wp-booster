@@ -36,7 +36,17 @@ class Analyzer {
     }
 
     public function init(): void {
-        $this->enabled = (bool) get_option( 'uwb_uro_analyzer_enabled', false );
+        $cookie_profile = isset( $_COOKIE['uwb_uro_profile'] ) && $_COOKIE['uwb_uro_profile'] === '1';
+
+        // Debug HTML comments in head
+        add_action( 'wp_head', function() use ( $cookie_profile ) {
+            echo "\n<!-- UWB URO Profiler: Initialized, Cookie Profile=" . ( $cookie_profile ? '1' : '0' ) . " -->\n";
+        } );
+        add_action( 'admin_head', function() use ( $cookie_profile ) {
+            echo "\n<!-- UWB URO Profiler: Initialized, Cookie Profile=" . ( $cookie_profile ? '1' : '0' ) . " -->\n";
+        } );
+
+        $this->enabled = (bool) get_option( 'uwb_uro_analyzer_enabled', false ) || $cookie_profile;
         if ( ! $this->enabled ) {
             return;
         }
@@ -395,17 +405,25 @@ class Analyzer {
             return null;
         }
         $file = wp_normalize_path( $file );
-        if ( strpos( $file, 'wp-content/plugins/' ) !== false ) {
-            $parts = explode( 'wp-content/plugins/', $file );
-            $sub = explode( '/', $parts[1] );
+        $plugins_dir = wp_normalize_path( WP_PLUGIN_DIR );
+
+        if ( strpos( $file, $plugins_dir ) !== false ) {
+            $relative = str_replace( $plugins_dir . '/', '', $file );
+            $sub = explode( '/', $relative );
             $dir = $sub[0];
             
             static $active_plugins_cache = null;
             if ( $active_plugins_cache === null ) {
-                $active_plugins_cache = get_option( 'active_plugins', [] );
+                global $wpdb;
+                $active_plugins_serialized = $wpdb->get_var( "SELECT option_value FROM $wpdb->options WHERE option_name = 'active_plugins'" );
+                $active_plugins_cache = maybe_unserialize( $active_plugins_serialized );
+                if ( ! is_array( $active_plugins_cache ) ) {
+                    $active_plugins_cache = [];
+                }
             }
+
             foreach ( $active_plugins_cache as $ap ) {
-                if ( strpos( $ap, $dir . '/' ) === 0 ) {
+                if ( strpos( $ap, $dir . '/' ) === 0 || $ap === $dir ) {
                     return $ap;
                 }
             }
