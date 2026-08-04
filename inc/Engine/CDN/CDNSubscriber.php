@@ -221,12 +221,21 @@ class CDNSubscriber implements Subscriber_Interface {
             $cdn_domain = 'https://' . $cdn_domain;
         }
 
-        $uploads  = wp_upload_dir();
-        $base_url = rtrim( $uploads['baseurl'], '/' );
+        $uploads       = wp_upload_dir();
+        $base_url      = rtrim( $uploads['baseurl'], '/' );
+        $base_url_path = wp_parse_url( $base_url, PHP_URL_PATH );
 
         if ( strpos( $url, $base_url ) === 0 ) {
             $rel = ltrim( substr( $url, strlen( $base_url ) ), '/' );
             return $cdn_domain . '/wp-content/uploads/' . $rel;
+        }
+
+        if ( $base_url_path ) {
+            $url_path = wp_parse_url( $url, PHP_URL_PATH );
+            if ( $url_path && strpos( $url_path, $base_url_path ) === 0 ) {
+                $rel = ltrim( substr( $url_path, strlen( $base_url_path ) ), '/' );
+                return $cdn_domain . $base_url_path . '/' . $rel;
+            }
         }
 
         return $url;
@@ -250,13 +259,22 @@ class CDNSubscriber implements Subscriber_Interface {
             $cdn_domain = 'https://' . $cdn_domain;
         }
 
-        $uploads  = wp_upload_dir();
-        $base_url = rtrim( $uploads['baseurl'], '/' );
+        $uploads       = wp_upload_dir();
+        $base_url      = rtrim( $uploads['baseurl'], '/' );
+        $base_url_path = wp_parse_url( $base_url, PHP_URL_PATH );
 
         foreach ( $sources as $width => &$source ) {
-            if ( isset( $source['url'] ) && strpos( $source['url'], $base_url ) === 0 ) {
-                $rel = ltrim( substr( $source['url'], strlen( $base_url ) ), '/' );
-                $source['url'] = $cdn_domain . '/wp-content/uploads/' . $rel;
+            if ( isset( $source['url'] ) ) {
+                if ( strpos( $source['url'], $base_url ) === 0 ) {
+                    $rel = ltrim( substr( $source['url'], strlen( $base_url ) ), '/' );
+                    $source['url'] = $cdn_domain . '/wp-content/uploads/' . $rel;
+                } elseif ( $base_url_path ) {
+                    $url_path = wp_parse_url( $source['url'], PHP_URL_PATH );
+                    if ( $url_path && strpos( $url_path, $base_url_path ) === 0 ) {
+                        $rel = ltrim( substr( $url_path, strlen( $base_url_path ) ), '/' );
+                        $source['url'] = $cdn_domain . $base_url_path . '/' . $rel;
+                    }
+                }
             }
         }
 
@@ -281,12 +299,19 @@ class CDNSubscriber implements Subscriber_Interface {
             $cdn_domain = 'https://' . $cdn_domain;
         }
 
-        $uploads  = wp_upload_dir();
-        $base_url = rtrim( $uploads['baseurl'], '/' );
+        $uploads       = wp_upload_dir();
+        $base_url      = rtrim( $uploads['baseurl'], '/' );
+        $base_url_path = wp_parse_url( $base_url, PHP_URL_PATH );
 
         if ( strpos( $image[0], $base_url ) === 0 ) {
             $rel = ltrim( substr( $image[0], strlen( $base_url ) ), '/' );
             $image[0] = $cdn_domain . '/wp-content/uploads/' . $rel;
+        } elseif ( $base_url_path ) {
+            $url_path = wp_parse_url( $image[0], PHP_URL_PATH );
+            if ( $url_path && strpos( $url_path, $base_url_path ) === 0 ) {
+                $rel = ltrim( substr( $url_path, strlen( $base_url_path ) ), '/' );
+                $image[0] = $cdn_domain . $base_url_path . '/' . $rel;
+            }
         }
 
         return $image;
