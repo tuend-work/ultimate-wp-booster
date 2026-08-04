@@ -510,7 +510,9 @@ class AdminBarSubscriber implements Subscriber_Interface {
                         </p>
                     </div>
                     <button id="uwb-quick-pm-close" style="background:none; border:none; cursor:pointer; font-size:20px; color:#94a3b8; font-weight:700; padding:4px; line-height:1;">✕</button>
-                         <!-- Search & Profile -->
+                </div>
+
+                <!-- Search & Profile -->
                 <div style="padding:12px 24px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; gap:16px; background:#fff; flex-wrap:wrap;">
                     <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:200px;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
