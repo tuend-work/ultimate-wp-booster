@@ -18,6 +18,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
             'admin_post_uwb_clear_cdn_zone_cache'  => 'handle_clear_cdn_zone_cache',
             'admin_post_uwb_clear_s3_asset_cache'  => 'handle_clear_s3_asset_cache',
             'admin_post_uwb_clear_cdn_cache'       => 'handle_clear_s3_asset_cache',
+            'admin_post_uwb_add_exclude_url'       => 'handle_add_exclude_url',
             'wp_footer'                         => 'render_plugin_manager_modal',
             'admin_footer'                      => 'render_plugin_manager_modal',
         );
@@ -39,65 +40,28 @@ class AdminBarSubscriber implements Subscriber_Interface {
             return;
         }
 
-        // Add main node
+        // ── Main Node ──────────────────────────────────────────────────────────
         $wp_admin_bar->add_node( array(
             'id'    => 'uwb-admin-bar',
-            'title' => 'WP Booster',
+            'title' => '<span class="ab-icon dashicons dashicons-performance" style="margin-top:2px;"></span> WP Booster',
             'href'  => $can_manage ? admin_url( 'admin.php?page=ultimate-wp-booster' ) : null,
         ) );
 
-        // Add sub-node: Purge This URL (only on frontend)
+        // ── 1. Purge This URL (frontend only) ─────────────────────────────────
         if ( ! is_admin() ) {
             $current_url = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-            $clean_url = strtok( $current_url, '?' );
-            
-            $action_url = 'admin-post.php?action=uwb_purge_url&url=' . urlencode( $clean_url );
+            $clean_url   = strtok( $current_url, '?' );
+            $action_url  = 'admin-post.php?action=uwb_purge_url&url=' . urlencode( $clean_url );
             if ( $current_post_id > 0 ) {
                 $action_url .= '&post_id=' . $current_post_id;
             }
             $purge_url = wp_nonce_url( admin_url( $action_url ), 'uwb_purge_url_action' );
-            
+
             $wp_admin_bar->add_node( array(
                 'id'     => 'uwb-purge-url',
                 'parent' => 'uwb-admin-bar',
-                'title'  => 'Purge This URL',
+                'title'  => '🗑 Purge This URL',
                 'href'   => $purge_url,
-            ) );
-        }
-
-        // Add sub-node: Plugin Manager (opens quick panel modal)
-        // Show on frontend and non-critical admin pages
-        $is_critical_admin = false;
-        if ( is_admin() ) {
-            $uri = $_SERVER['REQUEST_URI'] ?? '';
-            if ( strpos( $uri, 'plugins.php' ) !== false 
-                 || strpos( $uri, 'update.php' ) !== false 
-                 || strpos( $uri, 'update-core.php' ) !== false 
-                 || strpos( $uri, 'themes.php' ) !== false 
-                 || strpos( $uri, 'customize.php' ) !== false
-            ) {
-                $is_critical_admin = true;
-            }
-        }
-
-        if ( ! $is_critical_admin && $can_manage ) {
-            // Add parent node: Advanced
-            $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-bar-advanced',
-                'parent' => 'uwb-admin-bar',
-                'title'  => 'Advanced',
-                'href'   => '#',
-            ) );
-
-            // Add child node: Runtime Control
-            $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-plugin-manager',
-                'parent' => 'uwb-bar-advanced',
-                'title'  => '⚡ Runtime Control',
-                'href'   => '#',
-                'meta'   => array(
-                    'onclick' => 'jQuery("#uwb-quick-pm-modal").css("display", "flex"); return false;',
-                )
             ) );
         }
 
@@ -105,104 +69,168 @@ class AdminBarSubscriber implements Subscriber_Interface {
             return;
         }
 
-        // Add sub-node: Clear Cache Page (only clear, no preload)
+        // ── 2. Add This URL (frontend only – submenu to add to exclude lists) ─
+        if ( ! is_admin() ) {
+            $current_url = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+            $clean_url   = strtok( $current_url, '?' );
+            $encoded_url = urlencode( $clean_url );
+
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-add-url',
+                'parent' => 'uwb-admin-bar',
+                'title'  => '➕ Add This URL',
+                'href'   => '#',
+            ) );
+
+            // Submenu: add to each exclude list
+            $exclude_sections = array(
+                'exclude_cache'     => 'Exclude from Page Cache',
+                'exclude_minify'    => 'Exclude from Minify',
+                'exclude_lazyload'  => 'Exclude from Lazy Load',
+                'exclude_cdn'       => 'Exclude from CDN',
+                'exclude_preload'   => 'Exclude from Preload',
+            );
+            foreach ( $exclude_sections as $section_key => $section_label ) {
+                $add_url = wp_nonce_url(
+                    admin_url( 'admin-post.php?action=uwb_add_exclude_url&section=' . $section_key . '&url=' . $encoded_url ),
+                    'uwb_add_exclude_url_action'
+                );
+                $wp_admin_bar->add_node( array(
+                    'id'     => 'uwb-add-url-' . $section_key,
+                    'parent' => 'uwb-add-url',
+                    'title'  => $section_label,
+                    'href'   => $add_url,
+                ) );
+            }
+        }
+
+        // ── 3. Clear All Cache (parent = immediate purge all, children = components) ─
         $clear_cache_page_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cache_page' ), 'uwb_clear_cache_page_action' );
         $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-clear-cache-page',
+            'id'     => 'uwb-clear-all-cache',
             'parent' => 'uwb-admin-bar',
-            'title'  => 'Clear Cache Page',
+            'title'  => '🧹 Clear All Cache',
             'href'   => $clear_cache_page_url,
         ) );
 
-        // Add sub-node: Flush OPCache
+        // Sub: Clear Page Cache
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-sub-clear-page-cache',
+            'parent' => 'uwb-clear-all-cache',
+            'title'  => 'Clear Page Cache',
+            'href'   => $clear_cache_page_url,
+        ) );
+
+        // Sub: Clear OPCache
         $flush_op_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_opcache' ), 'uwb_flush_opcache_action' );
         $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-flush-opcache',
-            'parent' => 'uwb-admin-bar',
+            'id'     => 'uwb-sub-clear-opcache',
+            'parent' => 'uwb-clear-all-cache',
             'title'  => 'Clear OPCache',
             'href'   => $flush_op_url,
         ) );
 
+        // Sub: Clear Object Cache (only if active)
         if ( wp_using_ext_object_cache() ) {
-            // Add sub-node: Flush Object Cache
             $flush_oc_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_object_cache' ), 'uwb_flush_object_cache_action' );
             $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-flush-object-cache',
-                'parent' => 'uwb-admin-bar',
+                'id'     => 'uwb-sub-clear-object-cache',
+                'parent' => 'uwb-clear-all-cache',
                 'title'  => 'Clear Object Cache',
                 'href'   => $flush_oc_url,
             ) );
 
-            // Add Global Cache Statistics to Admin Bar
+            // Object Cache Stats info nodes
             global $wp_object_cache;
-            $hits = 0; $misses = 0;
-            if ( isset( $wp_object_cache->cache_hits ) ) $hits = intval( $wp_object_cache->cache_hits );
-            if ( isset( $wp_object_cache->cache_misses ) ) $misses = intval( $wp_object_cache->cache_misses );
+            $hits   = isset( $wp_object_cache->cache_hits )   ? intval( $wp_object_cache->cache_hits )   : 0;
+            $misses = isset( $wp_object_cache->cache_misses ) ? intval( $wp_object_cache->cache_misses ) : 0;
             $total_req = $hits + $misses;
             $hit_ratio = $total_req > 0 ? round( ( $hits / $total_req ) * 100, 1 ) : 0;
 
             $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-oc-stats',
-                'parent' => 'uwb-admin-bar',
-                'title'  => sprintf( 'Object Cache Stats (Hit Ratio: %s%%)', $hit_ratio ),
-                'href'   => admin_url( 'admin.php?page=ultimate-wp-booster' ),
-            ) );
-
-            $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-oc-hits',
-                'parent' => 'uwb-oc-stats',
-                'title'  => sprintf( 'Hits: %s', number_format( $hits ) ),
-                'href'   => '#',
-            ) );
-
-            $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-oc-misses',
-                'parent' => 'uwb-oc-stats',
-                'title'  => sprintf( 'Misses: %s', number_format( $misses ) ),
-                'href'   => '#',
-            ) );
-
-            $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-oc-total',
-                'parent' => 'uwb-oc-stats',
-                'title'  => sprintf( 'Total Requests: %s', number_format( $total_req ) ),
-                'href'   => '#',
+                'id'     => 'uwb-sub-oc-stats',
+                'parent' => 'uwb-clear-all-cache',
+                'title'  => sprintf( 'Object Cache: %s%% Hit Ratio', $hit_ratio ),
+                'href'   => admin_url( 'admin.php?page=ultimate-wp-booster&tab=object-cache' ),
             ) );
         }
-        // Add sub-node: Clear CDN Zone Cache (Cloudflare)
+
+        // Sub: Clear Cloudflare Cache
         $clear_zone_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_zone_cache' ), 'uwb_clear_cdn_zone_cache_action' );
         $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-clear-cdn-zone-cache',
-            'parent' => 'uwb-admin-bar',
+            'id'     => 'uwb-sub-clear-cloudflare',
+            'parent' => 'uwb-clear-all-cache',
             'title'  => 'Clear Cloudflare Cache',
             'href'   => $clear_zone_url,
         ) );
 
-        // Add sub-node: Clear S3 Asset Cache (Cloud Storage)
+        // Sub: Clear CSS/JS on S3
         $clear_s3_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_s3_asset_cache' ), 'uwb_clear_s3_asset_cache_action' );
         $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-clear-s3-asset-cache',
-            'parent' => 'uwb-admin-bar',
+            'id'     => 'uwb-sub-clear-s3',
+            'parent' => 'uwb-clear-all-cache',
             'title'  => 'Clear CSS / JS on S3 Storage',
             'href'   => $clear_s3_url,
         ) );
-        // Add sub-node: Flush All & Preload Cache
+
+        // ── 4. Flush All & Preload ─────────────────────────────────────────────
         $flush_all_preload_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_all_preload' ), 'uwb_flush_all_preload_action' );
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-flush-all-preload',
             'parent' => 'uwb-admin-bar',
-            'title'  => 'Flush All & Preload Cache',
+            'title'  => '🚀 Flush All & Preload',
             'href'   => $flush_all_preload_url,
         ) );
 
+        // ── 5. Advanced ──────────────────────────────────────────────────────────
+        $is_critical_admin = false;
+        if ( is_admin() ) {
+            $uri = $_SERVER['REQUEST_URI'] ?? '';
+            if (
+                strpos( $uri, 'plugins.php' ) !== false ||
+                strpos( $uri, 'update.php' ) !== false ||
+                strpos( $uri, 'update-core.php' ) !== false ||
+                strpos( $uri, 'themes.php' ) !== false ||
+                strpos( $uri, 'customize.php' ) !== false
+            ) {
+                $is_critical_admin = true;
+            }
+        }
 
+        if ( ! $is_critical_admin ) {
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-bar-advanced',
+                'parent' => 'uwb-admin-bar',
+                'title'  => '⚙ Advanced',
+                'href'   => '#',
+            ) );
 
-        // Add sub-node: Settings
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-plugin-manager',
+                'parent' => 'uwb-bar-advanced',
+                'title'  => '⚡ Plugin Control',
+                'href'   => '#',
+                'meta'   => array(
+                    'onclick' => 'jQuery("#uwb-quick-pm-modal").css("display", "flex"); return false;',
+                ),
+            ) );
+        }
+
+        // ── 6. Settings ──────────────────────────────────────────────────────────
         $wp_admin_bar->add_node( array(
             'id'     => 'uwb-settings',
             'parent' => 'uwb-admin-bar',
-            'title'  => 'Settings',
+            'title'  => '🛠 Settings',
             'href'   => admin_url( 'admin.php?page=ultimate-wp-booster' ),
+        ) );
+
+        // ── 7. Docs & Help ───────────────────────────────────────────────────────
+        $wp_admin_bar->add_node( array(
+            'id'     => 'uwb-docs',
+            'parent' => 'uwb-admin-bar',
+            'title'  => '📖 Docs & Help',
+            'href'   => 'https://github.com/tuend-work/ultimate-wp-booster',
+            'meta'   => array( 'target' => '_blank' ),
         ) );
     }
 
@@ -229,6 +257,44 @@ class AdminBarSubscriber implements Subscriber_Interface {
         } elseif ( ! empty( $url ) ) {
             $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
             $uwb_cache->purge_url( $url );
+        }
+
+        wp_safe_redirect( wp_get_referer() ? wp_get_referer() : home_url( '/' ) );
+        exit;
+    }
+
+    /**
+     * Handle adding the current URL to an exclude list via admin bar.
+     */
+    public function handle_add_exclude_url() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Permission denied.' );
+        }
+
+        check_admin_referer( 'uwb_add_exclude_url_action' );
+
+        $section = isset( $_GET['section'] ) ? sanitize_key( $_GET['section'] ) : '';
+        $url     = isset( $_GET['url'] ) ? esc_url_raw( urldecode( $_GET['url'] ) ) : '';
+
+        // Map section key to the option name
+        $option_map = array(
+            'exclude_cache'    => 'uwb_exclude_urls',
+            'exclude_minify'   => 'uwb_minify_excluded_urls',
+            'exclude_lazyload' => 'uwb_lazyload_excluded_urls',
+            'exclude_cdn'      => 'uwb_cdn_excluded_urls',
+            'exclude_preload'  => 'uwb_preload_excluded_urls',
+        );
+
+        if ( ! empty( $url ) && isset( $option_map[ $section ] ) ) {
+            $option_key    = $option_map[ $section ];
+            $existing      = get_option( $option_key, '' );
+            $lines         = array_filter( array_map( 'trim', explode( "\n", $existing ) ) );
+            $relative_path = wp_parse_url( $url, PHP_URL_PATH );
+
+            if ( $relative_path && ! in_array( $relative_path, $lines, true ) ) {
+                $lines[] = $relative_path;
+                update_option( $option_key, implode( "\n", $lines ) );
+            }
         }
 
         wp_safe_redirect( wp_get_referer() ? wp_get_referer() : home_url( '/' ) );
