@@ -40,7 +40,7 @@ class Analyzer {
      */
     public function init(): void {
         $this->enabled = (bool) get_option( 'uwb_uro_analyzer_enabled', false );
-        if ( ! $this->enabled || is_admin() ) {
+        if ( ! $this->enabled ) {
             return;
         }
 
@@ -95,10 +95,10 @@ class Analyzer {
             'hook_counts'     => $hook_counts,
             'rest_routes'     => $rest_routes,
             'shortcodes'      => $shortcodes,
-            'post_type'       => get_post_type() ?: '',
-            'is_archive'      => is_archive(),
-            'is_singular'     => is_singular(),
-            'is_front_page'   => is_front_page(),
+            'post_type'       => ( function_exists( 'get_post_type' ) ) ? get_post_type() ?: '' : '',
+            'is_archive'      => function_exists( 'is_archive' ) && is_archive(),
+            'is_singular'     => function_exists( 'is_singular' ) && is_singular(),
+            'is_front_page'   => function_exists( 'is_front_page' ) && is_front_page(),
         ];
 
         $this->append_log( $entry );

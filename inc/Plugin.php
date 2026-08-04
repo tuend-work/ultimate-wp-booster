@@ -97,11 +97,9 @@ class Plugin {
             ( new RuntimeManager() )->recompile();
         } );
 
-        // Analyzer: collect frontend page data (when enabled)
-        if ( ! is_admin() ) {
-            $analyzer = new Analyzer();
-            $analyzer->init();
-        }
+        // Analyzer: collect page data (when enabled)
+        $analyzer = new Analyzer();
+        $analyzer->init();
 
         if ( is_admin() ) {
             new \Ultimate_WP_Booster\Engine\Admin\Admin();
