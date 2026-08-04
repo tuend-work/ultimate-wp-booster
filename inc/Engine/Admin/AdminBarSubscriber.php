@@ -63,6 +63,17 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 'title'  => 'Purge This URL',
                 'href'   => $purge_url,
             ) );
+            if ( $can_manage ) {
+                $wp_admin_bar->add_node( array(
+                    'id'     => 'uwb-plugin-manager',
+                    'parent' => 'uwb-admin-bar',
+                    'title'  => '⚡ Plugin Manager',
+                    'href'   => '#',
+                    'meta'   => array(
+                        'onclick' => 'jQuery("#uwb-quick-pm-modal").css("display", "flex"); return false;',
+                    )
+                ) );
+            }
         }
 
         if ( ! $can_manage ) {
@@ -160,17 +171,6 @@ class AdminBarSubscriber implements Subscriber_Interface {
         ) );
 
 
-
-        // Add sub-node: Plugin Manager (opens quick panel modal)
-        $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-plugin-manager',
-            'parent' => 'uwb-admin-bar',
-            'title'  => '⚡ Plugin Manager',
-            'href'   => '#',
-            'meta'   => array(
-                'onclick' => 'jQuery("#uwb-quick-pm-modal").css("display", "flex"); return false;',
-            )
-        ) );
 
         // Add sub-node: Settings
         $wp_admin_bar->add_node( array(

@@ -50,6 +50,13 @@ add_filter( 'option_active_plugins', static function ( $plugins ) use ( $_uro ):
  * @return array          Filtered plugin list.
  */
 function _uro_apply( array $plugins, array $data ): array {
+    // Do not apply any runtime optimization inside wp-admin dashboard or login page
+    if ( is_admin() 
+         || ( defined( 'WP_ADMIN' ) && WP_ADMIN ) 
+         || ( isset( $_SERVER['REQUEST_URI'] ) && ( strpos( $_SERVER['REQUEST_URI'], '/wp-admin/' ) !== false || strpos( $_SERVER['REQUEST_URI'], 'wp-login.php' ) !== false ) )
+    ) {
+        return $plugins;
+    }
 
     // ── A. Resolve current context ───────────────────────────────────────────
 
@@ -98,8 +105,8 @@ function _uro_apply( array $plugins, array $data ): array {
     $matched = [];
     $trie    = $data['url_trie'] ?? [];
 
-    // Root-level rules
-    if ( isset( $trie['_root_rules'] ) ) {
+    // Root-level rules (only if segments list is empty, i.e., exact homepage request)
+    if ( empty( $segments ) && isset( $trie['_root_rules'] ) ) {
         foreach ( $trie['_root_rules'] as $rid ) {
             $matched[ $rid ] = true;
         }
