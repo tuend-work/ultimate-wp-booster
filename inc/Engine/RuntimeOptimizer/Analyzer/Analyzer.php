@@ -371,32 +371,71 @@ class Analyzer {
 /**
  * Custom WP_Hook subclass for profiling callback execution times.
  */
-class Uro_WP_Hook extends \WP_Hook {
+/**
+ * Custom WP_Hook wrapper proxy for profiling callback execution times.
+ * Delegates all actions to the original WP_Hook to avoid "Cannot extend final class WP_Hook" error.
+ */
+class Uro_WP_Hook implements \ArrayAccess, \IteratorAggregate, \Countable {
+
+    /** @var \WP_Hook */
+    private \WP_Hook $original;
 
     public function __construct( \WP_Hook $original ) {
-        $this->callbacks     = $original->callbacks;
-        $this->iterations    = $original->iterations;
-        $this->nesting_level = $original->nesting_level;
-        if ( isset( $original->doing_action ) ) {
-            $this->doing_action = $original->doing_action;
-        }
+        $this->original = $original;
+    }
+
+    public function __get( $name ) {
+        return $this->original->$name;
+    }
+
+    public function __set( $name, $value ) {
+        $this->original->$name = $value;
+    }
+
+    public function __isset( $name ) {
+        return isset( $this->original->$name );
+    }
+
+    public function __unset( $name ) {
+        unset( $this->original->$name );
+    }
+
+    public function __call( $name, $arguments ) {
+        return call_user_func_array( [ $this->original, $name ], $arguments );
+    }
+
+    public function add_filter( $hook_name, $callback, $priority, $accepted_args ) {
+        $this->original->add_filter( $hook_name, $callback, $priority, $accepted_args );
+    }
+
+    public function remove_filter( $hook_name, $callback, $priority ) {
+        return $this->original->remove_filter( $hook_name, $callback, $priority );
+    }
+
+    public function has_filter( $hook_name = '', $callback_to_check = false ) {
+        return $this->original->has_filter( $hook_name, $callback_to_check );
+    }
+
+    public function has_filters() {
+        return $this->original->has_filters();
     }
 
     public function apply_filters( $value, $args ) {
-        if ( ! $this->callbacks ) {
+        $callbacks = $this->original->callbacks;
+        if ( ! $callbacks ) {
             return $value;
         }
 
-        $this->nesting_level++;
-        $this->iterations[ $this->nesting_level ] = array_keys( $this->callbacks );
+        $this->original->nesting_level++;
+        $this->original->iterations[ $this->original->nesting_level ] = array_keys( $callbacks );
 
         do {
-            $priority = current( $this->iterations[ $this->nesting_level ] );
+            $priority = current( $this->original->iterations[ $this->original->nesting_level ] );
             if ( false === $priority ) {
                 break;
             }
 
-            $current_iteration = $this->callbacks[ $priority ];
+            $current_iteration = $callbacks[ $priority ];
             foreach ( $current_iteration as $idx => $the_ ) {
                 if ( empty( $the_['function'] ) ) {
                     continue;
@@ -404,7 +443,7 @@ class Uro_WP_Hook extends \WP_Hook {
 
                 $start = microtime( true );
 
-                if ( ! $this->doing_action ) {
+                if ( ! $this->original->doing_action ) {
                     $value = call_user_func_array( $the_['function'], array_slice( $args, 0, $the_['accepted_args'] ) );
                 } else {
                     call_user_func_array( $the_['function'], array_slice( $args, 0, $the_['accepted_args'] ) );
@@ -413,17 +452,49 @@ class Uro_WP_Hook extends \WP_Hook {
                 $duration = microtime( true ) - $start;
                 Analyzer::record_callback_time( $the_['function'], $duration );
             }
-        } while ( next( $this->iterations[ $this->nesting_level ] ) !== false );
+        } while ( next( $this->original->iterations[ $this->original->nesting_level ] ) !== false );
 
-        unset( $this->iterations[ $this->nesting_level ] );
-        $this->nesting_level--;
+        unset( $this->original->iterations[ $this->original->nesting_level ] );
+        $this->original->nesting_level--;
 
         return $value;
     }
 
     public function do_action( $args ) {
-        $this->doing_action = true;
+        $this->original->doing_action = true;
         $this->apply_filters( '', $args );
-        $this->doing_action = false;
+        $this->original->doing_action = false;
+    }
+
+    // ── Interface Implementations ────────────────────────────────────────────
+
+    #[\ReturnTypeWillChange]
+    public function offsetExists( $offset ) {
+        return isset( $this->original[ $offset ] );
+    }
+
+    #[\ReturnTypeWillChange]
+    public function offsetGet( $offset ) {
+        return $this->original[ $offset ];
+    }
+
+    #[\ReturnTypeWillChange]
+    public function offsetSet( $offset, $value ) {
+        $this->original[ $offset ] = $value;
+    }
+
+    #[\ReturnTypeWillChange]
+    public function offsetUnset( $offset ) {
+        unset( $this->original[ $offset ] );
+    }
+
+    #[\ReturnTypeWillChange]
+    public function getIterator() {
+        return $this->original->getIterator();
+    }
+
+    #[\ReturnTypeWillChange]
+    public function count() {
+        return count( $this->original );
     }
 }
