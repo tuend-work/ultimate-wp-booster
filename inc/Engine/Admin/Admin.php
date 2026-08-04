@@ -2465,19 +2465,7 @@ class Admin {
                                 <?php if ( $oc_active && ! empty( $stats_data ) ) : ?>
                                     <!-- Gauges Grid: 2 Columns side-by-side -->
                                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:24px; align-items:stretch;">
-                                        <!-- Gauge 1: Memory -->
-                                        <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                                            <strong style="font-size:14px; color:var(--uwb-text); margin-bottom:12px; display:block;">Memory Usage</strong>
-                                            <div style="position:relative; width:120px; height:120px; display:flex; align-items:center; justify-content:center;">
-                                                <svg width="100%" height="100%" viewBox="0 0 36 36">
-                                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e2e8f0" stroke-width="3" />
-                                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--uwb-primary)" stroke-dasharray="<?php echo $stats_data['memory_pct']; ?>, 100" stroke-width="3" stroke-linecap="round" />
-                                                </svg>
-                                                <span style="position:absolute; font-size:20px; font-weight:700; color:var(--uwb-text);"><?php echo $stats_data['memory_pct']; ?>%</span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Gauge 2: Hit Rate -->
+                                        <!-- Gauge 1: Hit Rate -->
                                         <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center;">
                                             <strong style="font-size:14px; color:var(--uwb-text); margin-bottom:12px; display:block;">Hit Rate (Keyspace)</strong>
                                             <div style="position:relative; width:120px; height:120px; display:flex; align-items:center; justify-content:center;">
@@ -2486,6 +2474,18 @@ class Admin {
                                                     <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--uwb-primary)" stroke-dasharray="<?php echo round($stats_data['hit_ratio']); ?>, 100" stroke-width="3" stroke-linecap="round" />
                                                 </svg>
                                                 <span style="position:absolute; font-size:20px; font-weight:700; color:var(--uwb-text);"><?php echo $stats_data['hit_ratio']; ?>%</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gauge 2: Memory -->
+                                        <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                                            <strong style="font-size:14px; color:var(--uwb-text); margin-bottom:12px; display:block;">Memory Usage</strong>
+                                            <div style="position:relative; width:120px; height:120px; display:flex; align-items:center; justify-content:center;">
+                                                <svg width="100%" height="100%" viewBox="0 0 36 36">
+                                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e2e8f0" stroke-width="3" />
+                                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--uwb-primary)" stroke-dasharray="<?php echo $stats_data['memory_pct']; ?>, 100" stroke-width="3" stroke-linecap="round" />
+                                                </svg>
+                                                <span style="position:absolute; font-size:20px; font-weight:700; color:var(--uwb-text);"><?php echo $stats_data['memory_pct']; ?>%</span>
                                             </div>
                                         </div>
                                     </div>
