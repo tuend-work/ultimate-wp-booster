@@ -4510,6 +4510,7 @@ js-(before|after)
         })(jQuery);
         </script>
 
+        <script>
         jQuery(document).ready(function($) {
             $('#uwb_auto_collect_params').on('change', function() {
                 if ($(this).is(':checked')) {
