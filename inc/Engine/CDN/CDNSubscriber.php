@@ -211,11 +211,6 @@ class CDNSubscriber implements Subscriber_Interface {
             $this->upload_attachment_to_s3( $post_id, false );
         }
 
-        // Only rewrite URL if offloaded (upload may have failed)
-        if ( ! CDNManager::is_attachment_offloaded( $post_id ) ) {
-            return $url;
-        }
-
         $cdn_domain = rtrim( $cdn_domain, '/' );
         if ( strpos( $cdn_domain, 'http://' ) !== 0 && strpos( $cdn_domain, 'https://' ) !== 0 ) {
             $cdn_domain = 'https://' . $cdn_domain;
