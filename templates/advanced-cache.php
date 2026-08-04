@@ -91,7 +91,7 @@ function uwb_advanced_cache_run() {
         // Dynamically check query bypass parameters from config (falls back to defaults if not set)
         $bypass_queries = isset( $config['bypass_query_params'] ) 
             ? $config['bypass_query_params'] 
-            : array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset', 'rest_route' );
+            : array( 'wc-ajax', 'wc-api', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset', 'rest_route', 'action', 'ajax', 'edd_action', 'xmlrpc', 'autoterm' );
 
         $intersect = array_intersect( array_keys( $query_params ), $bypass_queries );
         if ( ! empty( $intersect ) ) {
@@ -103,13 +103,13 @@ function uwb_advanced_cache_run() {
             return;
         }
 
-        // Check for any parameter starting or containing yith_wcan or yith-wcan
+        // Check for any parameter starting or containing yith_wcan, yith-wcan, wc-api, or rest_route
         foreach ( array_keys( $query_params ) as $q_key ) {
-            if ( strpos( $q_key, 'yith_wcan' ) !== false || strpos( $q_key, 'yith-wcan' ) !== false ) {
+            if ( strpos( $q_key, 'yith_wcan' ) !== false || strpos( $q_key, 'yith-wcan' ) !== false || strpos( $q_key, 'wc-api' ) !== false || strpos( $q_key, 'rest_route' ) !== false ) {
                 if ( $debug ) {
-                    error_log( "UWB: Run bypassed: YITH WCAN filter query parameter detected '{$q_key}'." );
+                    error_log( "UWB: Run bypassed: API/Filter query parameter detected '{$q_key}'." );
                 }
-                $GLOBALS['uwb_bypass_reason'] = 'YITH WCAN filter parameter: ' . $q_key;
+                $GLOBALS['uwb_bypass_reason'] = 'API/Filter parameter: ' . $q_key;
                 return;
             }
         }
@@ -258,12 +258,15 @@ function uwb_advanced_cache_run() {
     $uri_path       = rawurldecode( $uri_parts[0] );
     $normalized_uri = trim( $uri_path, '/' );
 
-    // 6.0. Bypass REST API requests and WooCommerce protected pages
-    if ( strpos( $uri_path, '/wp-json' ) === 0 || strpos( $normalized_uri, 'wp-json' ) === 0 || isset( $_GET['rest_route'] ) ) {
+    // 6.0. Bypass REST API, Admin, XML-RPC, Non-HTML Accept requests, and WooCommerce protected pages
+    $http_accept = isset( $_SERVER['HTTP_ACCEPT'] ) ? $_SERVER['HTTP_ACCEPT'] : '';
+    if ( strpos( $uri_path, '/wp-json' ) === 0 || strpos( $normalized_uri, 'wp-json' ) === 0 || 
+         strpos( $uri_path, '/wp-admin' ) === 0 || strpos( $uri_path, '/xmlrpc.php' ) === 0 ||
+         isset( $_GET['rest_route'] ) || ( strpos( $http_accept, 'application/json' ) !== false && strpos( $http_accept, 'text/html' ) === false ) ) {
         if ( $debug ) {
-            error_log( "UWB: Run bypassed: REST API request detected ({$uri_path})." );
+            error_log( "UWB: Run bypassed: REST API / Non-HTML request detected ({$uri_path})." );
         }
-        $GLOBALS['uwb_bypass_reason'] = 'REST API request: ' . $uri_path;
+        $GLOBALS['uwb_bypass_reason'] = 'REST API / Non-HTML request: ' . $uri_path;
         return;
     }
 
@@ -371,6 +374,29 @@ function uwb_advanced_cache_run() {
             }
             if ( $debug ) {
                 error_log( "UWB: Preload: deleted stale cache file for regeneration: {$cache_file}" );
+            }
+        }
+    }
+
+    if ( $target_cache_file !== '' ) {
+        // Guard Check: Verify file content integrity before serving to prevent serving corrupted or JSON files as HTML
+        if ( ! $is_serving_404 && file_exists( $target_cache_file ) ) {
+            $sample = @file_get_contents( $target_cache_file, false, null, 0, 300 );
+            if ( $sample !== false ) {
+                $trim_sample = ltrim( $sample );
+                $is_corrupt_json = ( strpos( $trim_sample, '{' ) === 0 || strpos( $trim_sample, '[' ) === 0 );
+                $is_valid_html   = ( stripos( $trim_sample, '<html' ) !== false || stripos( $trim_sample, '<!DOCTYPE' ) !== false || stripos( $trim_sample, '<!-- Cached by WP Booster' ) !== false || stripos( $trim_sample, '<head' ) !== false || stripos( $trim_sample, '<body' ) !== false );
+                
+                if ( ( ! $is_xml && ( $is_corrupt_json || ! $is_valid_html ) ) || 
+                     ( $is_xml && strpos( $trim_sample, '<?xml' ) === false && strpos( $trim_sample, '<urlset' ) === false && strpos( $trim_sample, '<sitemapindex' ) === false ) ) {
+                    // Corrupted/Non-HTML cache file detected on disk! Delete it immediately & bypass serving
+                    @unlink( $target_cache_file );
+                    @unlink( $target_cache_file . '_gzip' );
+                    if ( $debug ) {
+                        error_log( "UWB: Corrupted/Non-HTML cache file detected and deleted: {$target_cache_file}" );
+                    }
+                    $target_cache_file = ''; // Cancel serving target cache file
+                }
             }
         }
     }
@@ -556,6 +582,63 @@ function uwb_advanced_cache_shutdown() {
     if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
         $should_cache = false;
         $shutdown_bypass_reason = 'REST_REQUEST constant is true';
+    }
+
+    // Inspect emitted response headers
+    if ( $should_cache && function_exists( 'headers_list' ) ) {
+        foreach ( headers_list() as $header ) {
+            if ( stripos( $header, 'Content-Type:' ) === 0 ) {
+                $content_type = strtolower( trim( substr( $header, 13 ) ) );
+                if ( ! $is_xml ) {
+                    if ( strpos( $content_type, 'text/html' ) === false && strpos( $content_type, 'text/xhtml' ) === false ) {
+                        $should_cache = false;
+                        $shutdown_bypass_reason = 'Non-HTML Content-Type header emitted: ' . $content_type;
+                        if ( $debug ) {
+                            error_log( "UWB: Caching bypassed: Content-Type is {$content_type}" );
+                        }
+                        break;
+                    }
+                } else {
+                    if ( strpos( $content_type, 'xml' ) === false ) {
+                        $should_cache = false;
+                        $shutdown_bypass_reason = 'Non-XML Content-Type header emitted for sitemap: ' . $content_type;
+                        break;
+                    }
+                }
+            } elseif ( stripos( $header, 'Location:' ) === 0 ) {
+                $should_cache = false;
+                $shutdown_bypass_reason = 'Redirect Location header emitted';
+                break;
+            }
+        }
+    }
+
+    // Inspect HTML content structural integrity
+    if ( $should_cache ) {
+        $trim_html = ltrim( $html );
+        if ( ! $is_xml ) {
+            // Detect JSON array or object payload
+            if ( strpos( $trim_html, '{' ) === 0 || strpos( $trim_html, '[' ) === 0 ) {
+                $should_cache = false;
+                $shutdown_bypass_reason = 'Output is JSON payload (starts with { or [)';
+                if ( $debug ) {
+                    error_log( "UWB: Caching bypassed: Output is JSON payload." );
+                }
+            }
+            // Verify valid HTML structure
+            elseif ( stripos( $trim_html, '<html' ) === false && stripos( $trim_html, '<!DOCTYPE' ) === false && stripos( $trim_html, '<head' ) === false && stripos( $trim_html, '<body' ) === false ) {
+                $should_cache = false;
+                $shutdown_bypass_reason = 'Output lacks valid HTML markup structure';
+                if ( $debug ) {
+                    error_log( "UWB: Caching bypassed: Output does not contain standard HTML tags." );
+                }
+            }
+        } else {
+            if ( strpos( $trim_html, '<?xml' ) === false && strpos( $trim_html, '<urlset' ) === false && strpos( $trim_html, '<sitemapindex' ) === false ) {
+                $should_cache = false;
+                $shutdown_bypass_reason = 'Sitemap output lacks XML declaration';
+            }
+        }
     }
 
     $is_special_page = is_admin() || is_search() || is_feed() || is_trackback() || is_robots();
