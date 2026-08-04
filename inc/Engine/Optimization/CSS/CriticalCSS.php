@@ -31,7 +31,9 @@ class CriticalCSS {
         // Inject Custom Manual Critical CSS in a separate tag with highest priority
         if ( ! empty( $manual_clean ) && strpos( $html, 'id="uwb-manual-critical-css"' ) === false ) {
             $manual_tag = '<style id="uwb-manual-critical-css">' . $manual_clean . '</style>';
-            if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+            if ( preg_match( '/<meta\b[^>]*?charset[^>]*?>/i', $html, $matches ) ) {
+                $html = str_replace( $matches[0], $matches[0] . "\n" . $manual_tag, $html );
+            } elseif ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
                 $html = str_replace( $matches[0], $matches[0] . "\n" . $manual_tag, $html );
             }
         }
@@ -63,7 +65,9 @@ class CriticalCSS {
         // Inject Auto Critical CSS Placeholder in <head> if not present
         $placeholder_tag = '<style id="uwb-critical-css" data-hash="' . $url_hash . '"></style>';
         if ( strpos( $html, 'id="uwb-critical-css"' ) === false ) {
-            if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+            if ( preg_match( '/<meta\b[^>]*?charset[^>]*?>/i', $html, $matches ) ) {
+                $html = str_replace( $matches[0], $matches[0] . "\n" . $placeholder_tag, $html );
+            } elseif ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
                 $html = str_replace( $matches[0], $matches[0] . "\n" . $placeholder_tag, $html );
             }
         }

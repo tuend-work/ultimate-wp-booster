@@ -124,7 +124,9 @@ class ViewportScreen {
                             // 2. Ensure Custom Manual Critical CSS tag exists ONCE in <head>
                             if ( ! empty( $manual_clean ) && strpos( $content, 'id="uwb-manual-critical-css"' ) === false ) {
                                 $manual_tag = '<style id="uwb-manual-critical-css">' . $manual_clean . '</style>';
-                                if ( preg_match( '/<head[^>]*>/i', $content, $m ) ) {
+                                if ( preg_match( '/<meta\b[^>]*?charset[^>]*?>/i', $content, $m ) ) {
+                                    $content = str_replace( $m[0], $m[0] . "\n" . $manual_tag, $content );
+                                } elseif ( preg_match( '/<head[^>]*>/i', $content, $m ) ) {
                                     $content = str_replace( $m[0], $m[0] . "\n" . $manual_tag, $content );
                                 }
                             }
