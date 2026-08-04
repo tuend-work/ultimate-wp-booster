@@ -95,7 +95,7 @@ class Analyzer {
                 $original_func = $the_['function'];
                 
                 // Safe closure wrapper that records time
-                $the_['function'] = function( &...$cb_args ) use ( $original_func, $hook_name ) {
+                $the_['function'] = function( ...$cb_args ) use ( $original_func, $hook_name ) {
                     $start = microtime( true );
                     $res = call_user_func_array( $original_func, $cb_args );
                     $duration = microtime( true ) - $start;
