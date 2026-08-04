@@ -2878,7 +2878,8 @@ class Admin {
                                 $secret_key = get_option( 'uwb_preload_secret_key', '' );
                                 $http_cron_cmd = '* * * * * curl -s "' . esc_url( home_url( '/?uwb_preload_key=' . $secret_key ) ) . '" >/dev/null 2>&1';
                                 $wp_path = ABSPATH;
-                                $wp_cli_cron_cmd = '* * * * * wp uwb-preload run --path=' . escapeshellarg( $wp_path ) . ' >/dev/null 2>&1';
+                                $escaped_wp_path = function_exists( 'escapeshellarg' ) ? escapeshellarg( $wp_path ) : "'" . str_replace( "'", "'\\''", $wp_path ) . "'";
+                                $wp_cli_cron_cmd = '* * * * * wp uwb-preload run --path=' . $escaped_wp_path . ' >/dev/null 2>&1';
                                 ?>
                                 <div id="uwb-custom-cron-info" style="margin-top: 16px; padding: 20px; background: #f8fafc; border: 1px solid var(--uwb-border); border-radius: 12px; display: <?php echo ( get_option( 'uwb_preload_enabled', 0 ) == 2 ) ? 'block' : 'none'; ?>;">
                                     <h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--uwb-text); display: flex; align-items: center; gap: 6px;">
