@@ -4208,7 +4208,7 @@ js-(before|after)
                     $('#uro-status-runtime').html(runtimeOn
                         ? '<span style="color:#16a34a;">✅ Active (MU Plugin installed)</span>'
                         : '<span style="color:#dc2626;">🔴 Inactive</span>');
-                    $('#uro-status-compiled').text(d.compiled ? '✅ compiled.php exists' : '❌ Not compiled');
+                    $('#uro-status-compiled').text(d.compiled ? '✅ Rules compiled' : '❌ Not compiled');
                     $('#uro-status-rules').text(d.metadata ? d.metadata.rule_count + ' rule(s)' : '—');
                     var ts = d.metadata ? new Date(d.metadata.compile_time * 1000).toLocaleString() : '—';
                     $('#uro-status-time').text(ts);

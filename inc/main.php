@@ -27,6 +27,7 @@ if ( ! function_exists( 'uwb_check_upgrade' ) ) {
             $status = $mu_manager->mu_plugin_status();
             if ( $status['installed'] ) {
                 $mu_manager->install_mu_plugin();
+                $mu_manager->recompile();
             }
 
             update_option( 'uwb_version', UWB_VERSION );

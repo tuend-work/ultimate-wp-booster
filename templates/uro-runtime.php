@@ -16,31 +16,25 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// ── 1. Load compiled lookup tables ──────────────────────────────────────────
-$_uro_file = WP_CONTENT_DIR . '/cache/uro/compiled.php';
-
-if ( ! file_exists( $_uro_file ) ) {
-    return; // Fail-safe: compiled.php missing, load all plugins as normal
-}
-
-$_uro = @include $_uro_file;
+// ── 1. Resolve compiled lookup data ──────────────────────────────────────────
+$_uro = _uro_data();
 
 if ( ! is_array( $_uro ) || empty( $_uro['version'] ) ) {
-    return; // Fail-safe: corrupt data
+    return; // Fail-safe: corrupt or not compiled
 }
 
-// ── 2. Integrity check ───────────────────────────────────────────────────────
-if ( ! empty( $_uro['checksum'] ) ) {
-    $_uro_sig = md5( serialize( $_uro['url_trie'] ) . serialize( $_uro['rules'] ) . serialize( $_uro['masks'] ) );
-    if ( $_uro_sig !== $_uro['checksum'] ) {
-        return; // Fail-safe: corrupt compiled.php — do NOT apply any filter
-    }
-}
-
-// ── 3. Register the filter ───────────────────────────────────────────────────
+// ── 2. Register the filter ───────────────────────────────────────────────────
 add_filter( 'option_active_plugins', static function ( $plugins ) use ( $_uro ): array {
     return _uro_apply( $plugins, $_uro );
 }, 1 );
+
+/**
+ * Returns the compiled lookup data. Will be replaced at compile time.
+ */
+function _uro_data(): array {
+    // {{COMPILED_DATA}}
+    return [];
+}
 
 /**
  * Core runtime function: resolve context, lookup rules, filter plugins.
