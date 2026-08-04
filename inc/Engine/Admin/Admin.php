@@ -3572,7 +3572,7 @@ js-(before|after)
                                     $oc_redis_pw   = get_option( 'uwb_redis_password', '' );
                                     $oc_redis_db   = intval( get_option( 'uwb_redis_db', 0 ) );
                                     if ( class_exists( 'Redis' ) ) {
-                                        $r = new Redis();
+                                        $r = new \Redis();
                                         if ( @$r->connect( $oc_redis_host, $oc_redis_port, 1 ) ) {
                                             if ( $oc_redis_pw ) @$r->auth( $oc_redis_pw );
                                             if ( $oc_redis_db ) @$r->select( $oc_redis_db );
