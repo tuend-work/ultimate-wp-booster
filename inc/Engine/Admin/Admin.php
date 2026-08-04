@@ -26,6 +26,11 @@ class Admin {
         add_action( 'wp_ajax_nopriv_uwb_save_viewport_data', array( 'Ultimate_WP_Booster\Engine\Optimization\ViewportScreen', 'ajax_save_viewport_data' ) );
         add_action( 'wp_ajax_uwb_get_database_stats', array( $this, 'ajax_get_database_stats' ) );
         add_action( 'wp_ajax_uwb_optimize_database', array( $this, 'ajax_optimize_database' ) );
+        add_action( 'wp_ajax_uwb_get_redis_memory_info', array( $this, 'ajax_get_redis_memory_info' ) );
+        // Invalidate cached file count transient when cache is purged
+        add_action( 'uwb_after_purge_all', static function() {
+            delete_transient( 'uwb_dashboard_cache_file_count' );
+        } );
 
         $options_to_sync = array(
             'uwb_cache_page_enabled',
@@ -633,10 +638,14 @@ class Admin {
     public function admin_init_sync() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'ultimate_wp_booster_queue';
-        // Auto-migrate column from tinyint(1) to int(11) in case database has already been created
-        $row = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM {$table_name} LIKE %s", 'priority' ) );
-        if ( $row && strpos( strtolower( $row->Type ), 'tinyint' ) !== false ) {
-            $wpdb->query( "ALTER TABLE {$table_name} MODIFY COLUMN priority int(11) NOT NULL DEFAULT 0" );
+
+        // Auto-migrate column — only run once (flag stored in options)
+        if ( ! get_option( 'uwb_db_priority_migrated_v1' ) ) {
+            $row = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM {$table_name} LIKE %s", 'priority' ) );
+            if ( $row && strpos( strtolower( $row->Type ), 'tinyint' ) !== false ) {
+                $wpdb->query( "ALTER TABLE {$table_name} MODIFY COLUMN priority int(11) NOT NULL DEFAULT 0" );
+            }
+            update_option( 'uwb_db_priority_migrated_v1', 1, false );
         }
 
         // Migrate options from hours to minutes for older versions
@@ -696,6 +705,45 @@ class Admin {
         \Ultimate_WP_Booster\Engine\CDN\CDNManager::clear_cdn_cache();
 
         wp_send_json_success( array( 'message' => '☁️ Đã xóa CDN Cache thành công!' ) );
+    }
+
+    public function ajax_get_redis_memory_info() {
+        check_ajax_referer( 'uwb_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ) );
+        }
+
+        if ( ! class_exists( 'Redis' ) ) {
+            wp_send_json_error( array( 'message' => 'Redis extension not available' ) );
+        }
+
+        try {
+            $host   = get_option( 'uwb_redis_host', '127.0.0.1' );
+            $port   = intval( get_option( 'uwb_redis_port', 6379 ) );
+            $pw     = get_option( 'uwb_redis_password', '' );
+            $db     = intval( get_option( 'uwb_redis_db', 0 ) );
+
+            $r = new \Redis();
+            if ( ! @$r->connect( $host, $port, 1 ) ) {
+                wp_send_json_error( array( 'message' => 'Cannot connect to Redis' ) );
+            }
+            if ( $pw ) @$r->auth( $pw );
+            if ( $db ) @$r->select( $db );
+
+            $info = $r->info( 'memory' );
+            $used_mb = isset( $info['used_memory'] ) ? round( $info['used_memory'] / 1048576, 1 ) : 0;
+            $max_mb  = ( isset( $info['maxmemory'] ) && $info['maxmemory'] > 0 )
+                ? round( $info['maxmemory'] / 1048576, 0 ) . 'MB'
+                : 'unlimited';
+
+            wp_send_json_success( array(
+                'used' => $used_mb,
+                'max'  => $max_mb,
+                'text' => "{$used_mb}MB / {$max_mb}",
+            ) );
+        } catch ( \Exception $e ) {
+            wp_send_json_error( array( 'message' => $e->getMessage() ) );
+        }
     }
 
     public function ajax_clear_critical_css_cache() {
@@ -3551,11 +3599,11 @@ js-(before|after)
                                 }
                             }
 
-                            // 2. Object Cache
+                            // 2. Object Cache — hit rate from WP's in-memory counters (no TCP)
                             $obj_active = wp_using_ext_object_cache();
                             $obj_details = 'No external persistent cache detected.';
                             if ( $obj_active ) {
-                                $oc_type = intval( get_option( 'uwb_redis_enabled', 0 ) );
+                                $oc_type  = intval( get_option( 'uwb_redis_enabled', 0 ) );
                                 $oc_label = $oc_type === 2 ? 'Memcached' : 'Redis';
 
                                 global $wp_object_cache;
@@ -3564,29 +3612,8 @@ js-(before|after)
                                 $oc_total  = $oc_hits + $oc_misses;
                                 $oc_hit_pct = $oc_total > 0 ? round( ( $oc_hits / $oc_total ) * 100, 1 ) : 0;
 
-                                // Try to get memory info from Redis
-                                $oc_mem_str = '';
-                                try {
-                                    $oc_redis_host = get_option( 'uwb_redis_host', '127.0.0.1' );
-                                    $oc_redis_port = intval( get_option( 'uwb_redis_port', 6379 ) );
-                                    $oc_redis_pw   = get_option( 'uwb_redis_password', '' );
-                                    $oc_redis_db   = intval( get_option( 'uwb_redis_db', 0 ) );
-                                    if ( class_exists( 'Redis' ) ) {
-                                        $r = new \Redis();
-                                        if ( @$r->connect( $oc_redis_host, $oc_redis_port, 1 ) ) {
-                                            if ( $oc_redis_pw ) @$r->auth( $oc_redis_pw );
-                                            if ( $oc_redis_db ) @$r->select( $oc_redis_db );
-                                            $info = $r->info( 'memory' );
-                                            if ( isset( $info['used_memory'], $info['maxmemory'] ) ) {
-                                                $used_mb  = round( $info['used_memory'] / 1048576, 1 );
-                                                $max_mb   = $info['maxmemory'] > 0 ? round( $info['maxmemory'] / 1048576, 0 ) . 'MB' : 'unlimited';
-                                                $oc_mem_str = " — {$used_mb}MB / {$max_mb}";
-                                            }
-                                        }
-                                    }
-                                } catch ( \Exception $e ) { /* ignore */ }
-
-                                $obj_details = "{$oc_label} Active{$oc_mem_str} | Hit rate: {$oc_hit_pct}%";
+                                // Memory info fetched via AJAX to avoid blocking TCP connection here
+                                $obj_details = "{$oc_label} Active | Hit rate: {$oc_hit_pct}% <span id='uwb-oc-mem-inline' style='color:#64748b;'>(loading memory…)</span>";
                             }
 
                             // 3. Page Cache Full
@@ -3617,19 +3644,23 @@ js-(before|after)
                                 if ( intval( get_option( 'uwb_preload_fonts', 0 ) ) )    $active_opts[] = 'Font Preload';
                                 if ( intval( get_option( 'uwb_font_display_swap', 0 ) ) ) $active_opts[] = 'Font Display Swap';
 
-                                // Count cached files
-                                $cache_dirs = [ WP_CONTENT_DIR . '/cache/uwb', WP_CONTENT_DIR . '/cache/wp-rocket' ];
-                                $file_count = 0;
-                                foreach ( $cache_dirs as $cache_dir ) {
-                                    if ( is_dir( $cache_dir ) ) {
-                                        $di = new \RecursiveDirectoryIterator( $cache_dir, \RecursiveDirectoryIterator::SKIP_DOTS );
-                                        $it = new \RecursiveIteratorIterator( $di );
-                                        foreach ( $it as $f ) {
-                                            if ( $f->isFile() && in_array( $f->getExtension(), ['html', 'html_gzip'], true ) ) {
-                                                $file_count++;
+                                // Count cached files — use transient to avoid recursive scan on every page load
+                                $file_count = get_transient( 'uwb_dashboard_cache_file_count' );
+                                if ( $file_count === false ) {
+                                    $file_count = 0;
+                                    $cache_dirs = [ WP_CONTENT_DIR . '/cache/uwb', WP_CONTENT_DIR . '/cache/wp-rocket' ];
+                                    foreach ( $cache_dirs as $cache_dir ) {
+                                        if ( is_dir( $cache_dir ) ) {
+                                            $di = new \RecursiveDirectoryIterator( $cache_dir, \RecursiveDirectoryIterator::SKIP_DOTS );
+                                            $it = new \RecursiveIteratorIterator( $di );
+                                            foreach ( $it as $f ) {
+                                                if ( $f->isFile() && in_array( $f->getExtension(), ['html', 'html_gzip'], true ) ) {
+                                                    $file_count++;
+                                                }
                                             }
                                         }
                                     }
+                                    set_transient( 'uwb_dashboard_cache_file_count', $file_count, MINUTE_IN_SECONDS );
                                 }
 
                                 $opts_str = ! empty( $active_opts ) ? implode( ', ', $active_opts ) : 'No extra optimizations enabled';
@@ -3769,7 +3800,7 @@ js-(before|after)
                                             </div>
                                             <div class="node-text-wrap">
                                                 <span class="node-title">6. Object Cache (Redis/Memcached)</span>
-                                                <span class="node-desc"><?php echo esc_html($obj_details); ?></span>
+                                                <span class="node-desc"><?php echo wp_kses_post($obj_details); ?></span>
                                             </div>
                                         </div>
                                         <div class="node-action-right" style="display:flex; gap:6px;">
@@ -4655,6 +4686,28 @@ js-(before|after)
 
         <script>
         jQuery(document).ready(function($) {
+            // Async load Redis memory info for Object Cache dashboard node
+            if ($('#uwb-oc-mem-inline').length > 0) {
+                var adminNonce = '<?php echo esc_js( wp_create_nonce( "uwb_admin_nonce" ) ); ?>';
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'uwb_get_redis_memory_info',
+                        nonce: adminNonce
+                    },
+                    success: function(resp) {
+                        if (resp.success && resp.data && resp.data.text) {
+                            $('#uwb-oc-mem-inline').html('— ' + resp.data.text);
+                        } else {
+                            $('#uwb-oc-mem-inline').html('');
+                        }
+                    },
+                    error: function() {
+                        $('#uwb-oc-mem-inline').html('');
+                    }
+                });
+            }
             $('#uwb_auto_collect_params').on('change', function() {
                 if ($(this).is(':checked')) {
                     $('#uwb-collected-params-group').slideDown();

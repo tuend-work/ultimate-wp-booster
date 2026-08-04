@@ -432,9 +432,13 @@ class CacheManager {
                            "defined( 'ABSPATH' ) or die( 'Forbidden' );\n" .
                            "return " . var_export( $config, true ) . ";\n";
 
-        @file_put_contents( $config_path, $config_content );
-        if ( function_exists( 'opcache_invalidate' ) ) {
-            @opcache_invalidate( $config_path, true );
+        // Only rewrite the file if content actually changed (avoid disk I/O and opcache churn)
+        $existing = @file_get_contents( $config_path );
+        if ( $existing !== $config_content ) {
+            @file_put_contents( $config_path, $config_content );
+            if ( function_exists( 'opcache_invalidate' ) ) {
+                @opcache_invalidate( $config_path, true );
+            }
         }
 
         \Ultimate_WP_Booster\Engine\Activation\Activation::copy_advanced_cache_dropin();
@@ -453,6 +457,12 @@ class CacheManager {
     }
 
     public static function write_valid_post_ids_json() {
+        // Guard: only rebuild at most once every 5 minutes to avoid heavy queries on every admin request
+        $transient_key = 'uwb_post_ids_written';
+        if ( get_transient( $transient_key ) ) {
+            return;
+        }
+
         global $wpdb;
         $cache_dir = self::get_cache_dir();
         if ( ! file_exists( $cache_dir ) ) {
@@ -461,8 +471,8 @@ class CacheManager {
 
         $json_path = dirname( $cache_dir ) . '/uwb-valid-post-ids.json';
         $ids = $wpdb->get_col(
-            "SELECT ID FROM {$wpdb->posts} 
-             WHERE post_status = 'publish' 
+            "SELECT ID FROM {$wpdb->posts}
+             WHERE post_status = 'publish'
                AND post_type NOT IN ('revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request')"
         );
 
@@ -472,6 +482,9 @@ class CacheManager {
 
         $ids = array_map( 'intval', $ids );
         @file_put_contents( $json_path, json_encode( $ids ) );
+
+        // Mark as written — expire after 5 minutes
+        set_transient( $transient_key, 1, 5 * MINUTE_IN_SECONDS );
     }
 
     private function recursive_delete( $dir, $delete_self = true ) {
