@@ -93,20 +93,11 @@ class ViewportScreen {
         $host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( explode( ':', $_SERVER['HTTP_HOST'] )[0] ) : '';
         $target_dir = ( ! empty( $host ) && is_dir( $wp_rocket_dir . '/' . $host ) ) ? $wp_rocket_dir . '/' . $host : $wp_rocket_dir;
 
-        // Output Auto-Generated Critical CSS and Custom Manual Critical CSS into separate style tags
+        // Auto-Generated Critical CSS replacement for placeholder
+        $style_replacement = ! empty( $critical_css ) ? '<style id="uwb-critical-css" data-hash="' . $url_hash . '">' . trim( $critical_css ) . '</style>' : '';
+
         $manual_raw   = get_option( 'uwb_tuning_critical_css', '' );
         $manual_clean = ! empty( $manual_raw ) ? CriticalCSS::minify_css( CriticalCSS::sanitize_critical_css( $manual_raw ) ) : '';
-
-        $style_replacement = '';
-        if ( ! empty( $critical_css ) ) {
-            $style_replacement .= '<style id="uwb-critical-css" data-hash="' . $url_hash . '">' . trim( $critical_css ) . '</style>';
-        }
-        if ( ! empty( $manual_clean ) ) {
-            if ( ! empty( $style_replacement ) ) {
-                $style_replacement .= "\n";
-            }
-            $style_replacement .= '<style id="uwb-manual-critical-css">' . trim( $manual_clean ) . '</style>';
-        }
 
         $placeholder_pattern = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?data-hash=[\'"]' . preg_quote( $url_hash, '#' ) . '[\'"][^>]*?>.*?</style>#is';
         $fallback_pattern    = '#<style\b[^>]*?id=[\'"]uwb-critical-css[\'"][^>]*?>.*?</style>#is';
@@ -124,21 +115,31 @@ class ViewportScreen {
                     if ( filesize( $f ) > 100 ) {
                         $content = @file_get_contents( $f );
                         if ( preg_match( $placeholder_pattern, $content ) || ( strpos( $content, 'data-hash="' . $url_hash . '"' ) !== false && strpos( $content, 'uwb-critical-extractor' ) !== false ) ) {
-                            // Strip any pre-existing uwb-manual-critical-css tag to prevent duplication
-                            $content = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-manual-critical-css[\'"][^>]*?>.*?</style>\s*#is', '', $content );
-
-                            // 1. Fill Critical CSS into matching placeholder
+                            // 1. Fill Auto Critical CSS into matching placeholder
                             if ( ! empty( $style_replacement ) ) {
                                 $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
                                 $content = preg_replace( $fallback_pattern, $style_replacement, $content );
                             }
 
-                            // 2. Optimize first-view images using Lazyload class
+                            // 2. Ensure Custom Manual Critical CSS tag exists ONCE in <head>
+                            if ( ! empty( $manual_clean ) && strpos( $content, 'id="uwb-manual-critical-css"' ) === false ) {
+                                $manual_tag = '<style id="uwb-manual-critical-css">' . $manual_clean . '</style>';
+                                if ( preg_match( '/<head[^>]*>/i', $content, $m ) ) {
+                                    $content = str_replace( $m[0], $m[0] . "\n" . $manual_tag, $content );
+                                }
+                            }
+
+                            // 3. Deduplicate any duplicate manual style tags if present
+                            if ( substr_count( $content, 'id="uwb-manual-critical-css"' ) > 1 ) {
+                                $content = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-manual-critical-css[\'"][^>]*?>.*?</style>\s*#is', '', $content, substr_count( $content, 'id="uwb-manual-critical-css"' ) - 1 );
+                            }
+
+                            // 4. Optimize first-view images using Lazyload class
                             if ( ! empty( $images ) ) {
                                 $content = Lazyload::optimize_first_view_images( $content, $images );
                             }
 
-                            // 3. Multi-layer REMOVAL of extractor script tag from static HTML cache
+                            // 5. Multi-layer REMOVAL of extractor script tag from static HTML cache
                             $content = preg_replace( '#<!--UWB_CRIT_START-->.*?<!--UWB_CRIT_END-->#is', '', $content );
                             $content = preg_replace( '#<script\b[^>]*?id=[\'"]uwb-critical-extractor[\'"][^>]*?>.*?</script>#is', '', $content );
                             $content = preg_replace( '#<script\b[^>]*?>[^<]*?__uwb_crit_ran[^<]*?</script>#is', '', $content );
@@ -153,7 +154,7 @@ class ViewportScreen {
                             @file_put_contents( $f, $content );
                             $updated_count++;
 
-                            // 4. Purge matching .gzip file if present
+                            // 6. Purge matching .gzip file if present
                             $gzip_file = $f . '_gzip';
                             if ( file_exists( $gzip_file ) ) {
                                 @unlink( $gzip_file );
@@ -172,12 +173,18 @@ class ViewportScreen {
                 if ( file_exists( $f ) && filesize( $f ) > 100 ) {
                     $content = @file_get_contents( $f );
                     if ( preg_match( $placeholder_pattern, $content ) || ( strpos( $content, 'data-hash="' . $url_hash . '"' ) !== false && strpos( $content, 'uwb-critical-extractor' ) !== false ) ) {
-                        // Strip any pre-existing uwb-manual-critical-css tag to prevent duplication
-                        $content = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-manual-critical-css[\'"][^>]*?>.*?</style>\s*#is', '', $content );
-
                         if ( ! empty( $style_replacement ) ) {
                             $content = preg_replace( $placeholder_pattern, $style_replacement, $content );
                             $content = preg_replace( $fallback_pattern, $style_replacement, $content );
+                        }
+                        if ( ! empty( $manual_clean ) && strpos( $content, 'id="uwb-manual-critical-css"' ) === false ) {
+                            $manual_tag = '<style id="uwb-manual-critical-css">' . $manual_clean . '</style>';
+                            if ( preg_match( '/<head[^>]*>/i', $content, $m ) ) {
+                                $content = str_replace( $m[0], $m[0] . "\n" . $manual_tag, $content );
+                            }
+                        }
+                        if ( substr_count( $content, 'id="uwb-manual-critical-css"' ) > 1 ) {
+                            $content = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-manual-critical-css[\'"][^>]*?>.*?</style>\s*#is', '', $content, substr_count( $content, 'id="uwb-manual-critical-css"' ) - 1 );
                         }
                         if ( ! empty( $images ) ) {
                             $content = Lazyload::optimize_first_view_images( $content, $images );

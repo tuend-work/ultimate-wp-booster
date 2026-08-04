@@ -36,6 +36,11 @@ class CriticalCSS {
             }
         }
 
+        // Deduplicate if multiple manual style tags are present
+        if ( substr_count( $html, 'id="uwb-manual-critical-css"' ) > 1 ) {
+            $html = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-manual-critical-css[\'"][^>]*?>.*?</style>\s*#is', '', $html, substr_count( $html, 'id="uwb-manual-critical-css"' ) - 1 );
+        }
+
         if ( ! $enabled ) {
             return $html;
         }
