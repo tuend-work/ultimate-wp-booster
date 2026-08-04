@@ -31,6 +31,9 @@ class Analyzer {
     /** @var bool */
     private bool $enabled = false;
 
+    /** @var array */
+    private static array $wrapped_callbacks = [];
+
     public function __construct() {
         $this->cache_dir = WP_CONTENT_DIR . self::CACHE_DIR;
     }
@@ -54,9 +57,9 @@ class Analyzer {
         $this->start_time   = microtime( true );
         $this->start_memory = memory_get_usage( true );
 
-        // Hijack WP Hooks to profile individual callback execution times
-        $this->hijack_wp_hooks();
-        add_action( 'all', [ $this, 'hijack_dynamic_hooks' ] );
+        // Wrap existing hooks and hook into dynamic registrations
+        $this->wrap_all_existing_hooks();
+        add_action( 'all', [ $this, 'wrap_hook_callbacks_dynamically' ] );
 
         // Record after WP fully initialised
         add_action( 'wp_loaded', [ $this, 'record' ], 9999 );
@@ -65,26 +68,58 @@ class Analyzer {
     }
 
     /**
-     * Hijack dynamically registered actions/filters as they are fired.
+     * Wrap callbacks dynamically in-place right before the hook runs.
      */
-    public function hijack_dynamic_hooks( string $hook_name ): void {
+    public function wrap_hook_callbacks_dynamically( string $hook_name ): void {
         global $wp_filter;
-        if ( isset( $wp_filter[ $hook_name ] ) && $wp_filter[ $hook_name ] instanceof \WP_Hook && ! ( $wp_filter[ $hook_name ] instanceof Uro_WP_Hook ) ) {
-            $wp_filter[ $hook_name ] = new Uro_WP_Hook( $wp_filter[ $hook_name ], $hook_name );
+        if ( empty( $wp_filter[ $hook_name ] ) || ! ( $wp_filter[ $hook_name ] instanceof \WP_Hook ) ) {
+            return;
+        }
+
+        $hook = $wp_filter[ $hook_name ];
+        if ( empty( $hook->callbacks ) ) {
+            return;
+        }
+
+        foreach ( $hook->callbacks as $priority => $callbacks ) {
+            foreach ( $callbacks as $idx => $the_ ) {
+                if ( empty( $the_['function'] ) ) {
+                    continue;
+                }
+
+                $wrap_key = $hook_name . '_' . $priority . '_' . $idx;
+                if ( isset( self::$wrapped_callbacks[ $wrap_key ] ) ) {
+                    continue;
+                }
+
+                $original_func = $the_['function'];
+                
+                // Safe closure wrapper that records time
+                $the_['function'] = function( &...$cb_args ) use ( $original_func, $hook_name ) {
+                    $start = microtime( true );
+                    $res = call_user_func_array( $original_func, $cb_args );
+                    $duration = microtime( true ) - $start;
+                    Analyzer::record_callback_time_with_hook( $original_func, $hook_name, $duration );
+                    return $res;
+                };
+
+                $hook->callbacks[ $priority ][ $idx ] = $the_;
+                self::$wrapped_callbacks[ $wrap_key ] = true;
+            }
         }
     }
 
     /**
-     * Hijack already-registered action/filter hooks.
+     * Wrap all already-registered action/filter hooks.
      */
-    private function hijack_wp_hooks(): void {
+    private function wrap_all_existing_hooks(): void {
         global $wp_filter;
         if ( ! is_array( $wp_filter ) ) {
             return;
         }
         foreach ( $wp_filter as $name => $hook ) {
-            if ( $hook instanceof \WP_Hook && ! ( $hook instanceof Uro_WP_Hook ) ) {
-                $wp_filter[ $name ] = new Uro_WP_Hook( $hook, $name );
+            if ( $hook instanceof \WP_Hook ) {
+                $this->wrap_hook_callbacks_dynamically( $name );
             }
         }
     }
@@ -432,174 +467,4 @@ class Analyzer {
     }
 }
 
-/**
- * Custom WP_Hook subclass for profiling callback execution times.
- */
-/**
- * Custom WP_Hook wrapper proxy for profiling callback execution times.
- * Delegates all actions to the original WP_Hook to avoid "Cannot extend final class WP_Hook" error.
- */
-class Uro_WP_Hook implements \ArrayAccess, \IteratorAggregate, \Countable {
 
-    /** @var \WP_Hook */
-    private \WP_Hook $original;
-
-    /** @var string */
-    private string $hook_name;
-
-    public function __construct( \WP_Hook $original, string $hook_name = '' ) {
-        $this->original  = $original;
-        $this->hook_name = $hook_name;
-    }
-
-    public function __get( $name ) {
-        return $this->original->$name;
-    }
-
-    public function __set( $name, $value ) {
-        $this->original->$name = $value;
-    }
-
-    public function __isset( $name ) {
-        return isset( $this->original->$name );
-    }
-
-    public function __unset( $name ) {
-        unset( $this->original->$name );
-    }
-
-    public function __call( $name, $arguments ) {
-        return call_user_func_array( [ $this->original, $name ], $arguments );
-    }
-
-    public function add_filter( $hook_name, $callback, $priority, $accepted_args ) {
-        $this->original->add_filter( $hook_name, $callback, $priority, $accepted_args );
-    }
-
-    public function remove_filter( $hook_name, $callback, $priority ) {
-        return $this->original->remove_filter( $hook_name, $callback, $priority );
-    }
-
-    public function has_filter( $hook_name = '', $callback_to_check = false ) {
-        return $this->original->has_filter( $hook_name, $callback_to_check );
-    }
-
-    public function has_filters() {
-        return $this->original->has_filters();
-    }
-
-    public function apply_filters( $value, $args ) {
-        $original_callbacks = $this->original->callbacks;
-        if ( ! $original_callbacks ) {
-            return $this->original->apply_filters( $value, $args );
-        }
-
-        $wrapped_callbacks = [];
-        foreach ( $original_callbacks as $priority => $callbacks ) {
-            foreach ( $callbacks as $idx => $the_ ) {
-                if ( empty( $the_['function'] ) ) {
-                    continue;
-                }
-
-                $original_func = $the_['function'];
-                
-                // Wrap callback dynamically and safely
-                $the_['function'] = function( &...$cb_args ) use ( $original_func ) {
-                    $start = microtime( true );
-                    
-                    $res = call_user_func_array( $original_func, $cb_args );
-                    
-                    $duration = microtime( true ) - $start;
-                    Analyzer::record_callback_time_with_hook( $original_func, $this->hook_name, $duration );
-                    
-                    return $res;
-                };
-
-                $wrapped_callbacks[ $priority ][ $idx ] = $the_;
-            }
-        }
-
-        $this->original->callbacks = $wrapped_callbacks;
-
-        try {
-            $value = $this->original->apply_filters( $value, $args );
-        } finally {
-            $this->original->callbacks = $original_callbacks;
-        }
-
-        return $value;
-    }
-
-    public function do_action( $args ) {
-        $original_callbacks = $this->original->callbacks;
-        if ( ! $original_callbacks ) {
-            $this->original->do_action( $args );
-            return;
-        }
-
-        $wrapped_callbacks = [];
-        foreach ( $original_callbacks as $priority => $callbacks ) {
-            foreach ( $callbacks as $idx => $the_ ) {
-                if ( empty( $the_['function'] ) ) {
-                    continue;
-                }
-
-                $original_func = $the_['function'];
-                
-                // Wrap callback dynamically and safely
-                $the_['function'] = function( &...$cb_args ) use ( $original_func ) {
-                    $start = microtime( true );
-                    
-                    $res = call_user_func_array( $original_func, $cb_args );
-                    
-                    $duration = microtime( true ) - $start;
-                    Analyzer::record_callback_time_with_hook( $original_func, $this->hook_name, $duration );
-                    
-                    return $res;
-                };
-
-                $wrapped_callbacks[ $priority ][ $idx ] = $the_;
-            }
-        }
-
-        $this->original->callbacks = $wrapped_callbacks;
-
-        try {
-            $this->original->do_action( $args );
-        } finally {
-            $this->original->callbacks = $original_callbacks;
-        }
-    }
-
-    // ── Interface Implementations ────────────────────────────────────────────
-
-    #[\ReturnTypeWillChange]
-    public function offsetExists( $offset ) {
-        return isset( $this->original[ $offset ] );
-    }
-
-    #[\ReturnTypeWillChange]
-    public function offsetGet( $offset ) {
-        return $this->original[ $offset ];
-    }
-
-    #[\ReturnTypeWillChange]
-    public function offsetSet( $offset, $value ) {
-        $this->original[ $offset ] = $value;
-    }
-
-    #[\ReturnTypeWillChange]
-    public function offsetUnset( $offset ) {
-        unset( $this->original[ $offset ] );
-    }
-
-    #[\ReturnTypeWillChange]
-    public function getIterator() {
-        return $this->original->getIterator();
-    }
-
-    #[\ReturnTypeWillChange]
-    public function count() {
-        return count( $this->original );
-    }
-}

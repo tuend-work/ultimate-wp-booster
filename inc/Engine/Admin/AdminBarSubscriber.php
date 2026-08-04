@@ -563,7 +563,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
                                     </div>
                                 </div>
                                 <!-- Hooks detail block -->
-                                <div class="uwb-quick-pm-hooks-box" style="display:none; margin-top:10px; padding:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:11.5px; flex-direction:column; gap:4px; max-height:150px; overflow-y:auto; width:100%; box-sizing:border-box;"></div>
+                                <div class="uwb-quick-pm-hooks-box" style="display:none; margin-top:10px; padding:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:11.5px; max-height:150px; overflow-y:auto; width:100%; box-sizing:border-box;"></div>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -651,7 +651,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 e.preventDefault();
                 e.stopPropagation();
                 var $box = $(this).closest('.uwb-quick-pm-item').find('.uwb-quick-pm-hooks-box');
-                $box.slideToggle(150);
+                $box.toggle();
             });
 
             // Real-time Search filter
