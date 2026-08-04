@@ -50,12 +50,26 @@ add_filter( 'option_active_plugins', static function ( $plugins ) use ( $_uro ):
  * @return array          Filtered plugin list.
  */
 function _uro_apply( array $plugins, array $data ): array {
-    // Do not apply any runtime optimization inside wp-admin dashboard or login page
-    if ( is_admin() 
-         || ( defined( 'WP_ADMIN' ) && WP_ADMIN ) 
-         || ( isset( $_SERVER['REQUEST_URI'] ) && ( strpos( $_SERVER['REQUEST_URI'], '/wp-admin/' ) !== false || strpos( $_SERVER['REQUEST_URI'], 'wp-login.php' ) !== false ) )
+    // Safety bypass: critical WordPress admin screens, themes/plugins setup, customizer, login
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $path = strtolower( trim( parse_url( $uri, PHP_URL_PATH ) ?? '/', '/' ) );
+
+    if ( strpos( $path, 'wp-admin/plugins.php' ) !== false 
+         || strpos( $path, 'wp-admin/update.php' ) !== false 
+         || strpos( $path, 'wp-admin/update-core.php' ) !== false 
+         || strpos( $path, 'wp-admin/themes.php' ) !== false 
+         || strpos( $path, 'wp-admin/customize.php' ) !== false
+         || strpos( $uri, 'wp-login.php' ) !== false
     ) {
         return $plugins;
+    }
+
+    // Safety bypass: URO's own AJAX actions to prevent breakages during rebuild
+    if ( strpos( $path, 'admin-ajax.php' ) !== false ) {
+        $action = $_REQUEST['action'] ?? '';
+        if ( is_string( $action ) && strpos( $action, 'uwb_uro_' ) === 0 ) {
+            return $plugins;
+        }
     }
 
     // ── A. Resolve current context ───────────────────────────────────────────
@@ -210,5 +224,10 @@ function _uro_apply( array $plugins, array $data ): array {
 
     // ── E. Return filtered plugin list ───────────────────────────────────────
 
-    return array_values( array_filter( $plugins, static fn( $p ) => ! isset( $to_disable[ $p ] ) ) );
+    return array_values( array_filter( $plugins, static function( $p ) use ( $to_disable ) {
+        if ( $p === 'ultimate-wp-booster/ultimate-wp-booster.php' ) {
+            return true; // Never disable ourselves
+        }
+        return ! isset( $to_disable[ $p ] );
+    } ) );
 }

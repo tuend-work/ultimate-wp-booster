@@ -62,18 +62,33 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 'parent' => 'uwb-admin-bar',
                 'title'  => 'Purge This URL',
                 'href'   => $purge_url,
-            ) );
-            if ( $can_manage ) {
-                $wp_admin_bar->add_node( array(
-                    'id'     => 'uwb-plugin-manager',
-                    'parent' => 'uwb-admin-bar',
-                    'title'  => '⚡ Plugin Manager',
-                    'href'   => '#',
-                    'meta'   => array(
-                        'onclick' => 'jQuery("#uwb-quick-pm-modal").css("display", "flex"); return false;',
-                    )
-                ) );
+        }
+
+        // Add sub-node: Plugin Manager (opens quick panel modal)
+        // Show on frontend and non-critical admin pages
+        $is_critical_admin = false;
+        if ( is_admin() ) {
+            $uri = $_SERVER['REQUEST_URI'] ?? '';
+            if ( strpos( $uri, 'plugins.php' ) !== false 
+                 || strpos( $uri, 'update.php' ) !== false 
+                 || strpos( $uri, 'update-core.php' ) !== false 
+                 || strpos( $uri, 'themes.php' ) !== false 
+                 || strpos( $uri, 'customize.php' ) !== false
+            ) {
+                $is_critical_admin = true;
             }
+        }
+
+        if ( ! $is_critical_admin && $can_manage ) {
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-plugin-manager',
+                'parent' => 'uwb-admin-bar',
+                'title'  => '⚡ Plugin Manager',
+                'href'   => '#',
+                'meta'   => array(
+                    'onclick' => 'jQuery("#uwb-quick-pm-modal").css("display", "flex"); return false;',
+                )
+            ) );
         }
 
         if ( ! $can_manage ) {
@@ -433,7 +448,10 @@ class AdminBarSubscriber implements Subscriber_Interface {
 
         $uri = $_SERVER['REQUEST_URI'];
         $current_path = parse_url( $uri, PHP_URL_PATH );
-        $current_path_clean = '/' . trim( $current_path, '/' ) . '/';
+        $current_path_clean = '/' . trim( $current_path, '/' );
+        if ( substr( $current_path_clean, -4 ) !== '.php' ) {
+            $current_path_clean .= '/';
+        }
         if ( $current_path_clean === '//' ) {
             $current_path_clean = '/';
         }
