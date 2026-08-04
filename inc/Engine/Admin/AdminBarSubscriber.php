@@ -62,6 +62,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 'parent' => 'uwb-admin-bar',
                 'title'  => 'Purge This URL',
                 'href'   => $purge_url,
+            ) );
         }
 
         // Add sub-node: Plugin Manager (opens quick panel modal)
