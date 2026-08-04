@@ -272,6 +272,9 @@ class Optimizer {
             $debug_logs[] = "Delay JS Execution: Disabled in settings";
         }
 
+        // 15.5. Preload Excluded JS & CSS Assets
+        $html = self::inject_excluded_preloads( $html, $config, $debug_logs );
+
         // 16. CDN Static Assets URL Rewriter
         if ( ! empty( $config['cdn_enabled'] ) ) {
             $html = CDNManager::process_html( $html, $config );
@@ -476,6 +479,119 @@ class Optimizer {
 
         if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
             return str_replace( $matches[0], $matches[0] . $tags, $html );
+        }
+
+        return $html;
+    }
+
+    public static function inject_excluded_preloads( $html, $config, &$debug_logs = null ) {
+        $js_excludes  = array();
+        $css_excludes = array();
+
+        // 1. Collect JS Exclusions from Minify/Combine, Defer, and Delay
+        if ( ! empty( $config['js_combine'] ) || ! empty( $config['js_minify'] ) ) {
+            $raw = isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '';
+            if ( ! empty( $raw ) ) {
+                $js_excludes = array_merge( $js_excludes, array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) ) );
+            }
+        }
+        if ( ! empty( $config['js_load_defer'] ) ) {
+            $raw = isset( $config['tuning_js_defer_excludes'] ) ? $config['tuning_js_defer_excludes'] : ( isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '' );
+            if ( ! empty( $raw ) ) {
+                $js_excludes = array_merge( $js_excludes, array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+            }
+        }
+        if ( ! empty( $config['delay_js'] ) ) {
+            $raw = isset( $config['delay_js_exclusions'] ) ? $config['delay_js_exclusions'] : '';
+            if ( ! empty( $raw ) ) {
+                $js_excludes = array_merge( $js_excludes, array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+            }
+        }
+
+        // 2. Collect CSS Exclusions
+        if ( ! empty( $config['css_combine'] ) || ! empty( $config['css_minify'] ) ) {
+            $raw = isset( $config['tuning_css_excludes'] ) ? $config['tuning_css_excludes'] : '';
+            if ( ! empty( $raw ) ) {
+                $css_excludes = array_merge( $css_excludes, array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $raw ) ) ) );
+            }
+        }
+
+        $js_excludes  = array_unique( array_filter( $js_excludes ) );
+        $css_excludes = array_unique( array_filter( $css_excludes ) );
+
+        if ( empty( $js_excludes ) && empty( $css_excludes ) ) {
+            return $html;
+        }
+
+        $preload_urls = array();
+
+        // 3. Find matching JS <script src="..."> tags in HTML that match exclusions
+        if ( ! empty( $js_excludes ) ) {
+            preg_match_all( '#<script\b[^>]*?src=([\'"])(.*?)\1[^>]*?>#is', $html, $matches, PREG_SET_ORDER );
+            foreach ( $matches as $m ) {
+                $tag = $m[0];
+                $url = $m[2];
+                if ( empty( $url ) || strpos( $url, 'data:' ) === 0 ) {
+                    continue;
+                }
+                foreach ( $js_excludes as $ex ) {
+                    if ( ! empty( $ex ) && ( stripos( $tag, $ex ) !== false || stripos( $url, $ex ) !== false ) ) {
+                        $preload_urls[ $url ] = 'script';
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 4. Find matching CSS <link rel="stylesheet" href="..."> tags in HTML that match exclusions
+        if ( ! empty( $css_excludes ) ) {
+            preg_match_all( '#<link\b[^>]*?href=([\'"])(.*?)\1[^>]*?>#is', $html, $matches, PREG_SET_ORDER );
+            foreach ( $matches as $m ) {
+                $tag = $m[0];
+                $url = $m[2];
+                if ( empty( $url ) || strpos( $url, 'data:' ) === 0 || stripos( $tag, 'rel=' ) === false || stripos( $tag, 'stylesheet' ) === false ) {
+                    continue;
+                }
+                foreach ( $css_excludes as $ex ) {
+                    if ( ! empty( $ex ) && ( stripos( $tag, $ex ) !== false || stripos( $url, $ex ) !== false ) ) {
+                        $preload_urls[ $url ] = 'style';
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ( empty( $preload_urls ) ) {
+            return $html;
+        }
+
+        // 5. Build <link rel="preload"> tags
+        $preload_tags = '';
+        $added_count  = 0;
+
+        foreach ( $preload_urls as $url => $as_type ) {
+            $escaped_url = esc_url( $url );
+            // Do not add duplicate preload if already present in HTML
+            if ( stripos( $html, 'rel="preload"' ) !== false && stripos( $html, $escaped_url ) !== false ) {
+                continue;
+            }
+            $preload_tags .= "\n<link rel=\"preload\" href=\"{$escaped_url}\" as=\"{$as_type}\">";
+            $added_count++;
+        }
+
+        if ( empty( $preload_tags ) ) {
+            return $html;
+        }
+
+        // 6. Inject preload tags into <head> (preferably after <meta charset...>)
+        if ( preg_match( '/<meta\b[^>]*?charset[^>]*?>/i', $html, $m ) ) {
+            $html = str_replace( $m[0], $m[0] . $preload_tags, $html );
+        } elseif ( preg_match( '/<head[^>]*>/i', $html, $m ) ) {
+            $html = str_replace( $m[0], $m[0] . $preload_tags, $html );
+        }
+
+        if ( is_array( $debug_logs ) && $added_count > 0 ) {
+            $debug_logs[] = "Preload Excluded Assets: Applied rel=preload to {$added_count} excluded JS/CSS asset(s)";
         }
 
         return $html;
