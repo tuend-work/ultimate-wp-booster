@@ -512,15 +512,11 @@ class AdminBarSubscriber implements Subscriber_Interface {
                     <button id="uwb-quick-pm-close" style="background:none; border:none; cursor:pointer; font-size:20px; color:#94a3b8; font-weight:700; padding:4px; line-height:1;">✕</button>
                 </div>
 
-                <!-- Search & Profile -->
-                <div style="padding:12px 24px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; gap:16px; background:#fff; flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:200px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <input type="text" id="uwb-quick-pm-search" placeholder="Tìm kiếm plugin..." style="border:none; outline:none; font-size:13px; width:100%; color:#0f172a; padding:6px 0;">
-                    </div>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#475569; cursor:pointer; font-weight:500; user-select:none;">
-                        <input type="checkbox" id="uwb-quick-pm-profile-toggle" style="width:14px; height:14px; margin:0;">
-                        <span>Đo hiệu năng (Profile)</span>
+                <!-- Profile Toggle Container -->
+                <div style="padding:12px 24px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:flex-start; gap:16px; background:#fff;">
+                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#1e293b; cursor:pointer; font-weight:600; user-select:none;">
+                        <input type="checkbox" id="uwb-quick-pm-profile-toggle" style="width:16px; height:16px; margin:0; cursor:pointer;">
+                        <span>Đo hiệu năng trang hiện tại (Profile Request)</span>
                     </label>
                 </div>
 
@@ -654,18 +650,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 $box.toggle();
             });
 
-            // Real-time Search filter
-            $('#uwb-quick-pm-search').on('input', function() {
-                var query = $(this).val().toLowerCase();
-                $('.uwb-quick-pm-item').each(function() {
-                    var name = $(this).data('name') || '';
-                    if (name.indexOf(query) !== -1) {
-                        $(this).css('display', 'flex');
-                    } else {
-                        $(this).css('display', 'none');
-                    }
-                });
-            });
+
 
             // Save Rules
             $('#uwb-quick-pm-save').on('click', function() {
