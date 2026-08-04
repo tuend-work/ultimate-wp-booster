@@ -689,20 +689,20 @@ function uwb_advanced_cache_shutdown() {
     $cache_logged_in_val = intval( $cache_logged_in );
     if ( $cache_logged_in_val !== 2 && $logged_in_segment !== '' ) {
         $should_cache = false;
-        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (cache_logged_in is not set to Optimize & Cache)';
+        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (cache_logged_in is set to ' . ( $cache_logged_in_val === 1 ? 'Optimize Only' : 'None' ) . ')';
         if ( $debug ) {
             error_log( "UWB: Caching bypassed: User is logged in but cache_logged_in setting is " . $cache_logged_in_val );
         }
     }
     if ( $cache_logged_in_val !== 2 && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
         $should_cache = false;
-        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (is_user_logged_in() = true, cache_logged_in is not set to Optimize & Cache)';
+        if ( empty( $shutdown_bypass_reason ) ) $shutdown_bypass_reason = 'Logged-in user (is_user_logged_in() = true, cache_logged_in is set to ' . ( $cache_logged_in_val === 1 ? 'Optimize Only' : 'None' ) . ')';
         if ( $debug ) {
             error_log( "UWB: Caching bypassed: is_user_logged_in() is true and cache_logged_in setting is " . $cache_logged_in_val );
         }
     }
 
-    if ( function_exists( 'current_user_can' ) && current_user_can( 'manage_options' ) ) {
+    if ( $cache_logged_in_val !== 2 && function_exists( 'current_user_can' ) && current_user_can( 'manage_options' ) ) {
         $should_cache = false;
         if ( empty( $shutdown_bypass_reason ) ) {
             $shutdown_bypass_reason = 'Logged-in Administrator (manage_options)';

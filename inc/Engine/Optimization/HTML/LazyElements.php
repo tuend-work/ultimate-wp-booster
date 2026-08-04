@@ -108,9 +108,8 @@ class LazyElements {
                 $element->setAttribute( 'class', $new_classes );
                 $element->setAttribute( 'data-uwb-target', $template_id );
 
-                // Place <noscript> fallback inside container and append <template> sibling right after element
-                $element->innertext = '<noscript class="uwb-lazy-noscript">' . $inner_html . '</noscript>';
-                $element->outertext = $element->outertext() . '<template id="' . $template_id . '">' . $inner_html . '</template>';
+                // Place <noscript> fallback and <template> tag INSIDE container element to preserve HTML tree stability
+                $element->innertext = '<noscript class="uwb-lazy-noscript">' . $inner_html . '</noscript><template id="' . $template_id . '">' . $inner_html . '</template>';
             }
         }
 
