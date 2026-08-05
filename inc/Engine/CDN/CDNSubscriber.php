@@ -216,7 +216,10 @@ class CDNSubscriber implements Subscriber_Interface {
             return $url;
         }
 
-        $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        $cdn_domain = get_option( 'uwb_cdn_media_custom_domain', '' );
+        if ( empty( $cdn_domain ) ) {
+            $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        }
         if ( empty( $cdn_domain ) ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
                 error_log( 'UWB CDN Trace - Bypassed because uwb_cdn_custom_domain is empty.' );
@@ -264,7 +267,10 @@ class CDNSubscriber implements Subscriber_Interface {
             return $sources;
         }
 
-        $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        $cdn_domain = get_option( 'uwb_cdn_media_custom_domain', '' );
+        if ( empty( $cdn_domain ) ) {
+            $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        }
         if ( empty( $cdn_domain ) || ! is_array( $sources ) ) {
             return $sources;
         }
@@ -304,7 +310,10 @@ class CDNSubscriber implements Subscriber_Interface {
             return $image;
         }
 
-        $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        $cdn_domain = get_option( 'uwb_cdn_media_custom_domain', '' );
+        if ( empty( $cdn_domain ) ) {
+            $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
+        }
         if ( empty( $cdn_domain ) || ! is_array( $image ) || empty( $image[0] ) ) {
             return $image;
         }
@@ -412,7 +421,7 @@ class CDNSubscriber implements Subscriber_Interface {
             'uwb_has_bak'        => ( $file && file_exists( $file . '.bak' ) ),
             'uwb_bucket'         => get_option( 'uwb_cdn_bucket', '' ),
             'uwb_provider'       => get_option( 'uwb_cdn_provider', 'cloudflare_r2' ),
-            'uwb_cdn_domain'     => get_option( 'uwb_cdn_custom_domain', '' ),
+            'uwb_cdn_domain'     => get_option( 'uwb_cdn_media_custom_domain', '' ) ? get_option( 'uwb_cdn_media_custom_domain', '' ) : get_option( 'uwb_cdn_custom_domain', '' ),
             'uwb_cache_control'  => get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' ),
         );
     }

@@ -135,6 +135,7 @@ class Admin {
             'uwb_cdn_endpoint',
             'uwb_cdn_region',
             'uwb_cdn_custom_domain',
+            'uwb_cdn_media_custom_domain',
             'uwb_cdn_cache_control',
             'uwb_cdn_file_types_images',
             'uwb_cdn_file_types_css',
@@ -385,6 +386,7 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_cdn_endpoint', 'esc_url_raw' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_region', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_custom_domain', 'esc_url_raw' );
+        register_setting( 'uwb_settings_group', 'uwb_cdn_media_custom_domain', 'esc_url_raw' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_cache_control', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_file_types_images', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cdn_file_types_css', 'intval' );
@@ -6312,10 +6314,13 @@ js-(before|after)
             $(document).on('change', 'input[name="uwb_cdn_distribute_css"], input[name="uwb_cdn_distribute_js"], input[name="uwb_cdn_distribute_html"], input[name="uwb_cdn_distribute_media"], input[name="uwb_cdn_distribute_font"]', function() {
                 var $card = $(this).closest('div');
                 var $wrap = $card.find('.uwb-cdn-events-wrap');
+                var $mediaDomainWrap = $card.find('.uwb-cdn-media-custom-domain-wrap');
                 if ($(this).is(':checked')) {
                     $wrap.slideDown(200);
+                    $mediaDomainWrap.slideDown(200);
                 } else {
                     $wrap.slideUp(200);
+                    $mediaDomainWrap.slideUp(200);
                 }
             });
 
@@ -6897,6 +6902,19 @@ js-(before|after)
                 </div>
             <?php else : ?>
                 <?php $this->render_toggle_switch( $toggle_key, $toggle_label, $toggle_desc ); ?>
+
+                <?php if ( $toggle_key === 'uwb_cdn_distribute_media' ) : 
+                    $is_active = (bool) get_option( $toggle_key, 1 );
+                ?>
+                    <!-- CDN Custom Domain CNAME URL specific to Media Library -->
+                    <div class="uwb-cdn-media-custom-domain-wrap" style="margin-top:16px; background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; <?php echo $is_active ? '' : 'display:none;'; ?>">
+                        <div class="uwb-form-group" style="margin-bottom:0;">
+                            <label for="uwb_cdn_media_custom_domain" style="font-weight: 700; margin-bottom: 8px; display: block; color: var(--uwb-text); font-size: 13px;">CDN Custom Domain for Media / CNAME URL (Optional)</label>
+                            <input type="url" name="uwb_cdn_media_custom_domain" id="uwb_cdn_media_custom_domain" value="<?php echo esc_attr( get_option( 'uwb_cdn_media_custom_domain', '' ) ); ?>" placeholder="e.g. https://media-cdn.mysite.com (Leave empty to fallback to main CDN CNAME URL)" style="width:100%; padding:10px 14px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13px;" />
+                            <p class="description" style="margin-top:6px; margin-bottom:0;">Tên miền CDN riêng cho hình ảnh/tập tin trong thư viện Media. Nếu để trống, hệ thống sẽ sử dụng tên miền CDN chung ở tab <strong>[6] CDN Offload Media</strong>.</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
                 <?php if ( ! empty( $events ) && is_array( $events ) ) : 
                     $is_active = (bool) get_option( $toggle_key, 1 );

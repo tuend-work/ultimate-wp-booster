@@ -30,14 +30,13 @@ class CDNManager {
 
         $cdn_enabled = ! empty( $config['cdn_enabled'] );
         $cdn_domain  = isset( $config['cdn_custom_domain'] ) ? trim( $config['cdn_custom_domain'] ) : '';
-
-        if ( ! $cdn_enabled || empty( $cdn_domain ) ) {
-            return $html;
+        $cdn_media_domain = isset( $config['cdn_media_custom_domain'] ) ? trim( $config['cdn_media_custom_domain'] ) : '';
+        if ( empty( $cdn_media_domain ) ) {
+            $cdn_media_domain = $cdn_domain;
         }
 
-        $cdn_domain = rtrim( $cdn_domain, '/' );
-        if ( strpos( $cdn_domain, 'http://' ) !== 0 && strpos( $cdn_domain, 'https://' ) !== 0 ) {
-            $cdn_domain = 'https://' . $cdn_domain;
+        if ( ! $cdn_enabled || ( empty( $cdn_domain ) && empty( $cdn_media_domain ) ) ) {
+            return $html;
         }
 
         $home_url  = function_exists( 'home_url' ) ? home_url() : '';
@@ -75,14 +74,15 @@ class CDNManager {
         // 1. Rewrite single URL attributes: href, src, data-src
         $pattern = '/(href|src|data-src)=([\'"])((?:https?:\/\/(?:[a-z0-9\-]+\.)*' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?)\2/i';
 
-        $html = preg_replace_callback( $pattern, function( $matches ) use ( $home_host, $cdn_domain, $version ) {
+        $html = preg_replace_callback( $pattern, function( $matches ) use ( $home_host, $cdn_domain, $cdn_media_domain, $version ) {
             $attr    = $matches[1];
             $quote   = $matches[2];
             $url     = $matches[3];
+            $ext     = isset( $matches[4] ) ? strtolower( $matches[4] ) : '';
             $query   = isset( $matches[5] ) ? $matches[5] : '';
 
             $path_part = parse_url( $url, PHP_URL_PATH );
-            if ( empty( $path_part ) ) {
+            if ( empty($path_part) ) {
                 return $matches[0];
             }
 
@@ -99,13 +99,22 @@ class CDNManager {
                 }
             }
 
-            $cdn_url = $cdn_domain . $path_part . $query;
+            $target_domain = in_array( $ext, array( 'css', 'js', 'woff', 'woff2', 'ttf', 'eot', 'otf' ), true ) ? $cdn_domain : $cdn_media_domain;
+            if ( empty( $target_domain ) ) {
+                return $matches[0];
+            }
+            $target_domain = rtrim( $target_domain, '/' );
+            if ( strpos( $target_domain, 'http://' ) !== 0 && strpos( $target_domain, 'https://' ) !== 0 ) {
+                $target_domain = 'https://' . $target_domain;
+            }
+
+            $cdn_url = $target_domain . $path_part . $query;
             return $attr . '=' . $quote . esc_url( $cdn_url ) . $quote;
         }, $html );
 
         // 2. Rewrite multi-entry attributes: srcset and data-srcset (supports descriptors like 300w, 2x)
         $srcset_pattern = '/(srcset|data-srcset)=([\'"])(.*?)\2/i';
-        $html = preg_replace_callback( $srcset_pattern, function( $matches ) use ( $home_host_quoted, $cdn_domain, $version, $ext_pattern ) {
+        $html = preg_replace_callback( $srcset_pattern, function( $matches ) use ( $home_host_quoted, $cdn_domain, $cdn_media_domain, $version, $ext_pattern ) {
             $attr  = $matches[1];
             $quote = $matches[2];
             $val   = $matches[3];
@@ -140,7 +149,15 @@ class CDNManager {
                             $query .= '&ver=' . $version;
                         }
 
-                        $url = $cdn_domain . $path_part . $query;
+                        $ext = isset( $m[1] ) ? strtolower( $m[1] ) : '';
+                        $target_domain = in_array( $ext, array( 'css', 'js', 'woff', 'woff2', 'ttf', 'eot', 'otf' ), true ) ? $cdn_domain : $cdn_media_domain;
+                        if ( ! empty( $target_domain ) ) {
+                            $target_domain = rtrim( $target_domain, '/' );
+                            if ( strpos( $target_domain, 'http://' ) !== 0 && strpos( $target_domain, 'https://' ) !== 0 ) {
+                                $target_domain = 'https://' . $target_domain;
+                            }
+                            $url = $target_domain . $path_part . $query;
+                        }
                     }
                 }
 

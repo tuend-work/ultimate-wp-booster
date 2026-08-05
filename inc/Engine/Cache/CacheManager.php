@@ -395,6 +395,7 @@ class CacheManager {
             'cdn_enabled'                 => intval( get_option( 'uwb_cdn_enabled', 0 ) ),
             'cdn_provider'                => get_option( 'uwb_cdn_provider', 'cloudflare_r2' ),
             'cdn_custom_domain'           => get_option( 'uwb_cdn_custom_domain', '' ),
+            'cdn_media_custom_domain'     => get_option( 'uwb_cdn_media_custom_domain', '' ),
             'cdn_file_types_images'       => intval( get_option( 'uwb_cdn_file_types_images', 1 ) ),
             'cdn_file_types_css'          => intval( get_option( 'uwb_cdn_file_types_css', 1 ) ),
             'cdn_file_types_js'           => intval( get_option( 'uwb_cdn_file_types_js', 1 ) ),
