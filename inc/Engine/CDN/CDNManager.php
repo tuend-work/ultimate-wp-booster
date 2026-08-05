@@ -5,7 +5,6 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class CDNManager {
 
-    private static $uploaded_runtime_cache = array();
     private static $attachment_meta_cache = array();
 
     public static function is_asset_uploaded_to_cdn( $s3_key ) {
