@@ -39,6 +39,10 @@ class Analyzer {
     }
 
     public function init(): void {
+        if ( defined( 'UWB_DISABLE_ANALYZER' ) && UWB_DISABLE_ANALYZER ) {
+            return;
+        }
+
         $cookie_profile = isset( $_COOKIE['uwb_uro_profile'] ) && $_COOKIE['uwb_uro_profile'] === '1';
 
         // Debug HTML comments in head
@@ -57,8 +61,7 @@ class Analyzer {
         $this->start_time   = microtime( true );
         $this->start_memory = memory_get_usage( true );
 
-        // Wrap existing hooks and hook into dynamic registrations
-        $this->wrap_all_existing_hooks();
+        // Wrap dynamic registrations on the fly (no need for heavy wrap_all_existing_hooks at startup)
         add_action( 'all', [ $this, 'wrap_hook_callbacks_dynamically' ] );
 
         // Record request log to file (only when global Analyzer is enabled in Settings)
@@ -107,20 +110,7 @@ class Analyzer {
         }
     }
 
-    /**
-     * Wrap all already-registered action/filter hooks.
-     */
-    private function wrap_all_existing_hooks(): void {
-        global $wp_filter;
-        if ( ! is_array( $wp_filter ) ) {
-            return;
-        }
-        foreach ( $wp_filter as $name => $hook ) {
-            if ( $hook instanceof \WP_Hook ) {
-                $this->wrap_hook_callbacks_dynamically( $name );
-            }
-        }
-    }
+
 
     /**
      * Record current request profile.
