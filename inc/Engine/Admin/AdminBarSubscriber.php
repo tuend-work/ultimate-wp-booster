@@ -730,6 +730,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
                                 $box.html('<strong style="display:block; margin-bottom:4px; font-size:10px; color:#1e293b;">Callbacks Execution Breakdown:</strong>' + hookItems.join(''));
                                 $(this).find('.uwb-quick-pm-hooks-btn').show();
                             }
+                        }
                     });
 
                     if (totalTime > 0) {
