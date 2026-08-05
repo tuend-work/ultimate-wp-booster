@@ -165,27 +165,21 @@ class Activation {
         }
 
         $htaccess_path = ABSPATH . '.htaccess';
-        if ( ! file_exists( $htaccess_path ) || ! is_writable( $htaccess_path ) ) {
-            return;
-        }
-
-        $content = file_get_contents( $htaccess_path );
-        $marker = '# BEGIN Ultimate WP Booster LiteSpeed';
         
-        $rules = "# BEGIN Ultimate WP Booster LiteSpeed\n";
-        $rules .= "<IfModule LiteSpeed>\n";
-        $rules .= "    CacheLookup public on\n";
-        $rules .= "</IfModule>\n";
-        $rules .= "# END Ultimate WP Booster LiteSpeed";
-
-        if ( strpos( $content, $marker ) !== false ) {
-            $pattern = '/# BEGIN Ultimate WP Booster LiteSpeed.*?# END Ultimate WP Booster LiteSpeed/s';
-            $content = preg_replace( $pattern, $rules, $content );
-        } else {
-            $content = $rules . "\n\n" . $content;
+        // Ensure WordPress admin functions are loaded
+        if ( ! function_exists( 'insert_with_markers' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/misc.php';
         }
 
-        file_put_contents( $htaccess_path, $content );
+        if ( function_exists( 'insert_with_markers' ) ) {
+            $rules = array(
+                '<IfModule LiteSpeed>',
+                '    CacheLookup public on',
+                '</IfModule>'
+            );
+            insert_with_markers( $htaccess_path, 'Ultimate WP Booster LiteSpeed', $rules );
+        }
+        
         \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::touch_htaccess();
     }
 
