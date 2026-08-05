@@ -1094,7 +1094,8 @@ class Admin {
         ?>
         <div class="uwb-module-banner-inline"
              data-content-id="<?php echo esc_attr( $content_id ); ?>"
-             style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+             style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:24px;
+                 border:1px solid var(--uwb-border); border-radius:12px; padding:18px 24px; background:#ffffff; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
             <div style="flex:1; min-width:200px;">
                 <h2 style="margin:0; font-size:18px; font-weight:700; color:var(--uwb-text);"><?php echo esc_html( $module_name ); ?></h2>
                 <?php if ( ! empty( $description ) ) : ?>
