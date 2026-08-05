@@ -89,21 +89,17 @@ class Analyzer {
                     continue;
                 }
 
+                $original_func = $the_['function'];
+                if ( $original_func instanceof UWB_Callback_Wrapper ) {
+                    continue;
+                }
+
                 $wrap_key = $hook_name . '_' . $priority . '_' . $idx;
                 if ( isset( self::$wrapped_callbacks[ $wrap_key ] ) ) {
                     continue;
                 }
 
-                $original_func = $the_['function'];
-                
-                // Safe closure wrapper that records time
-                $the_['function'] = function( ...$cb_args ) use ( $original_func, $hook_name ) {
-                    $start = microtime( true );
-                    $res = call_user_func_array( $original_func, $cb_args );
-                    $duration = microtime( true ) - $start;
-                    Analyzer::record_callback_time_with_hook( $original_func, $hook_name, $duration );
-                    return $res;
-                };
+                $the_['function'] = new UWB_Callback_Wrapper( $original_func, $hook_name );
 
                 $hook->callbacks[ $priority ][ $idx ] = $the_;
                 self::$wrapped_callbacks[ $wrap_key ] = true;
@@ -466,6 +462,27 @@ class Analyzer {
             }
         }
         return null;
+    }
+}
+
+/**
+ * Invokable callback wrapper to measure hook callback execution times safely.
+ */
+class UWB_Callback_Wrapper {
+    public $original_func;
+    public $hook_name;
+
+    public function __construct( $original_func, $hook_name ) {
+        $this->original_func = $original_func;
+        $this->hook_name     = $hook_name;
+    }
+
+    public function __invoke( ...$args ) {
+        $start = microtime( true );
+        $res = call_user_func_array( $this->original_func, $args );
+        $duration = microtime( true ) - $start;
+        Analyzer::record_callback_time_with_hook( $this->original_func, $this->hook_name, $duration );
+        return $res;
     }
 }
 
