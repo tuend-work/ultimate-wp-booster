@@ -171,6 +171,7 @@ class CDNManager {
 
     private static $uploaded_runtime_cache = array();
     private static $uploaded_file_cache    = null;
+    private static $db_table_initialized   = false;
 
     private static function get_cache_file_path() {
         $dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster';
@@ -366,6 +367,11 @@ class CDNManager {
     }
 
     public static function init_db_table() {
+        if ( self::$db_table_initialized ) {
+            return;
+        }
+        self::$db_table_initialized = true;
+
         global $wpdb;
         $table_name = self::get_table_name();
         if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) !== $table_name ) {
