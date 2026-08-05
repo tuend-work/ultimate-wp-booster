@@ -4382,8 +4382,8 @@ js-(before|after)
                         + '<div style="font-size:12px; color:var(--uwb-text-muted);">Priority: ' + (rule.priority || 10) + ' · ' + pluginCount + ' plugin(s) · <span style="color:' + statusColor + ';">' + statusText + '</span></div>'
                         + '</div>'
                         + '<div style="display:flex; gap:8px;">'
-                        + '<button class="button uro-btn-edit-rule" data-idx="' + i + '" style="padding:7px 14px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; font-size:12px;">✏️ Edit</button>'
-                        + '<button class="button uro-btn-delete-rule" data-idx="' + i + '" style="padding:7px 14px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; font-size:12px; color:#dc2626;">🗑 Delete</button>'
+                        + '<button type="button" class="button uro-btn-edit-rule" data-idx="' + i + '" style="padding:7px 14px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; font-size:12px;">✏️ Edit</button>'
+                        + '<button type="button" class="button uro-btn-delete-rule" data-idx="' + i + '" style="padding:7px 14px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; font-size:12px; color:#dc2626;">🗑 Delete</button>'
                         + '</div>'
                         + '</div>';
                 });
@@ -4562,14 +4562,16 @@ js-(before|after)
                 });
 
                 // Edit Rule
-                $(document).on('click', '.uro-btn-edit-rule', function() {
+                $(document).on('click', '.uro-btn-edit-rule', function(e) {
+                    e.preventDefault();
                     var idx = parseInt($(this).data('idx'));
                     if (uroPlugins.length === 0) { uroLoadPlugins(function() { openModal(idx); }); }
                     else { openModal(idx); }
                 });
 
                 // Delete Rule
-                $(document).on('click', '.uro-btn-delete-rule', function() {
+                $(document).on('click', '.uro-btn-delete-rule', function(e) {
+                    e.preventDefault();
                     var idx = parseInt($(this).data('idx'));
                     if (!confirm('Delete this rule?')) return;
                     uroRules.splice(idx, 1);
