@@ -1031,8 +1031,8 @@ class Admin {
     }
 
     /**
-     * Render module enable/disable banner ở đầu mỗi tab.
-     * Tích hợp vào form settings thông thường — cần nhấn Save Settings để có hiệu lực.
+     * Render module enable/disable banner với iOS-style toggle.
+     * Toggle lập tức ẩn/hiện nội dung tab — vẫn lưu giá trị khi Save Settings.
      *
      * @param string $option_key  Ví dụ: 'uwb_module_cdn_enabled'
      * @param string $module_name Ví dụ: '☁️ CDN & S3 Storage'
@@ -1040,63 +1040,81 @@ class Admin {
      */
     private function render_module_banner( $option_key, $module_name, $description = '' ) {
         $is_enabled = (int) get_option( $option_key, 1 );
+        // Unique content-wrapper ID derived from option key
+        $content_id = 'uwb-mcontent-' . esc_attr( str_replace( array( 'uwb_module_', '_enabled' ), '', $option_key ) );
         ?>
-        <div class="uwb-module-banner" style="
-            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
-            background: <?php echo $is_enabled ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)' : 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)'; ?>;
-            border: 2px solid <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>;
-            border-radius: 12px; padding: 18px 24px; margin-bottom: 24px;
-        ">
-            <div style="display:flex; align-items:center; gap:14px; flex:1; min-width:200px;">
-                <div style="
-                    width:42px; height:42px; border-radius:10px; flex-shrink:0;
-                    background: <?php echo $is_enabled ? '#d1fae5' : '#ffedd5'; ?>;
-                    border: 1.5px solid <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>;
-                    display:flex; align-items:center; justify-content:center; font-size:18px;
-                "><?php echo $is_enabled ? '✅' : '⚠️'; ?></div>
-                <div>
-                    <div style="font-weight: 800; font-size: 15px; color: <?php echo $is_enabled ? '#065f46' : '#92400e'; ?>;">
-                        <?php echo esc_html( $module_name ); ?> &mdash;
-                        <span style="font-size:13px; font-weight:700; padding:2px 10px; border-radius:20px;
-                            background: <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>; color:#fff;">
-                            <?php echo $is_enabled ? 'ENABLED' : 'DISABLED'; ?>
-                        </span>
-                    </div>
-                    <?php if ( ! empty( $description ) ) : ?>
-                        <div style="font-size: 12.5px; color: <?php echo $is_enabled ? '#047857' : '#b45309'; ?>; margin-top: 3px;">
-                            <?php echo $is_enabled ? esc_html( $description ) : '⚠️ Module đang TẮT — Tất cả chức năng trong tab này đã bị vô hiệu hoá. Bật lại để sử dụng.'; ?>
-                        </div>
-                    <?php endif; ?>
+        <div class="uwb-module-banner"
+             data-content-id="<?php echo esc_attr( $content_id ); ?>"
+             data-module-name="<?php echo esc_attr( $module_name ); ?>"
+             data-desc-on="<?php echo esc_attr( $description ); ?>"
+             data-desc-off="⚠️ Module đang TẮT — Tất cả chức năng đã bị vô hiệu hoá. Bật lại để sử dụng."
+             style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;
+                 border-radius:14px; padding:18px 24px; margin-bottom:20px;
+                 border:2px solid <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>;
+                 background:<?php echo $is_enabled ? 'linear-gradient(135deg,#ecfdf5,#d1fae5)' : 'linear-gradient(135deg,#fff7ed,#ffedd5)'; ?>;
+                 transition:all 0.3s ease;">
+            <!-- Icon -->
+            <div class="uwb-mb-icon" style="width:44px;height:44px;border-radius:10px;flex-shrink:0;
+                display:flex;align-items:center;justify-content:center;font-size:20px;
+                border:1.5px solid <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>;
+                background:<?php echo $is_enabled ? '#d1fae5' : '#ffedd5'; ?>;
+                transition:all 0.3s ease;"><?php echo $is_enabled ? '✅' : '⚠️'; ?></div>
+            <!-- Info -->
+            <div style="flex:1;min-width:180px;">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <strong style="font-size:15px;font-weight:800;
+                        color:<?php echo $is_enabled ? '#065f46' : '#92400e'; ?>;">
+                        <?php echo esc_html( $module_name ); ?>
+                    </strong>
+                    <span class="uwb-mb-badge" style="font-size:11.5px;font-weight:800;padding:3px 12px;border-radius:20px;
+                        letter-spacing:0.5px;color:#fff;
+                        background:<?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>;
+                        transition:background 0.3s ease;">
+                        <?php echo $is_enabled ? 'ENABLED' : 'DISABLED'; ?>
+                    </span>
                 </div>
+                <?php if ( ! empty( $description ) ) : ?>
+                <div class="uwb-mb-desc" style="font-size:12.5px;margin-top:4px;
+                    color:<?php echo $is_enabled ? '#047857' : '#b45309'; ?>;">
+                    <?php echo $is_enabled ? esc_html( $description ) : '⚠️ Module đang TẮT — Tất cả chức năng đã bị vô hiệu hoá. Bật lại để sử dụng.'; ?>
+                </div>
+                <?php endif; ?>
             </div>
-            <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
-                <span style="font-size:12px; font-weight:600; color:<?php echo $is_enabled ? '#065f46' : '#92400e'; ?>;">Module Status:</span>
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:13px;
-                    color:<?php echo !$is_enabled ? '#6b7280' : 'var(--uwb-text-muted)'; ?>;">
-                    <input type="radio" name="<?php echo esc_attr( $option_key ); ?>" value="0"
-                        <?php checked( $is_enabled, 0 ); ?> style="width:15px; height:15px; cursor:pointer;"> OFF
-                </label>
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:13px;
-                    color:<?php echo $is_enabled ? '#10b981' : 'var(--uwb-text-muted)'; ?>;">
-                    <input type="radio" name="<?php echo esc_attr( $option_key ); ?>" value="1"
-                        <?php checked( $is_enabled, 1 ); ?> style="width:15px; height:15px; cursor:pointer;"> ON
-                </label>
-            </div>
-        </div>
-        <?php if ( ! $is_enabled ) : ?>
-        <div style="background:#fef3c7; border:1px solid #f59e0b; border-radius:10px; padding:14px 20px; margin-bottom:24px;
-            display:flex; align-items:flex-start; gap:12px;">
-            <span style="font-size:20px; flex-shrink:0;">⚠️</span>
-            <div>
-                <strong style="color:#92400e; font-size:13.5px;">Module đang TẮT</strong><br>
-                <span style="color:#78350f; font-size:12.5px;">
-                    Tất cả chức năng trong tab <strong><?php echo esc_html( $module_name ); ?></strong> hiện đã bị vô hiệu hoá.
-                    Web sẽ không chạy bất kỳ query hay hook nào liên quan đến module này.
-                    Chuyển sang <strong>ON</strong> và nhấn <strong>Save Settings</strong> để kích hoạt.
+            <!-- Toggle Switch -->
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                <span class="uwb-mb-status-label" style="font-size:12px;font-weight:700;
+                    color:<?php echo $is_enabled ? '#065f46' : '#92400e'; ?>;">
+                    <?php echo $is_enabled ? 'ON' : 'OFF'; ?>
                 </span>
+                <!-- Hidden input sends 0 when checkbox unchecked -->
+                <input type="hidden" name="<?php echo esc_attr( $option_key ); ?>" value="0">
+                <label class="uwb-module-toggle" title="<?php echo $is_enabled ? 'Click để tắt module' : 'Click để bật module'; ?>">
+                    <input type="checkbox"
+                           class="uwb-module-toggle-cb"
+                           name="<?php echo esc_attr( $option_key ); ?>"
+                           value="1"
+                           <?php checked( $is_enabled, 1 ); ?>>
+                    <span class="uwb-module-toggle-track">
+                        <span class="uwb-module-toggle-thumb"></span>
+                    </span>
+                </label>
             </div>
         </div>
-        <?php endif;
+        <!-- Content wrapper: shown/hidden by JS toggle, inputs keep values -->
+        <div id="<?php echo esc_attr( $content_id ); ?>"
+             class="uwb-module-content-wrap"
+             style="<?php echo ! $is_enabled ? 'display:none;' : ''; ?>transition:opacity 0.25s ease;">
+        <?php
+        // NOTE: This div is closed in render_module_banner_end()
+        // Called at the END of each tab/subtab content block
+    }
+
+    /**
+     * Đóng div wrapper mở bởi render_module_banner().
+     * Phải gọi ở cuối mỗi tab/subtab content có module banner.
+     */
+    private function render_module_banner_end() {
+        echo '</div><!-- /.uwb-module-content-wrap -->';
     }
 
     private function render_textarea_setting( $option_name, $label_desc, $placeholder = '', $detailed_desc = '', $disabled = false ) {
@@ -1769,6 +1787,60 @@ class Admin {
             }
             .uwb-opt-row a:hover {
                 text-decoration: underline;
+            }
+
+            /* ========== Module Toggle Switch (iOS-style) ========== */
+            .uwb-module-toggle {
+                position: relative;
+                display: inline-block;
+                width: 54px;
+                height: 30px;
+                cursor: pointer;
+                flex-shrink: 0;
+            }
+            .uwb-module-toggle-cb {
+                opacity: 0;
+                width: 0;
+                height: 0;
+                position: absolute;
+            }
+            .uwb-module-toggle-track {
+                position: absolute;
+                inset: 0;
+                background: #cbd5e1;
+                border-radius: 30px;
+                transition: background 0.3s ease, box-shadow 0.3s ease;
+                display: block;
+            }
+            .uwb-module-toggle-cb:checked + .uwb-module-toggle-track {
+                background: #10b981;
+                box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+            }
+            .uwb-module-toggle-thumb {
+                position: absolute;
+                width: 24px;
+                height: 24px;
+                left: 3px;
+                top: 3px;
+                background: #fff;
+                border-radius: 50%;
+                transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                display: block;
+            }
+            .uwb-module-toggle-cb:checked + .uwb-module-toggle-track .uwb-module-toggle-thumb {
+                transform: translateX(24px);
+            }
+            .uwb-module-toggle:hover .uwb-module-toggle-track {
+                box-shadow: 0 0 0 4px rgba(0,0,0,0.08);
+            }
+            /* Content wrapper fade animation */
+            .uwb-module-content-wrap {
+                animation: uwbFadeIn 0.25s ease;
+            }
+            @keyframes uwbFadeIn {
+                from { opacity: 0; transform: translateY(-6px); }
+                to   { opacity: 1; transform: translateY(0); }
             }
         </style>
         <?php
@@ -2944,6 +3016,7 @@ class Admin {
                                     <?php endif; ?>
                                 </div>
                             </div>
+                            <?php $this->render_module_banner_end(); ?>
                         </div>
 
                         <!-- TAB 2: Preload Cache -->
@@ -3041,7 +3114,7 @@ class Admin {
                                 <textarea id="uwb-preload-log" readonly rows="8" style="width:100%; font-family:monospace; font-size:11px; background:#fafafa; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; margin-top:8px; line-height:1.4; color:#334155; white-space:pre; overflow-x:auto;"><?php echo $log_content; ?></textarea>
                                 <p class="description">Live logs for the crawler's sitemap parsing and batch processing stages. Updates automatically during preloading.</p>
                             </div>
-
+                            <?php $this->render_module_banner_end(); ?>
                         </div>
 
                         <!-- TAB 3: Page Optimizes -->
@@ -3117,6 +3190,7 @@ class Admin {
                                 $this->render_toggle_switch( 'uwb_general_disable_dashicons', 'Disable Dashicons', 'De-enqueue Dashicons stylesheet on frontend for non-logged-in users.' );
                                 $this->render_toggle_switch( 'uwb_general_disable_embeds', 'Disable Embeds', 'De-enqueue oEmbed javascript and disable oEmbed-related discovery links.' );
                                 ?>
+                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
                             <!-- SUB-TAB 2: CSS Settings & Excludes -->
@@ -3438,6 +3512,7 @@ js-(before|after)
                                 );
                                 $this->render_page_optimizer_tools_section( 'Media Tools' );
                                 ?>
+                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
                             <!-- SUB-TAB 5: Font Optimization -->
@@ -3590,6 +3665,7 @@ js-(before|after)
                                     </div>
                                 </div>
                                 <?php $this->render_page_optimizer_tools_section( 'CDN Offload Tools' ); ?>
+                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
                             <!-- SUB-TAB 8: Database Settings -->
@@ -3659,6 +3735,7 @@ js-(before|after)
                                     <div id="uwb-db-opt-result" style="margin-top:16px; display:none; padding: 16px; border-radius: 8px;"></div>
                                 </div>
                             </div>
+                            <?php $this->render_module_banner_end(); ?>
                         </div>
 
                         <!-- TAB 5: Dashboard -->
@@ -5017,6 +5094,48 @@ js-(before|after)
                 var $container = $(this).closest('.uwb-toggle-container');
                 $container.find('.uwb-toggle-btn').removeClass('active');
                 $(this).closest('.uwb-toggle-btn').addClass('active');
+            });
+
+            // Module toggle switches interactive handler (iOS style ON/OFF)
+            $(document).on('change', '.uwb-module-toggle-cb', function() {
+                var $cb = $(this);
+                var isChecked = $cb.is(':checked');
+                var $banner = $cb.closest('.uwb-module-banner');
+                var contentId = $banner.data('content-id');
+                var moduleName = $banner.data('module-name');
+                var descOn = $banner.data('desc-on');
+                var descOff = $banner.data('desc-off');
+                var $wrapper = $('#' + contentId);
+
+                if (isChecked) {
+                    $banner.css({
+                        'border-color': '#10b981',
+                        'background': 'linear-gradient(135deg, #ecfdf5, #d1fae5)'
+                    });
+                    $banner.find('.uwb-mb-icon').text('✅').css({
+                        'border-color': '#10b981',
+                        'background': '#d1fae5'
+                    });
+                    $banner.find('.uwb-mb-badge').text('ENABLED').css('background', '#10b981');
+                    $banner.find('.uwb-mb-desc').text(descOn).css('color', '#047857');
+                    $banner.find('.uwb-mb-status-label').text('ON').css('color', '#065f46');
+                    $banner.find('.uwb-module-toggle').attr('title', 'Click để tắt module');
+                    $wrapper.stop().slideDown(250);
+                } else {
+                    $banner.css({
+                        'border-color': '#f59e0b',
+                        'background': 'linear-gradient(135deg, #fff7ed, #ffedd5)'
+                    });
+                    $banner.find('.uwb-mb-icon').text('⚠️').css({
+                        'border-color': '#f59e0b',
+                        'background': '#ffedd5'
+                    });
+                    $banner.find('.uwb-mb-badge').text('DISABLED').css('background', '#f59e0b');
+                    $banner.find('.uwb-mb-desc').text(descOff).css('color', '#b45309');
+                    $banner.find('.uwb-mb-status-label').text('OFF').css('color', '#92400e');
+                    $banner.find('.uwb-module-toggle').attr('title', 'Click để bật module');
+                    $wrapper.stop().slideUp(250);
+                }
             });
 
             // Sidebar Collapse/Expand Toggle
