@@ -444,6 +444,11 @@ function uwb_advanced_cache_run() {
                     $bc_lifespan = isset( $config['browser_cache_lifespan'] ) ? intval( $config['browser_cache_lifespan'] ) : 3600;
                     header( 'Pragma: public' );
                     header( 'Cache-Control: max-age=' . $bc_lifespan . ', public' );
+                    
+                    $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
+                    if ( ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) ) {
+                        header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $bc_lifespan );
+                    }
                 } else {
                     header( 'Cache-Control: no-cache, no-store, must-revalidate, private' );
                     header( 'Pragma: no-cache' );
