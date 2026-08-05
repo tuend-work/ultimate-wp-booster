@@ -579,11 +579,15 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 </div>
 
                 <!-- Profile Toggle Container -->
-                <div style="padding:12px 24px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:flex-start; gap:16px; background:#fff;">
+                <div style="padding:12px 24px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; background:#fff;">
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#1e293b; cursor:pointer; font-weight:600; user-select:none;">
                         <input type="checkbox" id="uwb-quick-pm-profile-toggle" style="width:16px; height:16px; margin:0; cursor:pointer;">
                         <span>Đo hiệu năng trang hiện tại (Profile Request)</span>
                     </label>
+                    <div id="uwb-quick-pm-total-time-wrap" style="display:none; font-size:12px; font-weight:600; color:#dc2626; background:#fee2e2; padding:4px 10px; border-radius:6px; align-items:center; gap:4px;">
+                        <span>Tổng thời gian:</span>
+                        <strong id="uwb-quick-pm-total-time">0ms</strong>
+                    </div>
                 </div>
 
                 <!-- Body / Plugins List -->
@@ -678,12 +682,14 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 try {
                     var profData = JSON.parse($profTag.text());
                     var plugins = profData.plugins || {};
+                    var totalTime = 0;
 
                     $('.uwb-quick-pm-item').each(function() {
                         var file = $(this).data('file');
                         var data = plugins[file];
                         if (data) {
                             var tVal = data.total_time || 0;
+                            totalTime += tVal;
                             var $badge = $(this).find('.uwb-quick-pm-time-badge');
                             $badge.text('(' + tVal.toFixed(1) + 'ms)').show();
 
@@ -701,8 +707,12 @@ class AdminBarSubscriber implements Subscriber_Interface {
                                 $box.html('<strong style="display:block; margin-bottom:4px; font-size:10px; color:#1e293b;">Callbacks Execution Breakdown:</strong>' + hookItems.join(''));
                                 $(this).find('.uwb-quick-pm-hooks-btn').show();
                             }
-                        }
                     });
+
+                    if (totalTime > 0) {
+                        $('#uwb-quick-pm-total-time').text(totalTime.toFixed(1) + 'ms');
+                        $('#uwb-quick-pm-total-time-wrap').css('display', 'inline-flex');
+                    }
                 } catch(e) {
                     console.error('UWB Profiler parsing error:', e);
                 }
