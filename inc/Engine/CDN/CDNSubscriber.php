@@ -1089,7 +1089,7 @@ class CDNSubscriber implements Subscriber_Interface {
                         '<div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;">' + actionsHtml + '</div>' +
                         '<div class="uwb-pop-footer-links">' +
                             '<a href="' + storageUrl + '" target="_blank"><span class="dashicons dashicons-external" style="font-size:13px; line-height:16px;"></span> STORAGE URL</a>' +
-                            '<a href="' + publicUrl + '" target="_blank"><span class="dashicons dashicons-external" style="font-size:13px; line-height:16px;"></span> PUBLIC URL</a>' +
+                            '<a href="' + publicUrl + '" target="_blank"><span class="dashicons dashicons-external" style="font-size:13px; line-height:16px;"></span> LOCAL URL</a>' +
                         '</div>' +
                     '</div>' +
                 '</div>';
