@@ -428,6 +428,143 @@ class CacheManager {
             'general_autosave_interval'               => get_option( 'uwb_general_autosave_interval', 'default' ),
         );
 
+        // Apply Module Enable/Disable flags to config (If parent/sub tab mẹ/con is disabled, force its options to 0)
+        
+        // 1. Parent Cache Module
+        if ( ! (int) get_option( 'uwb_module_cache_enabled', 1 ) ) {
+            $config['cache_page_enabled']    = 0;
+            $config['browser_cache_enabled'] = 0;
+            $config['redis_enabled']         = 0;
+        } else {
+            // Subtabs under Cache Module
+            if ( ! (int) get_option( 'uwb_browser_cache_enabled', 1 ) ) {
+                $config['browser_cache_enabled'] = 0;
+            }
+            if ( ! (int) get_option( 'uwb_cache_page_enabled', 1 ) ) {
+                $config['cache_page_enabled'] = 0;
+            }
+            if ( ! (int) get_option( 'uwb_module_object_cache_enabled', 1 ) ) {
+                $config['redis_enabled'] = 0;
+            }
+        }
+
+        // 2. Parent Optimizer Module
+        if ( ! (int) get_option( 'uwb_module_optimizer_enabled', 1 ) ) {
+            $config['html_minify']                     = 0;
+            $config['html_remove_qs']                  = 0;
+            $config['html_remove_gfonts']              = 0;
+            $config['html_remove_emoji']               = 0;
+            $config['html_remove_noscript']            = 0;
+            $config['html_lazy_load_elements_enabled'] = 0;
+            $config['media_lazy_load_images']          = 0;
+            $config['media_lazy_load_iframes']         = 0;
+            $config['media_add_missing_sizes']         = 0;
+            $config['css_minify']                      = 0;
+            $config['css_combine']                     = 0;
+            $config['css_combine_ext_inline']          = 0;
+            $config['css_load_async']                  = 0;
+            $config['js_minify']                       = 0;
+            $config['js_combine']                      = 0;
+            $config['js_combine_ext_inline']           = 0;
+            $config['js_load_defer']                   = 0;
+            $config['delay_js']                        = 0;
+            
+            // General WP Tweaks
+            $config['general_disable_emojis']                  = 0;
+            $config['general_disable_dashicons']               = 0;
+            $config['general_disable_embeds']                  = 0;
+            $config['general_disable_xmlrpc']                  = 0;
+            $config['general_remove_jquery_migrate']           = 0;
+            $config['general_hide_wp_version']                 = 0;
+            $config['general_remove_wlwmanifest']              = 0;
+            $config['general_remove_rsd']                      = 0;
+            $config['general_remove_shortlink']                = 0;
+            $config['general_disable_rss_feeds']               = 0;
+            $config['general_remove_rss_feed_links']           = 0;
+            $config['general_disable_self_pingbacks']          = 0;
+            $config['general_disable_rest_api']                = 'default';
+            $config['general_remove_rest_api_links']           = 0;
+            $config['general_disable_google_maps']             = 0;
+            $config['general_disable_password_strength_meter'] = 0;
+            $config['general_disable_comments']                = 0;
+            $config['general_remove_comment_urls']             = 0;
+            $config['general_add_blank_favicon']               = 0;
+            $config['general_remove_global_styles']            = 0;
+            $config['general_disable_heartbeat']               = 'default';
+            $config['general_heartbeat_frequency']             = 'default';
+            $config['general_limit_post_revisions']            = 'default';
+            $config['general_autosave_interval']               = 'default';
+        } else {
+            // Subtabs under Optimizer Module
+            // General
+            if ( ! (int) get_option( 'uwb_module_general_enabled', 1 ) ) {
+                $config['general_disable_emojis']                  = 0;
+                $config['general_disable_dashicons']               = 0;
+                $config['general_disable_embeds']                  = 0;
+                $config['general_disable_xmlrpc']                  = 0;
+                $config['general_remove_jquery_migrate']           = 0;
+                $config['general_hide_wp_version']                 = 0;
+                $config['general_remove_wlwmanifest']              = 0;
+                $config['general_remove_rsd']                      = 0;
+                $config['general_remove_shortlink']                = 0;
+                $config['general_disable_rss_feeds']               = 0;
+                $config['general_remove_rss_feed_links']           = 0;
+                $config['general_disable_self_pingbacks']          = 0;
+                $config['general_disable_rest_api']                = 'default';
+                $config['general_remove_rest_api_links']           = 0;
+                $config['general_disable_google_maps']             = 0;
+                $config['general_disable_password_strength_meter'] = 0;
+                $config['general_disable_comments']                = 0;
+                $config['general_remove_comment_urls']             = 0;
+                $config['general_add_blank_favicon']               = 0;
+                $config['general_remove_global_styles']            = 0;
+                $config['general_disable_heartbeat']               = 'default';
+                $config['general_heartbeat_frequency']             = 'default';
+                $config['general_limit_post_revisions']            = 'default';
+                $config['general_autosave_interval']               = 'default';
+            }
+            // HTML
+            if ( ! (int) get_option( 'uwb_module_html_enabled', 1 ) ) {
+                $config['html_minify']                     = 0;
+                $config['html_remove_qs']                  = 0;
+                $config['html_remove_noscript']            = 0;
+                $config['html_lazy_load_elements_enabled'] = 0;
+            }
+            // CSS
+            if ( ! (int) get_option( 'uwb_module_css_enabled', 1 ) ) {
+                $config['css_minify']             = 0;
+                $config['css_combine']            = 0;
+                $config['css_combine_ext_inline'] = 0;
+                $config['css_load_async']         = 0;
+            }
+            // JS
+            if ( ! (int) get_option( 'uwb_module_js_enabled', 1 ) ) {
+                $config['js_minify']             = 0;
+                $config['js_combine']            = 0;
+                $config['js_combine_ext_inline'] = 0;
+                $config['js_load_defer']         = 0;
+                $config['delay_js']              = 0;
+            }
+            // Media (Image Optimizer)
+            if ( ! (int) get_option( 'uwb_module_media_opt_enabled', 1 ) ) {
+                $config['media_lazy_load_images']  = 0;
+                $config['media_lazy_load_iframes'] = 0;
+                $config['media_add_missing_sizes'] = 0;
+            }
+            // Font
+            if ( ! (int) get_option( 'uwb_module_font_enabled', 1 ) ) {
+                $config['html_remove_gfonts']   = 0;
+                $config['css_font_display_opt'] = 0;
+                $config['preload_fonts']        = '';
+                $config['preconnect_domains']   = '';
+            }
+        }
+
+        // 3. Parent CDN Module
+        if ( ! (int) get_option( 'uwb_module_cdn_enabled', 1 ) ) {
+            $config['cdn_enabled'] = 0;
+        }
+
         $config_content = "<?php\n" .
                            "defined( 'ABSPATH' ) or die( 'Forbidden' );\n" .
                            "return " . var_export( $config, true ) . ";\n";

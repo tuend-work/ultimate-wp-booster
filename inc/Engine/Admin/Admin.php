@@ -40,6 +40,12 @@ class Admin {
             'uwb_module_cdn_enabled',
             'uwb_module_media_opt_enabled',
             'uwb_module_general_enabled',
+            'uwb_module_object_cache_enabled',
+            'uwb_module_html_enabled',
+            'uwb_module_css_enabled',
+            'uwb_module_js_enabled',
+            'uwb_module_font_enabled',
+            'uwb_module_database_enabled',
             // Cache settings
             'uwb_cache_page_enabled',
             'uwb_cache_lifespan',
@@ -326,6 +332,12 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_module_cdn_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_module_media_opt_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_module_general_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_object_cache_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_html_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_css_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_js_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_font_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_database_enabled', 'intval' );
 
         // CDN Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_cdn_enabled', 'intval' );
@@ -1080,24 +1092,16 @@ class Admin {
                 </div>
                 <?php endif; ?>
             </div>
-            <!-- Toggle Switch -->
-            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
-                <span class="uwb-mb-status-label" style="font-size:12px;font-weight:700;
-                    color:<?php echo $is_enabled ? '#065f46' : '#92400e'; ?>;">
-                    <?php echo $is_enabled ? 'ON' : 'OFF'; ?>
-                </span>
-                <!-- Hidden input sends 0 when checkbox unchecked -->
-                <input type="hidden" name="<?php echo esc_attr( $option_key ); ?>" value="0">
-                <label class="uwb-module-toggle" title="<?php echo $is_enabled ? 'Click để tắt module' : 'Click để bật module'; ?>">
-                    <input type="checkbox"
-                           class="uwb-module-toggle-cb"
-                           name="<?php echo esc_attr( $option_key ); ?>"
-                           value="1"
-                           <?php checked( $is_enabled, 1 ); ?>>
-                    <span class="uwb-module-toggle-track">
-                        <span class="uwb-module-toggle-thumb"></span>
-                    </span>
-                </label>
+            <!-- Toggle Switch (Segmented OFF/ON) -->
+            <div style="flex-shrink: 0;">
+                <div class="uwb-toggle-container" style="background: rgba(255,255,255,0.4); border-color: <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>;">
+                    <label class="uwb-toggle-btn <?php echo ! $is_enabled ? 'active' : ''; ?>" style="padding: 5px 16px; min-width: 50px; font-size: 12px;">
+                        <input type="radio" name="<?php echo esc_attr( $option_key ); ?>" value="0" <?php checked( $is_enabled, 0 ); ?> class="uwb-module-toggle-cb" style="display:none !important;"> OFF
+                    </label>
+                    <label class="uwb-toggle-btn <?php echo $is_enabled ? 'active' : ''; ?>" style="padding: 5px 16px; min-width: 50px; font-size: 12px;">
+                        <input type="radio" name="<?php echo esc_attr( $option_key ); ?>" value="1" <?php checked( $is_enabled, 1 ); ?> class="uwb-module-toggle-cb" style="display:none !important;"> ON
+                    </label>
+                </div>
             </div>
         </div>
         <!-- Content wrapper: shown/hidden by JS toggle, inputs keep values -->
@@ -1732,28 +1736,38 @@ class Admin {
             .uwb-toggle-container {
                 display: inline-flex;
                 background: #f1f5f9;
-                border: 1px solid var(--uwb-border);
-                border-radius: 8px;
-                padding: 3px;
-                gap: 2px;
+                border: 1px solid #e2e8f0;
+                border-radius: 100px;
+                padding: 4px;
+                gap: 4px;
+                align-items: center;
+                box-sizing: border-box;
             }
             .uwb-toggle-btn {
-                padding: 8px 20px;
-                font-size: 13px;
-                font-weight: 700;
+                padding: 6px 20px;
+                font-size: 13.5px;
+                font-weight: 800;
                 cursor: pointer;
-                border-radius: 6px;
-                color: var(--uwb-text-muted);
-                transition: all 0.2s ease;
+                border-radius: 100px;
+                color: #64748b;
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                 user-select: none;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
+                min-width: 60px;
+                border: none;
+                background: transparent;
+                box-sizing: border-box;
+                line-height: 1;
             }
             .uwb-toggle-btn.active {
-                background: var(--uwb-primary);
-                color: #ffffff;
-                box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+                background: #6366f1; /* Vibrant blue/indigo */
+                color: #ffffff !important;
+                box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2), 0 2px 4px -1px rgba(99, 102, 241, 0.1);
+            }
+            .uwb-toggle-btn:hover:not(.active) {
+                color: #6366f1;
             }
             .uwb-toggle-container.disabled {
                 background: #e2e8f0;
@@ -1765,74 +1779,11 @@ class Admin {
             }
             .uwb-toggle-btn.disabled.active {
                 background: #94a3b8;
-                color: #ffffff;
+                color: #ffffff !important;
                 box-shadow: none;
             }
             .uwb-toggle-input {
                 display: none !important;
-            }
-            .uwb-warning-box {
-                margin: 10px 0;
-                background: #fffbeb;
-                border-left: 4px solid #f59e0b;
-                padding: 12px;
-                border-radius: 4px;
-                font-size: 13px;
-                color: #b45309;
-            }
-            .uwb-opt-row a {
-                color: var(--uwb-primary);
-                text-decoration: none;
-                font-weight: 600;
-            }
-            .uwb-opt-row a:hover {
-                text-decoration: underline;
-            }
-
-            /* ========== Module Toggle Switch (iOS-style) ========== */
-            .uwb-module-toggle {
-                position: relative;
-                display: inline-block;
-                width: 54px;
-                height: 30px;
-                cursor: pointer;
-                flex-shrink: 0;
-            }
-            .uwb-module-toggle-cb {
-                opacity: 0;
-                width: 0;
-                height: 0;
-                position: absolute;
-            }
-            .uwb-module-toggle-track {
-                position: absolute;
-                inset: 0;
-                background: #cbd5e1;
-                border-radius: 30px;
-                transition: background 0.3s ease, box-shadow 0.3s ease;
-                display: block;
-            }
-            .uwb-module-toggle-cb:checked + .uwb-module-toggle-track {
-                background: #10b981;
-                box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-            }
-            .uwb-module-toggle-thumb {
-                position: absolute;
-                width: 24px;
-                height: 24px;
-                left: 3px;
-                top: 3px;
-                background: #fff;
-                border-radius: 50%;
-                transition: transform 0.3s cubic-bezier(.4,0,.2,1);
-                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-                display: block;
-            }
-            .uwb-module-toggle-cb:checked + .uwb-module-toggle-track .uwb-module-toggle-thumb {
-                transform: translateX(24px);
-            }
-            .uwb-module-toggle:hover .uwb-module-toggle-track {
-                box-shadow: 0 0 0 4px rgba(0,0,0,0.08);
             }
             /* Content wrapper fade animation */
             .uwb-module-content-wrap {
@@ -1979,16 +1930,7 @@ class Admin {
                                         Browser Cache Settings
                                     </h3>
                                     
-                                    <div class="uwb-form-group" style="margin-bottom: 24px;">
-                                        <label for="uwb_browser_cache_enabled">Enable Browser Caching</label>
-                                        <select name="uwb_browser_cache_enabled" id="uwb_browser_cache_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                            <option value="0" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 0 ); ?>>Disabled</option>
-                                            <option value="1" <?php selected( get_option( 'uwb_browser_cache_enabled', 1 ), 1 ); ?>>Enabled</option>
-                                        </select>
-                                        <p class="description">Allow visitors' browsers to store static files locally to speed up subsequent loads.</p>
-                                    </div>
-
-                                    <div id="uwb-browser-cache-detailed-settings" style="<?php echo get_option( 'uwb_browser_cache_enabled', 1 ) ? '' : 'display:none;'; ?>">
+                                <?php $this->render_module_banner( 'uwb_browser_cache_enabled', 'Browser Cache Submodule', 'Cho phép trình duyệt của khách truy cập lưu trữ cục bộ các tệp tĩnh (hình ảnh, CSS, JS, font) để tăng tốc độ tải trang.' ); ?>
                                         <h4 style="margin-top: 24px; margin-bottom: 16px; font-size: 14px; font-weight: 700; color: var(--uwb-text);">Configure Lifespan by File Type</h4>
                                         <p class="description" style="margin-bottom: 20px;">Lifespan values are configured in minutes. Defaults are 365 days (525600 minutes).</p>
                                         
@@ -2042,16 +1984,7 @@ class Admin {
                                         Page Cache Settings
                                     </h3>
                                     
-                                    <div class="uwb-form-group" style="margin-bottom: 24px;">
-                                        <label for="uwb_cache_page_enabled">Enable HTML Page Caching</label>
-                                        <select name="uwb_cache_page_enabled" id="uwb_cache_page_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                            <option value="1" <?php selected( get_option( 'uwb_cache_page_enabled', 1 ), 1 ); ?>>Enabled</option>
-                                            <option value="0" <?php selected( get_option( 'uwb_cache_page_enabled', 1 ), 0 ); ?>>Disabled</option>
-                                        </select>
-                                        <p class="description">If disabled, the plugin will not store or serve static HTML cache files for your pages.</p>
-                                    </div>
-
-                                    <div id="uwb-page-cache-detailed-settings" style="<?php echo get_option( 'uwb_cache_page_enabled', 1 ) ? '' : 'display:none;'; ?>">
+                                <?php $this->render_module_banner( 'uwb_cache_page_enabled', 'Page Cache Submodule', 'Tự động tạo và lưu trữ các trang tĩnh HTML để máy chủ phục vụ lập tức mà không cần biên dịch PHP hay truy vấn database.' ); ?>
                                         <div class="uwb-form-group">
                                             <label for="uwb_cache_lifespan">Cache Lifespan (Minutes)</label>
                                             <input type="number" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 0 ) ); ?>" />
@@ -2120,10 +2053,7 @@ class Admin {
                                             </p>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div id="uwb-page-cache-detailed-settings-rules" style="<?php echo get_option( 'uwb_cache_page_enabled', 1 ) ? '' : 'display:none;'; ?>">
-                                    <!-- Group 3: Exclusion & Bypass Rules -->
+                                    <!-- End of Page Cache Settings Card -->
                                     <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                         <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -2216,8 +2146,8 @@ class Admin {
                                             </p>
                                         </div>
                                     </div>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
-                            </div>
 
                             <!-- SUB-TAB 2: CDN Cache -->
                             <div id="subtab-cdn_cache" class="uwb-subtab-content">
@@ -2227,9 +2157,8 @@ class Admin {
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
                                         Cloudflare Zone CDN Cache Integration
                                     </h3>
+                                    <?php $this->render_module_banner( 'uwb_cf_enabled', 'Cloudflare CDN Purge Submodule', 'Tự động đồng bộ hóa việc xóa bộ nhớ đệm (Cache Purge) với Cloudflare Edge CDN khi xóa cache của plugin.' ); ?>
                                     <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Synchronize plugin cache clearing with Cloudflare Edge CDN cache for your domain.</p>
-
-                                    <?php $this->render_toggle_switch( 'uwb_cf_enabled', 'Enable Cloudflare Zone CDN Cache Purge', 'Automatically send Cache Purge API requests to Cloudflare CDN Edge when clearing plugin cache or single page cache.' ); ?>
 
                                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; margin-top:20px;">
                                         <div class="uwb-form-group">
@@ -2276,6 +2205,7 @@ class Admin {
                                     <button type="button" class="button button-primary" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; white-space:nowrap;">
                                         Go to Page Optimizes &rarr; [6] CDN Offload Media
                                     </button>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
                             </div>
 
@@ -2431,6 +2361,7 @@ class Admin {
 
                             <!-- SUB-TAB 4: Object Cache -->
                             <div id="subtab-object_cache" class="uwb-subtab-content">
+                                <?php $this->render_module_banner( 'uwb_module_object_cache_enabled', 'Object Cache Submodule', 'Bộ nhớ đệm đối tượng (Object Cache) giúp lưu trữ các câu truy vấn database nặng vào RAM (Redis/Valkey hoặc Memcached).' ); ?>
                                 <?php
                                 $oc_active = wp_using_ext_object_cache();
                                 $oc_dropin = file_exists( WP_CONTENT_DIR . '/object-cache.php' );
@@ -2824,6 +2755,7 @@ class Admin {
                                         </button>
                                         <div id="redis-test-result-settings" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:13px; font-weight:600;"></div>
                                     </div>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
                             </div>
 
@@ -3193,8 +3125,8 @@ class Admin {
                                 <?php $this->render_module_banner_end(); ?>
                             </div>
 
-                            <!-- SUB-TAB 2: CSS Settings & Excludes -->
                             <div id="subtab-opt_css" class="uwb-subtab-content">
+                                <?php $this->render_module_banner( 'uwb_module_css_enabled', 'CSS Optimizer Submodule', 'Minify, combine CSS, trì hoãn tải CSS tải bất đồng bộ (Load Async) và tạo Critical CSS.' ); ?>
                                 <?php
                                 $this->render_toggle_switch( 'uwb_css_minify', 'CSS Minify', 'Minify CSS files and inline CSS code.' );
                                 $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS stylesheets into a single cached file to reduce HTTP requests.' );
@@ -3238,10 +3170,11 @@ class Admin {
                                  );
                                 $this->render_page_optimizer_tools_section( 'CSS Tools' );
                                 ?>
+                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
-                            <!-- SUB-TAB 2: JS Settings, Defer, Delay & Excludes -->
                             <div id="subtab-opt_js" class="uwb-subtab-content">
+                                <?php $this->render_module_banner( 'uwb_module_js_enabled', 'JS Optimizer Submodule', 'Minify, combine JS, Defer JS và trì hoãn thực thi JS (Delay JS) cho tới khi có tương tác.' ); ?>
                                 <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Minification &amp; Combination</h4>
                                 <?php
                                 $delay_js_on = (bool) get_option( 'uwb_delay_js', 0 );
@@ -3299,10 +3232,11 @@ js-(before|after)
                                 );
                                 $this->render_page_optimizer_tools_section( 'JS Tools' );
                                 ?>
+                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
-                            <!-- SUB-TAB 3: HTML Settings -->
                             <div id="subtab-opt_html" class="uwb-subtab-content">
+                                <?php $this->render_module_banner( 'uwb_module_html_enabled', 'HTML Optimizer Submodule', 'Tối ưu hoá mã nguồn HTML, nén code HTML và lazy load phần tử.' ); ?>
                                 <?php
                                 $this->render_toggle_switch( 'uwb_html_minify', 'HTML Minify', 'Minify HTML source code.' );
 
@@ -3350,6 +3284,7 @@ js-(before|after)
 
                                 $this->render_page_optimizer_tools_section( 'HTML Tools' );
                                 ?>
+                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
                             <!-- SUB-TAB 4: Media Settings & Excludes -->
@@ -3515,8 +3450,8 @@ js-(before|after)
                                 <?php $this->render_module_banner_end(); ?>
                             </div>
 
-                            <!-- SUB-TAB 5: Font Optimization -->
                             <div id="subtab-opt_font" class="uwb-subtab-content">
+                                <?php $this->render_module_banner( 'uwb_module_font_enabled', 'Font Optimizer Submodule', 'Tối ưu hoá hiển thị font chữ (font-display: swap) và preload các font chữ quan trọng.' ); ?>
                                 <?php
                                 $this->render_toggle_switch( 'uwb_css_font_display_opt', 'Font Display Swap', 'Automatically injects <code>font-display: swap</code> into all CSS <code>@font-face</code> declarations (including theme icon fonts like <code>fl-icons.woff2</code>) and Google Fonts to ensure text remains visible during font load and pass PageSpeed Insights audit.' );
                                 $this->render_textarea_setting(
@@ -3546,6 +3481,7 @@ js-(before|after)
                                     )
                                 );
                                 ?>
+                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
                             <!-- SUB-TAB 6: CDN Offload Media -->
@@ -3668,8 +3604,8 @@ js-(before|after)
                                 <?php $this->render_module_banner_end(); ?>
                             </div>
 
-                            <!-- SUB-TAB 8: Database Settings -->
                             <div id="subtab-opt_database" class="uwb-subtab-content">
+                                <?php $this->render_module_banner( 'uwb_module_database_enabled', 'Database Optimizer Submodule', 'Dọn dẹp các bản nháp (revisions), spam comments, tối ưu hoá các bảng dữ liệu database.' ); ?>
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                     <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -3733,6 +3669,7 @@ js-(before|after)
                                         </button>
                                     </div>
                                     <div id="uwb-db-opt-result" style="margin-top:16px; display:none; padding: 16px; border-radius: 8px;"></div>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
                             </div>
                             <?php $this->render_module_banner_end(); ?>
@@ -5096,18 +5033,26 @@ js-(before|after)
                 $(this).closest('.uwb-toggle-btn').addClass('active');
             });
 
-            // Module toggle switches interactive handler (iOS style ON/OFF)
+            // Module toggle switches interactive handler (Segmented ON/OFF)
             $(document).on('change', '.uwb-module-toggle-cb', function() {
-                var $cb = $(this);
-                var isChecked = $cb.is(':checked');
-                var $banner = $cb.closest('.uwb-module-banner');
+                var $radio = $(this);
+                var val = parseInt($radio.val());
+                var isEnabled = (val === 1);
+                var $banner = $radio.closest('.uwb-module-banner');
                 var contentId = $banner.data('content-id');
-                var moduleName = $banner.data('module-name');
                 var descOn = $banner.data('desc-on');
                 var descOff = $banner.data('desc-off');
                 var $wrapper = $('#' + contentId);
 
-                if (isChecked) {
+                // Update active state in container
+                var $container = $radio.closest('.uwb-toggle-container');
+                $container.find('.uwb-toggle-btn').removeClass('active');
+                $radio.closest('.uwb-toggle-btn').addClass('active');
+
+                // Update container border style to fit the ON/OFF state
+                $container.css('border-color', isEnabled ? '#10b981' : '#f59e0b');
+
+                if (isEnabled) {
                     $banner.css({
                         'border-color': '#10b981',
                         'background': 'linear-gradient(135deg, #ecfdf5, #d1fae5)'
@@ -5118,8 +5063,6 @@ js-(before|after)
                     });
                     $banner.find('.uwb-mb-badge').text('ENABLED').css('background', '#10b981');
                     $banner.find('.uwb-mb-desc').text(descOn).css('color', '#047857');
-                    $banner.find('.uwb-mb-status-label').text('ON').css('color', '#065f46');
-                    $banner.find('.uwb-module-toggle').attr('title', 'Click để tắt module');
                     $wrapper.stop().slideDown(250);
                 } else {
                     $banner.css({
@@ -5132,8 +5075,6 @@ js-(before|after)
                     });
                     $banner.find('.uwb-mb-badge').text('DISABLED').css('background', '#f59e0b');
                     $banner.find('.uwb-mb-desc').text(descOff).css('color', '#b45309');
-                    $banner.find('.uwb-mb-status-label').text('OFF').css('color', '#92400e');
-                    $banner.find('.uwb-module-toggle').attr('title', 'Click để bật module');
                     $wrapper.stop().slideUp(250);
                 }
             });
@@ -5390,31 +5331,7 @@ js-(before|after)
             $('#uwb_preload_enabled').on('change', toggleCronFields);
             toggleCronFields();
 
-            // Toggle Browser Cache fields
-            function toggleBrowserCacheFields() {
-                var browserCacheEnabled = $('#uwb_browser_cache_enabled').val();
-                if (browserCacheEnabled === '1') {
-                    $('#uwb-browser-cache-detailed-settings').show();
-                } else {
-                    $('#uwb-browser-cache-detailed-settings').hide();
-                }
-            }
-            $('#uwb_browser_cache_enabled').on('change', toggleBrowserCacheFields);
-            toggleBrowserCacheFields();
 
-            // Toggle Page Cache fields
-            function togglePageCacheFields() {
-                var pageCacheEnabled = $('#uwb_cache_page_enabled').val();
-                if (pageCacheEnabled === '1') {
-                    $('#uwb-page-cache-detailed-settings').show();
-                    $('#uwb-page-cache-detailed-settings-rules').show();
-                } else {
-                    $('#uwb-page-cache-detailed-settings').hide();
-                    $('#uwb-page-cache-detailed-settings-rules').hide();
-                }
-            }
-            $('#uwb_cache_page_enabled').on('change', togglePageCacheFields);
-            togglePageCacheFields();
 
             // Clear Critical CSS Cache via AJAX
             $('#btn-clear-critical-css').on('click', function(e) {

@@ -56,12 +56,18 @@ class Activation {
         // Module enable flags — mặc định TẮT khi cài lần đầu.
         // Dùng get_option() === false để không ghi đè khi re-activate / update plugin.
         $module_defaults = array(
-            'uwb_module_cache_enabled'     => 0,  // Page Cache & Browser Cache
-            'uwb_module_preload_enabled'   => 0,  // Sitemap Preloader
-            'uwb_module_optimizer_enabled' => 0,  // JS/CSS/HTML Optimizer
-            'uwb_module_cdn_enabled'       => 0,  // CDN & S3 Storage
-            'uwb_module_media_opt_enabled' => 0,  // Image Optimizer
-            'uwb_module_general_enabled'   => 0,  // General WP Tweaks
+            'uwb_module_cache_enabled'        => 0,  // Page Cache & Browser Cache
+            'uwb_module_preload_enabled'      => 0,  // Sitemap Preloader
+            'uwb_module_optimizer_enabled'    => 0,  // JS/CSS/HTML Optimizer
+            'uwb_module_cdn_enabled'          => 0,  // CDN & S3 Storage
+            'uwb_module_media_opt_enabled'    => 0,  // Image Optimizer
+            'uwb_module_general_enabled'      => 0,  // General WP Tweaks
+            'uwb_module_object_cache_enabled' => 0,  // Object Cache Subtab
+            'uwb_module_html_enabled'         => 0,  // HTML Optimizer Subtab
+            'uwb_module_css_enabled'          => 0,  // CSS Optimizer Subtab
+            'uwb_module_js_enabled'           => 0,  // JS Optimizer Subtab
+            'uwb_module_font_enabled'         => 0,  // Font Optimizer Subtab
+            'uwb_module_database_enabled'     => 0,  // Database Optimizer Subtab
         );
         foreach ( $module_defaults as $key => $default_val ) {
             if ( get_option( $key ) === false ) {
