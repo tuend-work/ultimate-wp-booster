@@ -33,6 +33,14 @@ class Admin {
         } );
 
         $options_to_sync = array(
+            // Module enable flags
+            'uwb_module_cache_enabled',
+            'uwb_module_preload_enabled',
+            'uwb_module_optimizer_enabled',
+            'uwb_module_cdn_enabled',
+            'uwb_module_media_opt_enabled',
+            'uwb_module_general_enabled',
+            // Cache settings
             'uwb_cache_page_enabled',
             'uwb_cache_lifespan',
             'uwb_excluded_urls',
@@ -310,6 +318,14 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_img_opt_event_upload', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_img_opt_event_edit', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_img_opt_event_get_url', 'intval' );
+
+        // Module Enable/Disable Flags
+        register_setting( 'uwb_settings_group', 'uwb_module_cache_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_preload_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_optimizer_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_cdn_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_media_opt_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_module_general_enabled', 'intval' );
 
         // CDN Cache Settings
         register_setting( 'uwb_settings_group', 'uwb_cdn_enabled', 'intval' );
@@ -1012,6 +1028,75 @@ class Admin {
             </div>
         </div>
         <?php
+    }
+
+    /**
+     * Render module enable/disable banner ở đầu mỗi tab.
+     * Tích hợp vào form settings thông thường — cần nhấn Save Settings để có hiệu lực.
+     *
+     * @param string $option_key  Ví dụ: 'uwb_module_cdn_enabled'
+     * @param string $module_name Ví dụ: '☁️ CDN & S3 Storage'
+     * @param string $description Mô tả ngắn về module
+     */
+    private function render_module_banner( $option_key, $module_name, $description = '' ) {
+        $is_enabled = (int) get_option( $option_key, 1 );
+        ?>
+        <div class="uwb-module-banner" style="
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+            background: <?php echo $is_enabled ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)' : 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)'; ?>;
+            border: 2px solid <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>;
+            border-radius: 12px; padding: 18px 24px; margin-bottom: 24px;
+        ">
+            <div style="display:flex; align-items:center; gap:14px; flex:1; min-width:200px;">
+                <div style="
+                    width:42px; height:42px; border-radius:10px; flex-shrink:0;
+                    background: <?php echo $is_enabled ? '#d1fae5' : '#ffedd5'; ?>;
+                    border: 1.5px solid <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>;
+                    display:flex; align-items:center; justify-content:center; font-size:18px;
+                "><?php echo $is_enabled ? '✅' : '⚠️'; ?></div>
+                <div>
+                    <div style="font-weight: 800; font-size: 15px; color: <?php echo $is_enabled ? '#065f46' : '#92400e'; ?>;">
+                        <?php echo esc_html( $module_name ); ?> &mdash;
+                        <span style="font-size:13px; font-weight:700; padding:2px 10px; border-radius:20px;
+                            background: <?php echo $is_enabled ? '#10b981' : '#f59e0b'; ?>; color:#fff;">
+                            <?php echo $is_enabled ? 'ENABLED' : 'DISABLED'; ?>
+                        </span>
+                    </div>
+                    <?php if ( ! empty( $description ) ) : ?>
+                        <div style="font-size: 12.5px; color: <?php echo $is_enabled ? '#047857' : '#b45309'; ?>; margin-top: 3px;">
+                            <?php echo $is_enabled ? esc_html( $description ) : '⚠️ Module đang TẮT — Tất cả chức năng trong tab này đã bị vô hiệu hoá. Bật lại để sử dụng.'; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <span style="font-size:12px; font-weight:600; color:<?php echo $is_enabled ? '#065f46' : '#92400e'; ?>;">Module Status:</span>
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:13px;
+                    color:<?php echo !$is_enabled ? '#6b7280' : 'var(--uwb-text-muted)'; ?>;">
+                    <input type="radio" name="<?php echo esc_attr( $option_key ); ?>" value="0"
+                        <?php checked( $is_enabled, 0 ); ?> style="width:15px; height:15px; cursor:pointer;"> OFF
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; font-size:13px;
+                    color:<?php echo $is_enabled ? '#10b981' : 'var(--uwb-text-muted)'; ?>;">
+                    <input type="radio" name="<?php echo esc_attr( $option_key ); ?>" value="1"
+                        <?php checked( $is_enabled, 1 ); ?> style="width:15px; height:15px; cursor:pointer;"> ON
+                </label>
+            </div>
+        </div>
+        <?php if ( ! $is_enabled ) : ?>
+        <div style="background:#fef3c7; border:1px solid #f59e0b; border-radius:10px; padding:14px 20px; margin-bottom:24px;
+            display:flex; align-items:flex-start; gap:12px;">
+            <span style="font-size:20px; flex-shrink:0;">⚠️</span>
+            <div>
+                <strong style="color:#92400e; font-size:13.5px;">Module đang TẮT</strong><br>
+                <span style="color:#78350f; font-size:12.5px;">
+                    Tất cả chức năng trong tab <strong><?php echo esc_html( $module_name ); ?></strong> hiện đã bị vô hiệu hoá.
+                    Web sẽ không chạy bất kỳ query hay hook nào liên quan đến module này.
+                    Chuyển sang <strong>ON</strong> và nhấn <strong>Save Settings</strong> để kích hoạt.
+                </span>
+            </div>
+        </div>
+        <?php endif;
     }
 
     private function render_textarea_setting( $option_name, $label_desc, $placeholder = '', $detailed_desc = '', $disabled = false ) {
@@ -1801,6 +1886,8 @@ class Admin {
                         <div id="tab-cache_settings" class="uwb-tab-content">
                             <h2 style="margin-top:0;">Cache Configuration</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Configure cache lifespan, bypass conditions, and exclusions for static files.</p>
+
+                            <?php $this->render_module_banner( 'uwb_module_cache_enabled', 'Page Cache Module', 'Quản lý HTML static cache, Browser Cache headers và Object Cache cho toàn bộ website.' ); ?>
 
                             <!-- Horizontal Sub-tabs Nav -->
                             <div class="uwb-sub-tabs-nav">
@@ -2864,6 +2951,8 @@ class Admin {
                             <h2 style="margin-top:0;">Preload Cache (Automatic Crawler)</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Automatically crawl URLs in your sitemap to pre-generate static cache files before visitors arrive.</p>
 
+                            <?php $this->render_module_banner( 'uwb_module_preload_enabled', 'Preload Module', 'Tự động crawl sitemap để pre-generate static cache files trước khi visitor tới.' ); ?>
+
                             <div class="uwb-form-group">
                                 <label for="uwb_preload_enabled">Enable Automatic Preloading</label>
                                 <select name="uwb_preload_enabled" id="uwb_preload_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
@@ -2960,6 +3049,8 @@ class Admin {
                             <h2 style="margin-top:0;">Page Optimization</h2>
                             <p style="color:var(--uwb-text-muted); margin-bottom: 24px;">Optimize web source code by minifying and combining resources, lazy loading media, and tuning performance.</p>
 
+                            <?php $this->render_module_banner( 'uwb_module_optimizer_enabled', 'Page Optimizer Module', 'Minify JS/CSS/HTML, Lazy Load ảnh, combine files, delay JS và các tối ưu frontend khác.' ); ?>
+
                             <!-- Horizontal Sub-tabs Nav -->
                             <div class="uwb-sub-tabs-nav">
                                 <div class="uwb-sub-tab-item active" data-subtab="opt_general">[1] General</div>
@@ -2974,6 +3065,7 @@ class Admin {
 
                             <!-- SUB-TAB 1: General Settings -->
                             <div id="subtab-opt_general" class="uwb-subtab-content active">
+                                <?php $this->render_module_banner( 'uwb_module_general_enabled', '⚙️ General WP Tweaks Module', 'Disable emojis, embeds, XML-RPC, limit revisions, control Heartbeat và các tweak WordPress chung.' ); ?>
                                 <?php
                                 $this->render_select_setting( 'uwb_general_autosave_interval', 'Autosave Interval', array(
                                     'default' => 'Default',
@@ -3188,6 +3280,7 @@ js-(before|after)
 
                             <!-- SUB-TAB 4: Media Settings & Excludes -->
                             <div id="subtab-opt_media" class="uwb-subtab-content">
+                                <?php $this->render_module_banner( 'uwb_module_media_opt_enabled', '🖼️ Image Optimizer Module', 'Nén ảnh, chuyển đổi WebP/AVIF, tự động optimize khi upload và quản lý file backup.' ); ?>
                                 <?php
                                 $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
                                 $this->render_toggle_switch( 'uwb_media_optimize_viewport_images', 'Optimize Viewport Images (Above The Fold)', 'Automatically disable lazy loading and add fetchpriority="high" to images detected in the first screen (viewport) to improve LCP.' );
@@ -3382,6 +3475,7 @@ js-(before|after)
 
                             <!-- SUB-TAB 6: CDN Offload Media -->
                             <div id="subtab-opt_cdn_media" class="uwb-subtab-content">
+                                <?php $this->render_module_banner( 'uwb_module_cdn_enabled', '☁️ CDN & S3 Storage Module', 'Upload ảnh/assets lên S3/R2, rewrite CDN URLs, quản lý media offload và Cloudflare zone cache.' ); ?>
                                 <!-- Section 1: Provider Settings -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                     <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">

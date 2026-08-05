@@ -367,6 +367,10 @@ class CDNManager {
     }
 
     public static function init_db_table() {
+        // Không init DB table nếu module CDN bị tắt (bảo vệ kép ngoài Plugin.php)
+        if ( ! get_option( 'uwb_module_cdn_enabled', 1 ) ) {
+            return;
+        }
         if ( self::$db_table_initialized ) {
             return;
         }

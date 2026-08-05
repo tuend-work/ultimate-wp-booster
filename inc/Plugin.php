@@ -67,16 +67,35 @@ class Plugin {
             new AdminBarSubscriber(),
             new PostRowActionsSubscriber(),
             new HeartbeatSubscriber(),
-            new \Ultimate_WP_Booster\Engine\Cache\CacheSubscriber(),
-            new \Ultimate_WP_Booster\Engine\Preload\PreloadSubscriber(),
-            new \Ultimate_WP_Booster\Engine\CDN\CDNSubscriber(),
-            new \Ultimate_WP_Booster\Engine\Optimization\GeneralOptimizationSubscriber(),
         );
+
+        // Cache module — bao gồm Page Cache, Browser Cache purge hooks
+        if ( get_option( 'uwb_module_cache_enabled', 1 ) ) {
+            $subscribers[] = new \Ultimate_WP_Booster\Engine\Cache\CacheSubscriber();
+        }
+
+        // Preload module — Sitemap crawler
+        if ( get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            $subscribers[] = new \Ultimate_WP_Booster\Engine\Preload\PreloadSubscriber();
+        }
+
+        // CDN module — S3 Storage, media offload, CDN URL rewriting
+        if ( get_option( 'uwb_module_cdn_enabled', 1 ) ) {
+            $subscribers[] = new \Ultimate_WP_Booster\Engine\CDN\CDNSubscriber();
+        }
+
+        // Optimizer module — JS/CSS/HTML/Media optimization
+        if ( get_option( 'uwb_module_optimizer_enabled', 1 ) ) {
+            $subscribers[] = new \Ultimate_WP_Booster\Engine\Optimization\GeneralOptimizationSubscriber();
+        }
 
         if ( is_admin() ) {
             $subscribers[] = new \Ultimate_WP_Booster\Engine\Admin\AdminNoticeSubscriber();
         } else {
-            $subscribers[] = new BufferSubscriber();
+            // BufferSubscriber chỉ load khi ít nhất 1 optimization module bật
+            if ( get_option( 'uwb_module_optimizer_enabled', 1 ) || get_option( 'uwb_module_cdn_enabled', 1 ) ) {
+                $subscribers[] = new BufferSubscriber();
+            }
         }
 
         return $subscribers;
