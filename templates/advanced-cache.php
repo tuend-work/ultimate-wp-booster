@@ -155,6 +155,10 @@ function uwb_advanced_cache_run() {
                                 $supports_gzip = isset( $_SERVER['HTTP_ACCEPT_ENCODING'] ) && strpos( $_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip' ) !== false;
                                 $gzip_file = $cache_file_404 . '_gzip';
                                 if ( $supports_gzip && file_exists( $gzip_file ) && filesize( $gzip_file ) > 0 ) {
+                                    @ini_set( 'zlib.output_compression', 'Off' );
+                                    while ( ob_get_level() ) {
+                                        ob_end_clean();
+                                    }
                                     header( 'Content-Encoding: gzip' );
                                     header( 'Vary: Accept-Encoding' );
                                     @readfile( $gzip_file );
@@ -452,6 +456,10 @@ function uwb_advanced_cache_run() {
             }
 
             if ( $supports_gzip && file_exists( $gzip_file ) && filesize( $gzip_file ) > 0 ) {
+                @ini_set( 'zlib.output_compression', 'Off' );
+                while ( ob_get_level() ) {
+                    ob_end_clean();
+                }
                 header( 'Content-Encoding: gzip' );
                 header( 'Vary: Accept-Encoding' );
                 @readfile( $gzip_file );
