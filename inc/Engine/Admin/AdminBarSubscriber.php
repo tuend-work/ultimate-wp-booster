@@ -105,40 +105,34 @@ class AdminBarSubscriber implements Subscriber_Interface {
         }
 
         // ── 3. Clear All Cache (parent = immediate purge all, children = components) ─
-        $clear_cache_page_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cache_page' ), 'uwb_clear_cache_page_action' );
-        $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-clear-all-cache',
-            'parent' => 'uwb-admin-bar',
-            'title'  => 'Clear All Cache',
-            'href'   => $clear_cache_page_url,
-        ) );
+        $cache_enabled = (bool) get_option( 'uwb_module_cache_enabled', 1 );
+        $sub_nodes = array();
 
-        // Sub: Clear Page Cache
-        $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-sub-clear-page-cache',
-            'parent' => 'uwb-clear-all-cache',
-            'title'  => 'Clear Page Cache',
-            'href'   => $clear_cache_page_url,
-        ) );
+        if ( $cache_enabled ) {
+            $clear_cache_page_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cache_page' ), 'uwb_clear_cache_page_action' );
+            $sub_nodes[] = array(
+                'id'    => 'uwb-sub-clear-page-cache',
+                'title' => 'Clear Page Cache',
+                'href'  => $clear_cache_page_url,
+            );
+        }
 
         // Sub: Clear OPCache
         $flush_op_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_opcache' ), 'uwb_flush_opcache_action' );
-        $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-sub-clear-opcache',
-            'parent' => 'uwb-clear-all-cache',
-            'title'  => 'Clear OPCache',
-            'href'   => $flush_op_url,
-        ) );
+        $sub_nodes[] = array(
+            'id'    => 'uwb-sub-clear-opcache',
+            'title' => 'Clear OPCache',
+            'href'  => $flush_op_url,
+        );
 
         // Sub: Clear Object Cache (only if active)
         if ( wp_using_ext_object_cache() ) {
             $flush_oc_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_object_cache' ), 'uwb_flush_object_cache_action' );
-            $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-sub-clear-object-cache',
-                'parent' => 'uwb-clear-all-cache',
-                'title'  => 'Clear Object Cache',
-                'href'   => $flush_oc_url,
-            ) );
+            $sub_nodes[] = array(
+                'id'    => 'uwb-sub-clear-object-cache',
+                'title' => 'Clear Object Cache',
+                'href'  => $flush_oc_url,
+            );
 
             // Object Cache Stats info nodes
             global $wp_object_cache;
@@ -147,40 +141,69 @@ class AdminBarSubscriber implements Subscriber_Interface {
             $total_req = $hits + $misses;
             $hit_ratio = $total_req > 0 ? round( ( $hits / $total_req ) * 100, 1 ) : 0;
 
-            $wp_admin_bar->add_node( array(
-                'id'     => 'uwb-sub-oc-stats',
-                'parent' => 'uwb-clear-all-cache',
-                'title'  => sprintf( 'Object Cache: %s%% Hit Ratio', $hit_ratio ),
-                'href'   => admin_url( 'admin.php?page=ultimate-wp-booster&tab=object-cache' ),
-            ) );
+            $sub_nodes[] = array(
+                'id'    => 'uwb-sub-oc-stats',
+                'title' => sprintf( 'Object Cache: %s%% Hit Ratio', $hit_ratio ),
+                'href'  => admin_url( 'admin.php?page=ultimate-wp-booster&tab=object-cache' ),
+            );
         }
 
         // Sub: Clear Cloudflare Cache
-        $clear_zone_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_zone_cache' ), 'uwb_clear_cdn_zone_cache_action' );
-        $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-sub-clear-cloudflare',
-            'parent' => 'uwb-clear-all-cache',
-            'title'  => 'Clear Cloudflare Cache',
-            'href'   => $clear_zone_url,
-        ) );
+        $cf_email = get_option( 'uwb_cloudflare_email', '' );
+        if ( ! empty( $cf_email ) ) {
+            $clear_zone_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cdn_zone_cache' ), 'uwb_clear_cdn_zone_cache_action' );
+            $sub_nodes[] = array(
+                'id'    => 'uwb-sub-clear-cloudflare',
+                'title' => 'Clear Cloudflare Cache',
+                'href'  => $clear_zone_url,
+            );
+        }
 
         // Sub: Clear CSS/JS on S3
-        $clear_s3_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_s3_asset_cache' ), 'uwb_clear_s3_asset_cache_action' );
-        $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-sub-clear-s3',
-            'parent' => 'uwb-clear-all-cache',
-            'title'  => 'Clear CSS / JS on S3 Storage',
-            'href'   => $clear_s3_url,
-        ) );
+        $s3_configured = \Ultimate_WP_Booster\Engine\CDN\CDNManager::get_s3_client()->is_configured();
+        if ( $s3_configured ) {
+            $clear_s3_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_s3_asset_cache' ), 'uwb_clear_s3_asset_cache_action' );
+            $sub_nodes[] = array(
+                'id'    => 'uwb-sub-clear-s3',
+                'title' => 'Clear CSS / JS on S3 Storage',
+                'href'  => $clear_s3_url,
+            );
+        }
 
-        // ── 4. Flush All & Preload ─────────────────────────────────────────────
-        $flush_all_preload_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_all_preload' ), 'uwb_flush_all_preload_action' );
-        $wp_admin_bar->add_node( array(
-            'id'     => 'uwb-flush-all-preload',
-            'parent' => 'uwb-admin-bar',
-            'title'  => 'Flush All & Preload',
-            'href'   => $flush_all_preload_url,
-        ) );
+        if ( ! empty( $sub_nodes ) ) {
+            $parent_title = $cache_enabled ? 'Clear All Cache' : 'Clear Caches';
+            $parent_url   = $cache_enabled 
+                ? wp_nonce_url( admin_url( 'admin-post.php?action=uwb_clear_cache_page' ), 'uwb_clear_cache_page_action' )
+                : '#';
+
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-clear-all-cache',
+                'parent' => 'uwb-admin-bar',
+                'title'  => $parent_title,
+                'href'   => $parent_url,
+            ) );
+
+            foreach ( $sub_nodes as $node ) {
+                $wp_admin_bar->add_node( array(
+                    'id'     => $node['id'],
+                    'parent' => 'uwb-clear-all-cache',
+                    'title'  => $node['title'],
+                    'href'   => $node['href'],
+                ) );
+            }
+        }
+
+        // ── 4. Flush All & Preload (only if both Page Cache AND Preload are enabled) ──
+        $preload_enabled = (bool) get_option( 'uwb_module_preload_enabled', 1 );
+        if ( $cache_enabled && $preload_enabled ) {
+            $flush_all_preload_url = wp_nonce_url( admin_url( 'admin-post.php?action=uwb_flush_all_preload' ), 'uwb_flush_all_preload_action' );
+            $wp_admin_bar->add_node( array(
+                'id'     => 'uwb-flush-all-preload',
+                'parent' => 'uwb-admin-bar',
+                'title'  => 'Flush All & Preload',
+                'href'   => $flush_all_preload_url,
+            ) );
+        }
 
         // ── 5. Advanced ──────────────────────────────────────────────────────────
         $is_critical_admin = false;

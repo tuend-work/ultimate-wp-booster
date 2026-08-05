@@ -38,62 +38,115 @@ class PreloadSubscriber implements Subscriber_Interface {
     }
 
     public function run_preload_batch() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            return;
+        }
         $this->preloader->run_preload_batch();
     }
 
     public function start_preload() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            return;
+        }
         $this->preloader->start_preload();
     }
 
     public function maybe_mark_cached_url_completed() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            return;
+        }
         $this->preloader->maybe_mark_cached_url_completed();
     }
 
     public function maybe_output_important_sitemap() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            return;
+        }
         $this->preloader->maybe_output_important_sitemap();
     }
 
     public function maybe_output_preload_links_script() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            return;
+        }
         $this->preloader->maybe_output_preload_links_script();
     }
 
     public function invalidate_homepage_links_cache() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            return;
+        }
         Preloader::invalidate_homepage_links_cache();
     }
 
     public function ajax_start_preload() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_error( array( 'message' => 'Preload module is disabled.' ) );
+        }
         $this->preloader->ajax_start_preload();
     }
 
     public function ajax_stop_preload() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_error( array( 'message' => 'Preload module is disabled.' ) );
+        }
         $this->preloader->ajax_stop_preload();
     }
 
     public function ajax_clear_preload() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_error( array( 'message' => 'Preload module is disabled.' ) );
+        }
         $this->preloader->ajax_clear_preload();
     }
 
     public function ajax_get_preload_status() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_success( array(
+                'total'      => 0,
+                'pending'    => 0,
+                'processing' => 0,
+                'completed'  => 0,
+                'failed'     => 0,
+                'running'    => 0,
+                'log'        => 'Preload module is currently disabled. Please enable it in Preload Settings.'
+            ) );
+        }
         $this->preloader->ajax_get_preload_status();
     }
 
     public function ajax_trigger_preload_batch() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_error( array( 'message' => 'Preload module is disabled.' ) );
+        }
         $this->preloader->ajax_trigger_preload_batch();
     }
 
     public function ajax_get_url_table() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_error( array( 'message' => 'Preload module is disabled.' ) );
+        }
         $this->preloader->ajax_get_url_table();
     }
 
     public function ajax_process_url_now() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_error( array( 'message' => 'Preload module is disabled.' ) );
+        }
         $this->preloader->ajax_process_url_now();
     }
 
     public function ajax_add_to_exclude() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_error( array( 'message' => 'Preload module is disabled.' ) );
+        }
         $this->preloader->ajax_add_to_exclude();
     }
 
     public function ajax_add_to_priority() {
+        if ( ! get_option( 'uwb_module_preload_enabled', 1 ) ) {
+            wp_send_json_error( array( 'message' => 'Preload module is disabled.' ) );
+        }
         $this->preloader->ajax_add_to_priority();
     }
 }

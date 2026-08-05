@@ -74,10 +74,8 @@ class Plugin {
             $subscribers[] = new \Ultimate_WP_Booster\Engine\Cache\CacheSubscriber();
         }
 
-        // Preload module — Sitemap crawler
-        if ( get_option( 'uwb_module_preload_enabled', 1 ) ) {
-            $subscribers[] = new \Ultimate_WP_Booster\Engine\Preload\PreloadSubscriber();
-        }
+        // Preload module — Sitemap crawler (always loaded to prevent AJAX 400 errors)
+        $subscribers[] = new \Ultimate_WP_Booster\Engine\Preload\PreloadSubscriber();
 
         // CDN module — S3 Storage, media offload, CDN URL rewriting
         if ( get_option( 'uwb_module_cdn_enabled', 1 ) ) {
