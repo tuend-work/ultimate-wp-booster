@@ -5,6 +5,9 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class CDNManager {
 
+    private static $uploaded_runtime_cache = array();
+    private static $attachment_meta_cache = array();
+
     public static function is_asset_uploaded_to_cdn( $s3_key ) {
         $s3_key = ltrim( str_replace( '\\', '/', $s3_key ), '/' );
         if ( empty( $s3_key ) ) {
@@ -471,34 +474,38 @@ class CDNManager {
     }
 
     public static function get_s3_attachment_meta( $attachment_id ) {
+        $attachment_id = intval( $attachment_id );
+        if ( isset( self::$attachment_meta_cache[ $attachment_id ] ) ) {
+            return self::$attachment_meta_cache[ $attachment_id ];
+        }
+
         global $wpdb;
         self::init_db_table();
         $table_name = self::get_table_name();
-        return $wpdb->get_row( $wpdb->prepare(
+        $row = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM $table_name WHERE attachment_id = %d",
             $attachment_id
         ), ARRAY_A );
+
+        self::$attachment_meta_cache[ $attachment_id ] = $row ? $row : false;
+        return $row;
     }
 
     public static function is_attachment_offloaded( $attachment_id ) {
-        global $wpdb;
-        self::init_db_table();
-        $table_name = self::get_table_name();
-        $cloud_status = $wpdb->get_var( $wpdb->prepare(
-            "SELECT s3_cloud_status FROM $table_name WHERE attachment_id = %d",
-            $attachment_id
-        ) );
+        $meta = self::get_s3_attachment_meta( $attachment_id );
+        if ( ! $meta ) {
+            return false;
+        }
+        $cloud_status = $meta['s3_cloud_status'] ?? '';
         return ( $cloud_status === 'synced' || $cloud_status === 'uploaded' || $cloud_status === '1' );
     }
 
     public static function is_local_deleted( $attachment_id ) {
-        global $wpdb;
-        self::init_db_table();
-        $table_name = self::get_table_name();
-        $local_deleted = $wpdb->get_var( $wpdb->prepare(
-            "SELECT s3_local_deleted FROM $table_name WHERE attachment_id = %d",
-            $attachment_id
-        ) );
+        $meta = self::get_s3_attachment_meta( $attachment_id );
+        if ( ! $meta ) {
+            return false;
+        }
+        $local_deleted = $meta['s3_local_deleted'] ?? null;
         if ( null !== $local_deleted ) {
             return (bool) $local_deleted;
         }
@@ -520,18 +527,13 @@ class CDNManager {
             's3_local_status'  => $local_deleted ? 'removed' : 'kept',
             's3_local_deleted' => $local_deleted ? 1 : 0
         ) );
+        unset( self::$attachment_meta_cache[ intval( $attachment_id ) ] );
     }
 
     public static function get_attachment_s3_key( $attachment_id ) {
-        global $wpdb;
-        self::init_db_table();
-        $table_name = self::get_table_name();
-        $s3_key = $wpdb->get_var( $wpdb->prepare(
-            "SELECT s3_key FROM $table_name WHERE attachment_id = %d",
-            $attachment_id
-        ) );
-        if ( ! empty( $s3_key ) ) {
-            return $s3_key;
+        $meta = self::get_s3_attachment_meta( $attachment_id );
+        if ( $meta && ! empty( $meta['s3_key'] ) ) {
+            return $meta['s3_key'];
         }
 
         $file = get_attached_file( $attachment_id );
@@ -559,6 +561,7 @@ class CDNManager {
             's3_local_status'  => $is_deleted ? 'removed' : 'kept',
             's3_local_deleted' => $is_deleted ? 1 : 0
         ), array( 'attachment_id' => $attachment_id ) );
+        unset( self::$attachment_meta_cache[ intval( $attachment_id ) ] );
     }
 
     public static function download_attachment_from_s3( $attachment_id ) {
@@ -620,5 +623,6 @@ class CDNManager {
         self::init_db_table();
         $table_name = self::get_table_name();
         $wpdb->delete( $table_name, array( 'attachment_id' => $attachment_id ) );
+        unset( self::$attachment_meta_cache[ intval( $attachment_id ) ] );
     }
 }
