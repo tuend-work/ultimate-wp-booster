@@ -276,7 +276,7 @@ class Optimizer {
         $html = self::inject_excluded_preloads( $html, $config, $debug_logs );
 
         // 16. CDN Static Assets URL Rewriter
-        if ( ! empty( $config['cdn_enabled'] ) ) {
+        if ( ! empty( $config['cdn_enabled'] ) || ! empty( $config['cdn_distribute_media'] ) || ! empty( $config['cdn_distribute_css'] ) || ! empty( $config['cdn_distribute_js'] ) || ! empty( $config['cdn_distribute_font'] ) || ! empty( $config['cdn_distribute_html'] ) ) {
             $html = CDNManager::process_html( $html, $config );
             if ( $debug_enabled ) $debug_logs[] = "CDN URL Rewriter: Applied";
         } elseif ( $debug_enabled ) {

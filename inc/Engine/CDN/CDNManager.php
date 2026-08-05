@@ -29,13 +29,21 @@ class CDNManager {
         }
 
         $cdn_enabled = ! empty( $config['cdn_enabled'] );
+        $cdn_distribute_media = ! empty( $config['cdn_distribute_media'] );
+        $cdn_distribute_css = ! empty( $config['cdn_distribute_css'] );
+        $cdn_distribute_js = ! empty( $config['cdn_distribute_js'] );
+        $cdn_distribute_font = ! empty( $config['cdn_distribute_font'] );
+        $cdn_distribute_html = ! empty( $config['cdn_distribute_html'] );
+
+        $cdn_rewrite_allowed = $cdn_enabled || $cdn_distribute_media || $cdn_distribute_css || $cdn_distribute_js || $cdn_distribute_font || $cdn_distribute_html;
+
         $cdn_domain  = isset( $config['cdn_custom_domain'] ) ? trim( $config['cdn_custom_domain'] ) : '';
         $cdn_media_domain = isset( $config['cdn_media_custom_domain'] ) ? trim( $config['cdn_media_custom_domain'] ) : '';
         if ( empty( $cdn_media_domain ) ) {
             $cdn_media_domain = $cdn_domain;
         }
 
-        if ( ! $cdn_enabled || ( empty( $cdn_domain ) && empty( $cdn_media_domain ) ) ) {
+        if ( ! $cdn_rewrite_allowed || ( empty( $cdn_domain ) && empty( $cdn_media_domain ) ) ) {
             return $html;
         }
 
@@ -47,20 +55,27 @@ class CDNManager {
         }
 
         $allowed_exts = array();
-        if ( ! empty( $config['cdn_file_types_images'] ) ) {
-            $allowed_exts = array_merge( $allowed_exts, array( 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico' ) );
+        // Rewrite images & media if media distribution is active OR if global cdn_enabled is active
+        if ( $cdn_distribute_media || $cdn_enabled ) {
+            if ( ! empty( $config['cdn_file_types_images'] ) ) {
+                $allowed_exts = array_merge( $allowed_exts, array( 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico' ) );
+            }
+            if ( ! empty( $config['cdn_file_types_media'] ) ) {
+                $allowed_exts = array_merge( $allowed_exts, array( 'mp4', 'webm', 'mp3', 'pdf', 'zip', 'rar' ) );
+            }
         }
-        if ( ! empty( $config['cdn_file_types_css'] ) || ! empty( $config['cdn_distribute_css'] ) ) {
+        
+        // CSS
+        if ( $cdn_distribute_css || ( $cdn_enabled && ! empty( $config['cdn_file_types_css'] ) ) ) {
             $allowed_exts[] = 'css';
         }
-        if ( ! empty( $config['cdn_file_types_js'] ) || ! empty( $config['cdn_distribute_js'] ) ) {
+        // JS
+        if ( $cdn_distribute_js || ( $cdn_enabled && ! empty( $config['cdn_file_types_js'] ) ) ) {
             $allowed_exts[] = 'js';
         }
-        if ( ! empty( $config['cdn_file_types_fonts'] ) ) {
+        // Fonts
+        if ( $cdn_distribute_font || ( $cdn_enabled && ! empty( $config['cdn_file_types_fonts'] ) ) ) {
             $allowed_exts = array_merge( $allowed_exts, array( 'woff', 'woff2', 'ttf', 'eot', 'otf' ) );
-        }
-        if ( ! empty( $config['cdn_file_types_media'] ) ) {
-            $allowed_exts = array_merge( $allowed_exts, array( 'mp4', 'webm', 'mp3', 'pdf', 'zip', 'rar' ) );
         }
 
         if ( empty( $allowed_exts ) ) {

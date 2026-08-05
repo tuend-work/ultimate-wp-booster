@@ -403,6 +403,9 @@ class CacheManager {
             'cdn_file_types_media'        => intval( get_option( 'uwb_cdn_file_types_media', 0 ) ),
             'cdn_distribute_css'          => intval( get_option( 'uwb_cdn_distribute_css', 0 ) ),
             'cdn_distribute_js'           => intval( get_option( 'uwb_cdn_distribute_js', 0 ) ),
+            'cdn_distribute_media'        => intval( get_option( 'uwb_cdn_distribute_media', 0 ) ),
+            'cdn_distribute_html'         => intval( get_option( 'uwb_cdn_distribute_html', 0 ) ),
+            'cdn_distribute_font'         => intval( get_option( 'uwb_cdn_distribute_font', 0 ) ),
             'general_disable_emojis'                  => intval( get_option( 'uwb_general_disable_emojis', 0 ) ),
             'general_disable_dashicons'               => intval( get_option( 'uwb_general_disable_dashicons', 0 ) ),
             'general_disable_embeds'                  => intval( get_option( 'uwb_general_disable_embeds', 0 ) ),
@@ -563,7 +566,12 @@ class CacheManager {
 
         // 3. Parent CDN Module
         if ( ! (int) get_option( 'uwb_module_cdn_enabled', 1 ) ) {
-            $config['cdn_enabled'] = 0;
+            $config['cdn_enabled']          = 0;
+            $config['cdn_distribute_css']   = 0;
+            $config['cdn_distribute_js']    = 0;
+            $config['cdn_distribute_media'] = 0;
+            $config['cdn_distribute_html']  = 0;
+            $config['cdn_distribute_font']  = 0;
         }
 
         $config_content = "<?php\n" .

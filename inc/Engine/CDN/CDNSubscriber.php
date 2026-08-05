@@ -209,12 +209,7 @@ class CDNSubscriber implements Subscriber_Interface {
             }
             return $url;
         }
-        if ( ! get_option( 'uwb_cdn_auto_rewrite_attachment_url', 0 ) ) {
-            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( 'UWB CDN Trace - Bypassed because uwb_cdn_auto_rewrite_attachment_url is disabled.' );
-            }
-            return $url;
-        }
+
 
         $cdn_domain = get_option( 'uwb_cdn_media_custom_domain', '' );
         if ( empty( $cdn_domain ) ) {
@@ -263,9 +258,7 @@ class CDNSubscriber implements Subscriber_Interface {
         if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
             return $sources;
         }
-        if ( ! get_option( 'uwb_cdn_auto_rewrite_attachment_url', 0 ) ) {
-            return $sources;
-        }
+
 
         $cdn_domain = get_option( 'uwb_cdn_media_custom_domain', '' );
         if ( empty( $cdn_domain ) ) {
@@ -306,9 +299,7 @@ class CDNSubscriber implements Subscriber_Interface {
         if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
             return $image;
         }
-        if ( ! get_option( 'uwb_cdn_auto_rewrite_attachment_url', 0 ) ) {
-            return $image;
-        }
+
 
         $cdn_domain = get_option( 'uwb_cdn_media_custom_domain', '' );
         if ( empty( $cdn_domain ) ) {
