@@ -3736,6 +3736,7 @@ js-(before|after)
                                 $this->render_page_optimizer_tools_section( 'HTML Tools' );
                                 ?>
                                 <?php $this->render_module_banner_end(); ?>
+                                </div>
                             </div>
 
                             <!-- SUB-TAB 4: Media Settings & Excludes -->
