@@ -1196,6 +1196,42 @@ class Admin {
         echo '</div><!-- /.uwb-module-content-wrap -->';
     }
 
+    /**
+     * Render header submodule với toggle ON/OFF nằm cùng hàng (ngang hàng) với sub title.
+     * Không có phần giải thích rườm rà phía dưới.
+     *
+     * @param string $option_key  Ví dụ: 'uwb_browser_cache_enabled'
+     * @param string $sub_title   Ví dụ: 'Browser Cache Settings'
+     * @param string $icon_svg    (Optional) Mã SVG icon cho tiêu đề
+     */
+    private function render_submodule_header( $option_key, $sub_title, $icon_svg = '' ) {
+        $is_enabled = (int) get_option( $option_key, 1 );
+        $content_id = 'uwb-mcontent-' . esc_attr( str_replace( array( 'uwb_module_', '_enabled' ), '', $option_key ) );
+        ?>
+        <div class="uwb-submodule-header"
+             data-content-id="<?php echo esc_attr( $content_id ); ?>"
+             style="display:flex; align-items:center; justify-content:space-between; margin-top:0; margin-bottom:20px; gap:16px; flex-wrap:wrap;">
+            <h3 style="margin:0; font-size:15px; font-weight:700; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
+                <?php if ( ! empty( $icon_svg ) ) { echo $icon_svg; } ?>
+                <span><?php echo esc_html( $sub_title ); ?></span>
+            </h3>
+            <div style="flex-shrink:0;">
+                <div class="uwb-toggle-container" style="background:#f1f5f9; border:1px solid var(--uwb-border); border-radius:30px; display:inline-flex; padding:2px;">
+                    <label class="uwb-toggle-btn <?php echo ! $is_enabled ? 'active' : ''; ?>" style="border-radius:20px; padding:6px 18px; font-weight:700; font-size:11px; cursor:pointer;">
+                        <input type="radio" name="<?php echo esc_attr( $option_key ); ?>" value="0" <?php checked( $is_enabled, 0 ); ?> class="uwb-module-toggle-cb" style="display:none !important;"> OFF
+                    </label>
+                    <label class="uwb-toggle-btn <?php echo $is_enabled ? 'active' : ''; ?>" style="border-radius:20px; padding:6px 18px; font-weight:700; font-size:11px; cursor:pointer;">
+                        <input type="radio" name="<?php echo esc_attr( $option_key ); ?>" value="1" <?php checked( $is_enabled, 1 ); ?> class="uwb-module-toggle-cb" style="display:none !important;"> ON
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div id="<?php echo esc_attr( $content_id ); ?>"
+             class="uwb-module-content-wrap"
+             style="<?php echo ! $is_enabled ? 'display:none;' : ''; ?>">
+        <?php
+    }
+
     private function render_textarea_setting( $option_name, $label_desc, $placeholder = '', $detailed_desc = '', $disabled = false ) {
         $val = get_option( $option_name, '' );
         if ( $disabled ) {
@@ -1982,7 +2018,7 @@ class Admin {
 
                         <!-- TAB 1: Cache Settings -->
                         <div id="tab-cache_settings" class="uwb-tab-content">
-                            <?php $this->render_module_banner( 'uwb_module_cache_enabled', 'Cache Configuration', 'Configure cache lifespan, bypass conditions, and exclusions for static files.' ); ?>
+                            <?php $this->render_module_banner( 'uwb_module_cache_enabled', 'Cache Module', 'Configure cache lifespan, bypass conditions, and exclusions for static files.' ); ?>
 
                             <!-- Horizontal Sub-tabs Nav -->
                             <div class="uwb-sub-tabs-nav">
@@ -1997,12 +2033,7 @@ class Admin {
                             <!-- SUB-TAB 0: Browser Cache -->
                             <div id="subtab-browser_cache" class="uwb-subtab-content active">
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                                        Browser Cache Settings
-                                    </h3>
-                                    
-                                <?php $this->render_module_banner( 'uwb_browser_cache_enabled', 'Browser Cache Submodule', 'Cho phép trình duyệt của khách truy cập lưu trữ cục bộ các tệp tĩnh (hình ảnh, CSS, JS, font) để tăng tốc độ tải trang.' ); ?>
+                                    <?php $this->render_submodule_header( 'uwb_browser_cache_enabled', 'Browser Cache Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' ); ?>
                                         <h4 style="margin-top: 24px; margin-bottom: 16px; font-size: 14px; font-weight: 700; color: var(--uwb-text);">Configure Lifespan by File Type</h4>
                                         <p class="description" style="margin-bottom: 20px;">Lifespan values are configured in minutes. Defaults are 365 days (525600 minutes).</p>
                                         
@@ -2043,7 +2074,7 @@ class Admin {
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
-                                    </div>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
                             </div>
 
@@ -2051,12 +2082,7 @@ class Admin {
                             <div id="subtab-page_cache" class="uwb-subtab-content">
                                 <!-- Group 1: Page Cache Settings -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:20px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                                        Page Cache Settings
-                                    </h3>
-                                    
-                                <?php $this->render_module_banner( 'uwb_cache_page_enabled', 'Page Cache Submodule', 'Tự động tạo và lưu trữ các trang tĩnh HTML để máy chủ phục vụ lập tức mà không cần biên dịch PHP hay truy vấn database.' ); ?>
+                                    <?php $this->render_submodule_header( 'uwb_cache_page_enabled', 'Page Cache Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' ); ?>
                                         <div class="uwb-form-group">
                                             <label for="uwb_cache_lifespan">Cache Lifespan (Minutes)</label>
                                             <input type="number" name="uwb_cache_lifespan" id="uwb_cache_lifespan" value="<?php echo esc_attr( get_option( 'uwb_cache_lifespan', 0 ) ); ?>" />
@@ -2224,12 +2250,7 @@ class Admin {
                             <div id="subtab-cdn_cache" class="uwb-subtab-content">
                                 <!-- Section 1: Cloudflare Zone CDN Cache Integration -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-                                        Cloudflare Zone CDN Cache Integration
-                                    </h3>
-                                    <?php $this->render_module_banner( 'uwb_cf_enabled', 'Cloudflare CDN Purge Submodule', 'Tự động đồng bộ hóa việc xóa bộ nhớ đệm (Cache Purge) với Cloudflare Edge CDN khi xóa cache của plugin.' ); ?>
-                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Synchronize plugin cache clearing with Cloudflare Edge CDN cache for your domain.</p>
+                                    <?php $this->render_submodule_header( 'uwb_cf_enabled', 'Cloudflare Zone CDN Cache Integration', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>' ); ?>
 
                                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; margin-top:20px;">
                                         <div class="uwb-form-group">
@@ -2432,7 +2453,8 @@ class Admin {
 
                             <!-- SUB-TAB 4: Object Cache -->
                             <div id="subtab-object_cache" class="uwb-subtab-content">
-                                <?php $this->render_module_banner( 'uwb_module_object_cache_enabled', 'Object Cache Submodule', 'Bộ nhớ đệm đối tượng (Object Cache) giúp lưu trữ các câu truy vấn database nặng vào RAM (Redis/Valkey hoặc Memcached).' ); ?>
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <?php $this->render_submodule_header( 'uwb_module_object_cache_enabled', 'Object Cache Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>' ); ?>
                                 <?php
                                 $oc_active = wp_using_ext_object_cache();
                                 $oc_dropin = file_exists( WP_CONTENT_DIR . '/object-cache.php' );
@@ -3476,189 +3498,196 @@ class Admin {
 
                             <!-- Horizontal Sub-tabs Nav -->
                             <div class="uwb-sub-tabs-nav">
-                                <div class="uwb-sub-tab-item active" data-subtab="opt_general">[1] General</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_html">[2] HTML</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_css">[3] CSS</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_js">[4] JS</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_media">[5] Media & File</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_font">[6] Font</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">[7] S3 Storage</div>
-                                <div class="uwb-sub-tab-item" data-subtab="opt_database">[8] Database</div>
+                                <div class="uwb-sub-tab-item active" data-subtab="opt_general">WP Teak</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_html">HTML</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_css">CSS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_js">JS</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_media">Media & File</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_font">Font</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_cdn_media">S3 Storage</div>
+                                <div class="uwb-sub-tab-item" data-subtab="opt_database">Database</div>
                             </div>
 
                             <!-- SUB-TAB 1: General Settings -->
                             <div id="subtab-opt_general" class="uwb-subtab-content active">
-                                <?php $this->render_module_banner( 'uwb_module_general_enabled', '⚙️ General WP Tweaks Module', 'Disable emojis, embeds, XML-RPC, limit revisions, control Heartbeat và các tweak WordPress chung.' ); ?>
-                                <?php
-                                $this->render_toggle_switch( 'uwb_preload_links', 'Preload Links (Hover Instant Page)', 'Link preloading improves perceived load time by downloading HTML when a user hovers over a link on the frontend. Powered by <a href="https://instant.page" target="_blank" rel="noopener noreferrer">instant.page</a>.' );
-                                $this->render_toggle_switch( 'uwb_optimize_logged_in', 'Optimize for Logged-in Users', 'Run page optimization (minify HTML/CSS/JS, lazy load, etc.) for logged-in users. By default, optimization is skipped for admin/logged-in sessions to avoid conflicts.' );
-                                ?>
-                                <?php
-                                $this->render_select_setting( 'uwb_general_autosave_interval', 'Autosave Interval', array(
-                                    'default' => 'Default',
-                                    '60'      => '1 Minute',
-                                    '120'     => '2 Minutes',
-                                    '300'     => '5 Minutes',
-                                    '600'     => '10 Minutes',
-                                ), 'Select the interval for WordPress autosave feature.' );
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <?php $this->render_submodule_header( 'uwb_module_general_enabled', 'General WP Tweaks Settings', '⚙️' ); ?>
+                                    <?php
+                                    $this->render_toggle_switch( 'uwb_preload_links', 'Preload Links (Hover Instant Page)', 'Link preloading improves perceived load time by downloading HTML when a user hovers over a link on the frontend. Powered by <a href="https://instant.page" target="_blank" rel="noopener noreferrer">instant.page</a>.' );
+                                    $this->render_toggle_switch( 'uwb_optimize_logged_in', 'Optimize for Logged-in Users', 'Run page optimization (minify HTML/CSS/JS, lazy load, etc.) for logged-in users. By default, optimization is skipped for admin/logged-in sessions to avoid conflicts.' );
+                                    ?>
+                                    <?php
+                                    $this->render_select_setting( 'uwb_general_autosave_interval', 'Autosave Interval', array(
+                                        'default' => 'Default',
+                                        '60'      => '1 Minute',
+                                        '120'     => '2 Minutes',
+                                        '300'     => '5 Minutes',
+                                        '600'     => '10 Minutes',
+                                    ), 'Select the interval for WordPress autosave feature.' );
 
-                                $this->render_select_setting( 'uwb_general_limit_post_revisions', 'Limit Post Revisions', array(
-                                    'default' => 'Default',
-                                    'disable' => 'Disable Revisions',
-                                    '1'       => '1',
-                                    '2'       => '2',
-                                    '3'       => '3',
-                                    '4'       => '4',
-                                    '5'       => '5',
-                                    '10'      => '10',
-                                ), 'Limit the number of post revisions stored in the database.' );
+                                    $this->render_select_setting( 'uwb_general_limit_post_revisions', 'Limit Post Revisions', array(
+                                        'default' => 'Default',
+                                        'disable' => 'Disable Revisions',
+                                        '1'       => '1',
+                                        '2'       => '2',
+                                        '3'       => '3',
+                                        '4'       => '4',
+                                        '5'       => '5',
+                                        '10'      => '10',
+                                    ), 'Limit the number of post revisions stored in the database.' );
 
-                                $this->render_select_setting( 'uwb_general_heartbeat_frequency', 'Heartbeat Frequency', array(
-                                    'default' => 'Default',
-                                    '15'      => '15 Seconds',
-                                    '30'      => '30 Seconds',
-                                    '60'      => '60 Seconds',
-                                    '120'     => '120 Seconds',
-                                ), 'Set the heartbeat API communication frequency.' );
+                                    $this->render_select_setting( 'uwb_general_heartbeat_frequency', 'Heartbeat Frequency', array(
+                                        'default' => 'Default',
+                                        '15'      => '15 Seconds',
+                                        '30'      => '30 Seconds',
+                                        '60'      => '60 Seconds',
+                                        '120'     => '120 Seconds',
+                                    ), 'Set the heartbeat API communication frequency.' );
 
-                                $this->render_select_setting( 'uwb_general_disable_heartbeat', 'Disable Heartbeat', array(
-                                    'default'     => 'Default',
-                                    'disable_all' => 'Disable Everywhere',
-                                    'only_edit'   => 'Only Allow When Editing Posts/Pages',
-                                ), 'Control or disable the WordPress Heartbeat API.' );
+                                    $this->render_select_setting( 'uwb_general_disable_heartbeat', 'Disable Heartbeat', array(
+                                        'default'     => 'Default',
+                                        'disable_all' => 'Disable Everywhere',
+                                        'only_edit'   => 'Only Allow When Editing Posts/Pages',
+                                    ), 'Control or disable the WordPress Heartbeat API.' );
 
-                                $this->render_toggle_switch( 'uwb_general_disable_comments', 'Disable Comments', 'Close comments, pings, and hide comments on the front-end completely.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_password_strength_meter', 'Disable Password Strength Meter', 'Disable password strength meter scripts in WooCommerce or checkout pages.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_google_maps', 'Disable Google Maps', 'De-enqueue Google Maps API scripts and styles from the front-end.' );
+                                    $this->render_toggle_switch( 'uwb_general_disable_comments', 'Disable Comments', 'Close comments, pings, and hide comments on the front-end completely.' );
+                                    $this->render_toggle_switch( 'uwb_general_disable_password_strength_meter', 'Disable Password Strength Meter', 'Disable password strength meter scripts in WooCommerce or checkout pages.' );
+                                    $this->render_toggle_switch( 'uwb_general_disable_google_maps', 'Disable Google Maps', 'De-enqueue Google Maps API scripts and styles from the front-end.' );
 
-                                $this->render_select_setting( 'uwb_general_disable_rest_api', 'Disable REST API', array(
-                                    'default'           => 'Default',
-                                    'disable_non_admin' => 'Disable for Non-Admins',
-                                    'disable_all'       => 'Disable Completely',
-                                ), 'Block REST API requests to secure your site\'s endpoints.' );
+                                    $this->render_select_setting( 'uwb_general_disable_rest_api', 'Disable REST API', array(
+                                        'default'           => 'Default',
+                                        'disable_non_admin' => 'Disable for Non-Admins',
+                                        'disable_all'       => 'Disable Completely',
+                                    ), 'Block REST API requests to secure your site\'s endpoints.' );
 
-                                $this->render_toggle_switch( 'uwb_general_disable_self_pingbacks', 'Disable Self Pingbacks', 'Stop WordPress from pingbacking your own posts when you link to them.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_rss_feeds', 'Disable RSS Feeds', 'Disable RSS feed generation and redirect feed URLs to display error page.' );
-                                $this->render_toggle_switch( 'uwb_general_remove_jquery_migrate', 'Remove jQuery Migrate', 'Remove jQuery Migrate script dependency from frontend scripts.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_xmlrpc', 'Disable XML-RPC', 'Disable XML-RPC requests and remove RSD links to block brute-force attacks.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_dashicons', 'Disable Dashicons', 'De-enqueue Dashicons stylesheet on frontend for non-logged-in users.' );
-                                $this->render_toggle_switch( 'uwb_general_disable_embeds', 'Disable Embeds', 'De-enqueue oEmbed javascript and disable oEmbed-related discovery links.' );
-                                ?>
-                                <?php $this->render_module_banner_end(); ?>
+                                    $this->render_toggle_switch( 'uwb_general_disable_self_pingbacks', 'Disable Self Pingbacks', 'Stop WordPress from pingbacking your own posts when you link to them.' );
+                                    $this->render_toggle_switch( 'uwb_general_disable_rss_feeds', 'Disable RSS Feeds', 'Disable RSS feed generation and redirect feed URLs to display error page.' );
+                                    $this->render_toggle_switch( 'uwb_general_remove_jquery_migrate', 'Remove jQuery Migrate', 'Remove jQuery Migrate script dependency from frontend scripts.' );
+                                    $this->render_toggle_switch( 'uwb_general_disable_xmlrpc', 'Disable XML-RPC', 'Disable XML-RPC requests and remove RSD links to block brute-force attacks.' );
+                                    $this->render_toggle_switch( 'uwb_general_disable_dashicons', 'Disable Dashicons', 'De-enqueue Dashicons stylesheet on frontend for non-logged-in users.' );
+                                    $this->render_toggle_switch( 'uwb_general_disable_embeds', 'Disable Embeds', 'De-enqueue oEmbed javascript and disable oEmbed-related discovery links.' );
+                                    ?>
+                                    <?php $this->render_module_banner_end(); ?>
+                                </div>
                             </div>
 
                             <div id="subtab-opt_css" class="uwb-subtab-content">
-                                <?php $this->render_module_banner( 'uwb_module_css_enabled', 'CSS Optimizer Submodule', 'Minify, combine CSS, trì hoãn tải CSS tải bất đồng bộ (Load Async) và tạo Critical CSS.' ); ?>
-                                <?php
-                                $this->render_toggle_switch( 'uwb_css_minify', 'CSS Minify', 'Minify CSS files and inline CSS code.' );
-                                $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS stylesheets into a single cached file to reduce HTTP requests.' );
-                                $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS files and inline CSS code in the combined CSS bundle.' );
-                                $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
-                                $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Load CSS files asynchronously to eliminate render-blocking CSS and speed up page rendering.' );
-                                $this->render_toggle_switch( 'uwb_auto_critical_css', 'Automatic Server-Side Critical CSS Generation', 'Tự động trích xuất các quy tắc CSS hiển thị ở màn hình đầu tiên (Above-The-Fold) ngay khi tạo Cache trang lần đầu tiên và nhúng trực tiếp vào &lt;head&gt;.' );
-                                ?>
-
-                                <!-- Critical CSS Management Card -->
-                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:20px; margin-top:16px; margin-bottom:24px;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-                                        <h4 style="margin:0; font-size:14px; font-weight:700; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
-                                            ⚡ Auto Critical CSS &amp; Custom Manual Addition
-                                        </h4>
-                                        <button type="button" id="btn-clear-critical-css" class="button button-secondary button-small" style="font-weight:600; padding:4px 12px; border-radius:6px; cursor:pointer;">
-                                            Clear Critical CSS Cache
-                                        </button>
-                                    </div>
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <?php $this->render_submodule_header( 'uwb_module_css_enabled', 'CSS Optimization Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="20" y1="20" x2="4" y2="4"/></svg>' ); ?>
                                     <?php
-                                    $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Custom Above-The-Fold CSS (Manual Addition)', '', 'Nhập các quy tắc CSS tùy chỉnh để xuất ra thẻ &lt;style id="uwb-manual-critical-css"&gt; riêng biệt trong &lt;head&gt; (chèn song song với Critical CSS tự động và có độ ưu tiên cao nhất).' );
+                                    $this->render_toggle_switch( 'uwb_css_minify', 'CSS Minify', 'Minify CSS files and inline CSS code.' );
+                                    $this->render_toggle_switch( 'uwb_css_combine', 'CSS Combine', 'Combine CSS stylesheets into a single cached file to reduce HTTP requests.' );
+                                    $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS files and inline CSS code in the combined CSS bundle.' );
+                                    $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
+                                    $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Load CSS files asynchronously to eliminate render-blocking CSS and speed up page rendering.' );
+                                    $this->render_toggle_switch( 'uwb_auto_critical_css', 'Automatic Server-Side Critical CSS Generation', 'Tự động trích xuất các quy tắc CSS hiển thị ở màn hình đầu tiên (Above-The-Fold) ngay khi tạo Cache trang lần đầu tiên và nhúng trực tiếp vào &lt;head&gt;.' );
                                     ?>
+
+                                    <!-- Critical CSS Management Card -->
+                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:20px; margin-top:16px; margin-bottom:24px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                                            <h4 style="margin:0; font-size:14px; font-weight:700; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
+                                                ⚡ Auto Critical CSS &amp; Custom Manual Addition
+                                            </h4>
+                                            <button type="button" id="btn-clear-critical-css" class="button button-secondary button-small" style="font-weight:600; padding:4px 12px; border-radius:6px; cursor:pointer;">
+                                                Clear Critical CSS Cache
+                                            </button>
+                                        </div>
+                                        <?php
+                                        $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Custom Above-The-Fold CSS (Manual Addition)', '', 'Nhập các quy tắc CSS tùy chỉnh để xuất ra thẻ &lt;style id="uwb-manual-critical-css"&gt; riêng biệt trong &lt;head&gt; (chèn song song với Critical CSS tự động và có độ ưu tiên cao nhất).' );
+                                        ?>
+                                    </div>
+
+                                    <?php
+
+                                    $this->render_cdn_distribution_card(
+                                        'Cloudflare R2 / S3 CDN Distribution for CSS',
+                                        'uwb_cdn_distribute_css',
+                                        'Phân phối CSS qua S3 CDN?',
+                                        'Tải các tập tin CSS đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để tối ưu hóa tốc độ tải trang.',
+                                        array(
+                                            'Upload to S3 when:' => array(
+                                                'uwb_cdn_auto_upload_combined_css' => 'upload (gộp file CSS)',
+                                                'uwb_cdn_auto_upload_minified_css' => 'edit (nén file CSS)',
+                                            ),
+                                            'Delete From S3 when:' => array(
+                                                'uwb_cdn_auto_purge_css_cdn' => 'Delete file (xả cache CSS)',
+                                            ),
+                                        )
+                                     );
+                                    $this->render_page_optimizer_tools_section( 'CSS Tools' );
+                                    ?>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
-
-                                <?php
-
-                                $this->render_cdn_distribution_card(
-                                    'Cloudflare R2 / S3 CDN Distribution for CSS',
-                                    'uwb_cdn_distribute_css',
-                                    'Phân phối CSS qua S3 CDN?',
-                                    'Tải các tập tin CSS đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để tối ưu hóa tốc độ tải trang.',
-                                    array(
-                                        'Upload to S3 when:' => array(
-                                            'uwb_cdn_auto_upload_combined_css' => 'upload (gộp file CSS)',
-                                            'uwb_cdn_auto_upload_minified_css' => 'edit (nén file CSS)',
-                                        ),
-                                        'Delete From S3 when:' => array(
-                                            'uwb_cdn_auto_purge_css_cdn' => 'Delete file (xả cache CSS)',
-                                        ),
-                                    )
-                                 );
-                                $this->render_page_optimizer_tools_section( 'CSS Tools' );
-                                ?>
-                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
                             <div id="subtab-opt_js" class="uwb-subtab-content">
-                                <?php $this->render_module_banner( 'uwb_module_js_enabled', 'JS Optimizer Submodule', 'Minify, combine JS, Defer JS và trì hoãn thực thi JS (Delay JS) cho tới khi có tương tác.' ); ?>
-                                <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Minification &amp; Combination</h4>
-                                <?php
-                                $delay_js_on = (bool) get_option( 'uwb_delay_js', 0 );
-                                $this->render_toggle_switch( 'uwb_js_minify', 'JS Minify', 'Minify JS files and inline JS code.' );
-                                $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JavaScript files into a single cached file to reduce HTTP requests.', $delay_js_on );
-                                if ( $delay_js_on ) : ?>
-                                <div style="display:flex; align-items:flex-start; gap:10px; background:#fffbeb; border:1px solid #fbbf24; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#92400e; margin-top:-8px;">
-                                    <svg style="flex-shrink:0; margin-top:1px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                    <span><strong>Disabled automatically:</strong> JS Combine is not compatible with Delay JavaScript Execution. Disable Delay JS first to enable JS Combine.</span>
-                                </div>
-                                <?php endif; ?>
-                                <?php
-                                $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS files and inline JS code in the combined JS bundle.', $delay_js_on );
-                                $this->render_textarea_setting( 'uwb_tuning_js_excludes', 'JS Minify & Combine Excludes', '', 'JS files or inline keywords to exclude from minification/combination (one per line).' );
-                                ?>
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <?php $this->render_submodule_header( 'uwb_module_js_enabled', 'JS Optimization Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>' ); ?>
+                                    <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Minification &amp; Combination</h4>
+                                    <?php
+                                    $delay_js_on = (bool) get_option( 'uwb_delay_js', 0 );
+                                    $this->render_toggle_switch( 'uwb_js_minify', 'JS Minify', 'Minify JS files and inline JS code.' );
+                                    $this->render_toggle_switch( 'uwb_js_combine', 'JS Combine', 'Combine JavaScript files into a single cached file to reduce HTTP requests.', $delay_js_on );
+                                    if ( $delay_js_on ) : ?>
+                                    <div style="display:flex; align-items:flex-start; gap:10px; background:#fffbeb; border:1px solid #fbbf24; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#92400e; margin-top:-8px;">
+                                        <svg style="flex-shrink:0; margin-top:1px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                        <span><strong>Disabled automatically:</strong> JS Combine is not compatible with Delay JavaScript Execution. Disable Delay JS first to enable JS Combine.</span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php
+                                    $this->render_toggle_switch( 'uwb_js_combine_ext_inline', 'JS Combine External and Inline', 'Include external JS files and inline JS code in the combined JS bundle.', $delay_js_on );
+                                    $this->render_textarea_setting( 'uwb_tuning_js_excludes', 'JS Minify & Combine Excludes', '', 'JS files or inline keywords to exclude from minification/combination (one per line).' );
+                                    ?>
 
-                                <h4 style="margin: 24px 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Load JS Deferred</h4>
-                                <?php
-                                $js_quick_fix_notice = '<br><span style="display:block; margin-top:8px; padding:10px 14px; background:#f8fafc; border-left:3px solid #6366f1; border-radius:6px; font-size:12px; color:#334155; line-height:1.5;"><strong>💡 Quick Fix:</strong> If you have problems after activating this option, copy and paste the default exclusions to quickly resolve issues:<br><code style="display:block; margin-top:6px; padding:8px 10px; background:#0f172a; color:#f8fafc; border-radius:6px; font-family:monospace; font-size:11.5px; white-space:pre; overflow-x:auto;">\/jquery(-migrate)?-?([0-9.]+)?(.min|.slim|.slim.min)?.js(\?(.*))?( |\'|"|&gt;)
+                                    <h4 style="margin: 24px 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px;">Load JS Deferred</h4>
+                                    <?php
+                                    $js_quick_fix_notice = '<br><span style="display:block; margin-top:8px; padding:10px 14px; background:#f8fafc; border-left:3px solid #6366f1; border-radius:6px; font-size:12px; color:#334155; line-height:1.5;"><strong>💡 Quick Fix:</strong> If you have problems after activating this option, copy and paste the default exclusions to quickly resolve issues:<br><code style="display:block; margin-top:6px; padding:8px 10px; background:#0f172a; color:#f8fafc; border-radius:6px; font-family:monospace; font-size:11.5px; white-space:pre; overflow-x:auto;">\/jquery(-migrate)?-?([0-9.]+)?(.min|.slim|.slim.min)?.js(\?(.*))?( |\'|"|&gt;)
 js-(before|after)
 (?:/wp-content/|/wp-includes/)(.*)</code></span>';
 
-                                $this->render_toggle_switch( 'uwb_js_load_defer', 'Load JS Deferred', 'Load JS with defer attribute so scripts download in background without blocking DOM parsing.' . $js_quick_fix_notice );
-                                $this->render_textarea_setting( 'uwb_tuning_js_defer_excludes', 'JS Deferred Excludes', '', 'JS files or inline keywords to exclude from deferred loading (one per line).' );
-                                ?>
+                                    $this->render_toggle_switch( 'uwb_js_load_defer', 'Load JS Deferred', 'Load JS with defer attribute so scripts download in background without blocking DOM parsing.' . $js_quick_fix_notice );
+                                    $this->render_textarea_setting( 'uwb_tuning_js_defer_excludes', 'JS Deferred Excludes', '', 'JS files or inline keywords to exclude from deferred loading (one per line).' );
+                                    ?>
 
-                                <h4 style="margin: 24px 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px; display:flex; align-items:center; gap:8px;">
-                                    Delay JavaScript Execution
-                                    <span style="background:#7c3aed; color:#fff; font-size:10px; padding:2px 8px; border-radius:12px; font-weight:700;">NEW</span>
-                                </h4>
-                                <?php
-                                $this->render_toggle_switch( 'uwb_delay_js', 'Enable Delay JS', 'Delay execution of JavaScript until first user interaction (scroll, click, keypress). Dramatically improves <strong>LCP</strong> and <strong>TBT</strong> scores.' . $js_quick_fix_notice );
-                                $this->render_textarea_setting(
-                                    'uwb_delay_js_exclusions',
-                                    'Delay JS Exclusions',
-                                    "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js",
-                                    'One pattern per line. Scripts matching these patterns will NOT be delayed.',
-                                    ! intval( get_option( 'uwb_delay_js', 0 ) )
-                                );
+                                    <h4 style="margin: 24px 0 16px 0; font-size: 14px; font-weight: 700; color: var(--uwb-text); border-bottom: 1px solid var(--uwb-border); padding-bottom: 8px; display:flex; align-items:center; gap:8px;">
+                                        Delay JavaScript Execution
+                                        <span style="background:#7c3aed; color:#fff; font-size:10px; padding:2px 8px; border-radius:12px; font-weight:700;">NEW</span>
+                                    </h4>
+                                    <?php
+                                    $this->render_toggle_switch( 'uwb_delay_js', 'Enable Delay JS', 'Delay execution of JavaScript until first user interaction (scroll, click, keypress). Dramatically improves <strong>LCP</strong> and <strong>TBT</strong> scores.' . $js_quick_fix_notice );
+                                    $this->render_textarea_setting(
+                                        'uwb_delay_js_exclusions',
+                                        'Delay JS Exclusions',
+                                        "jquery.js\njquery.min.js\njquery-migrate.min.js\nga.js\ngtm.js",
+                                        'One pattern per line. Scripts matching these patterns will NOT be delayed.',
+                                        ! intval( get_option( 'uwb_delay_js', 0 ) )
+                                    );
 
-                                $this->render_cdn_distribution_card(
-                                    'Cloudflare R2 / S3 CDN Distribution for JS',
-                                    'uwb_cdn_distribute_js',
-                                    'Phân phối JS qua S3 CDN?',
-                                    'Tải các tập tin JavaScript đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để phục vụ khách truy cập.',
-                                    array(
-                                        'Upload to S3 when:' => array(
-                                            'uwb_cdn_auto_upload_combined_js' => 'upload (gộp file JS)',
-                                            'uwb_cdn_auto_upload_minified_js' => 'edit (nén file JS)',
-                                        ),
-                                        'Delete From S3 when:' => array(
-                                            'uwb_cdn_auto_purge_js_cdn' => 'Delete file (xả cache JS)',
-                                        ),
-                                    )
-                                );
-                                $this->render_page_optimizer_tools_section( 'JS Tools' );
-                                ?>
-                                <?php $this->render_module_banner_end(); ?>
+                                    $this->render_cdn_distribution_card(
+                                        'Cloudflare R2 / S3 CDN Distribution for JS',
+                                        'uwb_cdn_distribute_js',
+                                        'Phân phối JS qua S3 CDN?',
+                                        'Tải các tập tin JavaScript đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để phục vụ khách truy cập.',
+                                        array(
+                                            'Upload to S3 when:' => array(
+                                                'uwb_cdn_auto_upload_combined_js' => 'upload (gộp file JS)',
+                                                'uwb_cdn_auto_upload_minified_js' => 'edit (nén file JS)',
+                                            ),
+                                            'Delete From S3 when:' => array(
+                                                'uwb_cdn_auto_purge_js_cdn' => 'Delete file (xả cache JS)',
+                                            ),
+                                        )
+                                    );
+                                    $this->render_page_optimizer_tools_section( 'JS Tools' );
+                                    ?>
+                                    <?php $this->render_module_banner_end(); ?>
+                                </div>
                             </div>
 
                             <div id="subtab-opt_html" class="uwb-subtab-content">
-                                <?php $this->render_module_banner( 'uwb_module_html_enabled', 'HTML Optimizer Submodule', 'Tối ưu hoá mã nguồn HTML, nén code HTML và lazy load phần tử.' ); ?>
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <?php $this->render_submodule_header( 'uwb_module_html_enabled', 'HTML Optimization Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' ); ?>
                                 <?php
                                 $this->render_toggle_switch( 'uwb_html_minify', 'HTML Minify', 'Minify HTML source code.' );
 
@@ -3711,328 +3740,330 @@ js-(before|after)
 
                             <!-- SUB-TAB 4: Media Settings & Excludes -->
                             <div id="subtab-opt_media" class="uwb-subtab-content">
-                                <?php $this->render_module_banner( 'uwb_module_media_opt_enabled', '🖼️ Image Optimizer Module', 'Nén ảnh, chuyển đổi WebP/AVIF, tự động optimize khi upload và quản lý file backup.' ); ?>
-                                <?php
-                                $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
-                                $this->render_toggle_switch( 'uwb_media_optimize_viewport_images', 'Optimize Viewport Images (Above The Fold)', 'Automatically disable lazy loading and add fetchpriority="high" to images detected in the first screen (viewport) to improve LCP.' );
-                                $this->render_toggle_switch( 'uwb_media_lazy_load_iframes', 'Lazy Load Iframes / Videos', 'Delay iframe (YouTube/Vimeo) and HTML5 video loading until visible in viewport.' );
-                                $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
-                                $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
-                                $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', "skip-lazy\n.hero-section\nsection.banner-wrap", 'Specify CSS class names or parent container selectors (e.g. <code>skip-lazy</code>, <code>.hero-section</code>, <code>section.banner-wrap</code>, <code>div.no-lazy-container</code>) to exclude all nested images/iframes/videos inside those parent blocks from lazy loading (one per line).' );
-                                ?>
-
-                                <!-- Section: Optimize Image (Compress & Convert WebP/AVIF) -->
-                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-top:24px; margin-bottom:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                        Optimize Image (Compress, WebP / AVIF &amp; Meta Flags)
-                                    </h3>
-                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;"></p>
-
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <?php $this->render_submodule_header( 'uwb_module_media_opt_enabled', 'Image Optimization Settings', '🖼️' ); ?>
                                     <?php
-                                    $this->render_toggle_switch( 'uwb_media_opt_enabled', 'Enable Automatic Image Optimization & Conversion', 'Tự động nén chất lượng ảnh và convert định dạng khi upload hoặc gọi ảnh trong Thư viện Media.' );
-                                    $this->render_toggle_switch( 'uwb_media_opt_backup_bak', 'Backup ảnh gốc thành đuôi .bak?', 'Tự động tạo bản sao lưu file ảnh gốc dạng filename.jpg.bak trước khi nén hoặc convert.' );
-                                    $is_opt_active = (bool) get_option( 'uwb_media_opt_enabled', 0 );
+                                    $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
+                                    $this->render_toggle_switch( 'uwb_media_optimize_viewport_images', 'Optimize Viewport Images (Above The Fold)', 'Automatically disable lazy loading and add fetchpriority="high" to images detected in the first screen (viewport) to improve LCP.' );
+                                    $this->render_toggle_switch( 'uwb_media_lazy_load_iframes', 'Lazy Load Iframes / Videos', 'Delay iframe (YouTube/Vimeo) and HTML5 video loading until visible in viewport.' );
+                                    $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
+                                    $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
+                                    $this->render_textarea_setting( 'uwb_media_lazy_load_class_excludes', 'Lazy Load Class Excludes', "skip-lazy\n.hero-section\nsection.banner-wrap", 'Specify CSS class names or parent container selectors (e.g. <code>skip-lazy</code>, <code>.hero-section</code>, <code>section.banner-wrap</code>, <code>div.no-lazy-container</code>) to exclude all nested images/iframes/videos inside those parent blocks from lazy loading (one per line).' );
                                     ?>
 
-                                    <!-- Event Actions for Image Optimization -->
-                                    <div class="uwb-img-opt-events-wrap" style="margin-top:16px; margin-bottom:20px; background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; <?php echo $is_opt_active ? '' : 'display:none;'; ?>">
-                                        <h5 style="margin:0 0 14px 0; font-size:12px; font-weight:700; color:var(--uwb-text); text-transform:uppercase; letter-spacing:0.5px;">Sự kiện tự động tối ưu ảnh (Event Actions)</h5>
-                                        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:10px 14px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:8px;">
-                                            <div style="min-width:180px; font-weight:700; font-size:13px; color:var(--uwb-text); flex-shrink:0;">
-                                                Tự động tối ưu ảnh khi:
-                                            </div>
-                                            <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; flex:1;">
-                                                <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
-                                                    <input type="hidden" name="uwb_img_opt_event_upload" value="0" />
-                                                    <input type="checkbox" name="uwb_img_opt_event_upload" value="1" <?php checked( get_option( 'uwb_img_opt_event_upload', 1 ), 1 ); ?> />
-                                                    upload
-                                                </label>
-                                                <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
-                                                    <input type="hidden" name="uwb_img_opt_event_edit" value="0" />
-                                                    <input type="checkbox" name="uwb_img_opt_event_edit" value="1" <?php checked( get_option( 'uwb_img_opt_event_edit', 0 ), 1 ); ?> />
-                                                    edit
-                                                </label>
-                                                <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
-                                                    <input type="hidden" name="uwb_img_opt_event_get_url" value="0" />
-                                                    <input type="checkbox" name="uwb_img_opt_event_get_url" value="1" <?php checked( get_option( 'uwb_img_opt_event_get_url', 0 ), 1 ); ?> />
-                                                    get_url
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <!-- Section: Optimize Image (Compress & Convert WebP/AVIF) -->
+                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-top:24px; margin-bottom:24px;">
+                                        <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                            Optimize Image (Compress, WebP / AVIF &amp; Meta Flags)
+                                        </h3>
+                                        <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;"></p>
 
-                                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-top:16px; margin-bottom:20px; background:#fff; padding:20px; border:1px solid var(--uwb-border); border-radius:10px;">
-                                        <!-- Field 1: Quality Percentage -->
-                                        <div class="uwb-form-group">
-                                            <label for="uwb_media_opt_quality" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
-                                                Mức độ nén chất lượng (%) (Compression Quality)
-                                            </label>
-                                            <div style="display:flex; align-items:center; gap:10px;">
-                                                <input type="number" min="1" max="100" name="uwb_media_opt_quality" id="uwb_media_opt_quality" value="<?php echo esc_attr( get_option( 'uwb_media_opt_quality', 80 ) ); ?>" style="width:100px; padding:8px 12px; border:1px solid var(--uwb-border); border-radius:6px; font-size:13.5px; font-weight:700; text-align:center;" />
-                                                <span style="font-size:12.5px; color:var(--uwb-text-muted);">(Mặc định 80%. Mức 75% - 85% cho tỷ lệ nén dung lượng tối ưu nhất)</span>
-                                            </div>
-                                        </div>
+                                        <?php
+                                        $this->render_toggle_switch( 'uwb_media_opt_enabled', 'Enable Automatic Image Optimization & Conversion', 'Tự động nén chất lượng ảnh và convert định dạng khi upload hoặc gọi ảnh trong Thư viện Media.' );
+                                        $this->render_toggle_switch( 'uwb_media_opt_backup_bak', 'Backup ảnh gốc thành đuôi .bak?', 'Tự động tạo bản sao lưu file ảnh gốc dạng filename.jpg.bak trước khi nén hoặc convert.' );
+                                        $is_opt_active = (bool) get_option( 'uwb_media_opt_enabled', 0 );
+                                        ?>
 
-                                        <!-- Field 2: Target Format -->
-                                        <div class="uwb-form-group">
-                                            <label for="uwb_media_opt_format" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
-                                                Chuyển đổi định dạng (Convert Format)
-                                            </label>
-                                            <?php
-                                            $opt_format = get_option( 'uwb_media_opt_format', 'original' );
-                                            $webp_ok = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::is_webp_supported();
-                                            $avif_ok = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::is_avif_supported();
-                                            ?>
-                                            <select name="uwb_media_opt_format" id="uwb_media_opt_format" style="width:100%; border:1px solid var(--uwb-border); border-radius:6px; padding:9px 12px; font-size:13.5px; background:#fff;">
-                                                <option value="original" <?php selected( $opt_format, 'original' ); ?>>Giữ nguyên định dạng gốc (Original format)</option>
-                                                <option value="webp" <?php selected( $opt_format, 'webp' ); ?> <?php disabled( ! $webp_ok ); ?>>Convert sang WebP (<?php echo $webp_ok ? 'Supported' : 'PHP GD/Imagick Not Supported'; ?>)</option>
-                                                <option value="avif" <?php selected( $opt_format, 'avif' ); ?> <?php disabled( ! $avif_ok ); ?>>Convert sang AVIF (<?php echo $avif_ok ? 'Supported' : 'PHP GD/Imagick Not Supported'; ?>)</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Field 3: Conversion Methods & Output Modes (Checkboxes) -->
-                                        <div class="uwb-form-group" style="grid-column:1 / -1;">
-                                            <label style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:10px;">
-                                                Phương thức ghi file (Conversion Output Modes)
-                                            </label>
-                                            <div style="display:flex; flex-direction:column; gap:12px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:8px; padding:14px 16px;">
-                                                <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
-                                                    <input type="hidden" name="uwb_media_opt_mode_sidecar" value="0" />
-                                                    <input type="checkbox" name="uwb_media_opt_mode_sidecar" value="1" <?php checked( get_option( 'uwb_media_opt_mode_sidecar', 1 ), 1 ); ?> style="margin-top:2px;" />
-                                                    <div>
-                                                        <strong style="font-size:13px; color:var(--uwb-text); display:block;">Create Sidecar File (Default)</strong>
-                                                        <span style="font-size:12px; color:var(--uwb-text-muted);">Tạo file WebP/AVIF mới song song (ví dụ: <code>image.webp</code> hoặc <code>image.jpg.webp</code>)</span>
-                                                    </div>
-                                                </label>
-
-                                                <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
-                                                    <input type="hidden" name="uwb_media_opt_mode_overwrite" value="0" />
-                                                    <input type="checkbox" name="uwb_media_opt_mode_overwrite" value="1" <?php checked( get_option( 'uwb_media_opt_mode_overwrite', 0 ), 1 ); ?> style="margin-top:2px;" />
-                                                    <div>
-                                                        <strong style="font-size:13px; color:var(--uwb-text); display:block;">Overwrite File Content In-Place</strong>
-                                                        <span style="font-size:12px; color:var(--uwb-text-muted);">Ghi đè dữ liệu nhị phân (binary data) WebP/AVIF trực tiếp lên file gốc giữ nguyên đuôi mở rộng cũ</span>
-                                                    </div>
-                                                </label>
-
-                                                <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
-                                                    <input type="hidden" name="uwb_media_opt_mode_replace_ext" value="0" />
-                                                    <input type="checkbox" name="uwb_media_opt_mode_replace_ext" value="1" <?php checked( get_option( 'uwb_media_opt_mode_replace_ext', 0 ), 1 ); ?> style="margin-top:2px;" />
-                                                    <div>
-                                                        <strong style="font-size:13px; color:var(--uwb-text); display:block;">Replace &amp; Change File Extension</strong>
-                                                        <span style="font-size:12px; color:var(--uwb-text-muted);">Chuyển đổi định dạng và đổi trực tiếp đuôi file thành <code>.webp</code> / <code>.avif</code>, cập nhật database WordPress</span>
-                                                    </div>
-                                                </label>
+                                        <!-- Event Actions for Image Optimization -->
+                                        <div class="uwb-img-opt-events-wrap" style="margin-top:16px; margin-bottom:20px; background:#fff; border:1px solid var(--uwb-border); border-radius:10px; padding:16px; <?php echo $is_opt_active ? '' : 'display:none;'; ?>">
+                                            <h5 style="margin:0 0 14px 0; font-size:12px; font-weight:700; color:var(--uwb-text); text-transform:uppercase; letter-spacing:0.5px;">Sự kiện tự động tối ưu ảnh (Event Actions)</h5>
+                                            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:10px 14px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:8px;">
+                                                <div style="min-width:180px; font-weight:700; font-size:13px; color:var(--uwb-text); flex-shrink:0;">
+                                                    Tự động tối ưu ảnh khi:
+                                                </div>
+                                                <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; flex:1;">
+                                                    <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                                        <input type="hidden" name="uwb_img_opt_event_upload" value="0" />
+                                                        <input type="checkbox" name="uwb_img_opt_event_upload" value="1" <?php checked( get_option( 'uwb_img_opt_event_upload', 1 ), 1 ); ?> />
+                                                        upload
+                                                    </label>
+                                                    <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                                        <input type="hidden" name="uwb_img_opt_event_edit" value="0" />
+                                                        <input type="checkbox" name="uwb_img_opt_event_edit" value="1" <?php checked( get_option( 'uwb_img_opt_event_edit', 0 ), 1 ); ?> />
+                                                        edit
+                                                    </label>
+                                                    <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;">
+                                                        <input type="hidden" name="uwb_img_opt_event_get_url" value="0" />
+                                                        <input type="checkbox" name="uwb_img_opt_event_get_url" value="1" <?php checked( get_option( 'uwb_img_opt_event_get_url', 0 ), 1 ); ?> />
+                                                        get_url
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <!-- Batch Optimizer Button -->
-                                    <div style="border-top:1px solid var(--uwb-border); padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                                        <div>
-                                            <strong style="font-size:13px; color:var(--uwb-text); display:block;">Batch Optimize Media Library</strong>
-                                            <span style="font-size:12px; color:var(--uwb-text-muted);">Nén &amp; convert toàn bộ ảnh hiện có trong Thư viện Media (Tự động lưu cờ status để không nén lặp lại).</span>
+                                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-top:16px; margin-bottom:20px; background:#fff; padding:20px; border:1px solid var(--uwb-border); border-radius:10px;">
+                                            <!-- Field 1: Quality Percentage -->
+                                            <div class="uwb-form-group">
+                                                <label for="uwb_media_opt_quality" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
+                                                    Mức độ nén chất lượng (%) (Compression Quality)
+                                                </label>
+                                                <div style="display:flex; align-items:center; gap:10px;">
+                                                    <input type="number" min="1" max="100" name="uwb_media_opt_quality" id="uwb_media_opt_quality" value="<?php echo esc_attr( get_option( 'uwb_media_opt_quality', 80 ) ); ?>" style="width:100px; padding:8px 12px; border:1px solid var(--uwb-border); border-radius:6px; font-size:13.5px; font-weight:700; text-align:center;" />
+                                                    <span style="font-size:12.5px; color:var(--uwb-text-muted);">(Mặc định 80%. Mức 75% - 85% cho tỷ lệ nén dung lượng tối ưu nhất)</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Field 2: Target Format -->
+                                            <div class="uwb-form-group">
+                                                <label for="uwb_media_opt_format" style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:6px;">
+                                                    Chuyển đổi định dạng (Convert Format)
+                                                </label>
+                                                <?php
+                                                $opt_format = get_option( 'uwb_media_opt_format', 'original' );
+                                                $webp_ok = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::is_webp_supported();
+                                                $avif_ok = \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::is_avif_supported();
+                                                ?>
+                                                <select name="uwb_media_opt_format" id="uwb_media_opt_format" style="width:100%; border:1px solid var(--uwb-border); border-radius:6px; padding:9px 12px; font-size:13.5px; background:#fff;">
+                                                    <option value="original" <?php selected( $opt_format, 'original' ); ?>>Giữ nguyên định dạng gốc (Original format)</option>
+                                                    <option value="webp" <?php selected( $opt_format, 'webp' ); ?> <?php disabled( ! $webp_ok ); ?>>Convert sang WebP (<?php echo $webp_ok ? 'Supported' : 'PHP GD/Imagick Not Supported'; ?>)</option>
+                                                    <option value="avif" <?php selected( $opt_format, 'avif' ); ?> <?php disabled( ! $avif_ok ); ?>>Convert sang AVIF (<?php echo $avif_ok ? 'Supported' : 'PHP GD/Imagick Not Supported'; ?>)</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Field 3: Conversion Methods & Output Modes (Checkboxes) -->
+                                            <div class="uwb-form-group" style="grid-column:1 / -1;">
+                                                <label style="font-weight:700; font-size:13px; color:var(--uwb-text); display:block; margin-bottom:10px;">
+                                                    Phương thức ghi file (Conversion Output Modes)
+                                                </label>
+                                                <div style="display:flex; flex-direction:column; gap:12px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:8px; padding:14px 16px;">
+                                                    <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                                                        <input type="hidden" name="uwb_media_opt_mode_sidecar" value="0" />
+                                                        <input type="checkbox" name="uwb_media_opt_mode_sidecar" value="1" <?php checked( get_option( 'uwb_media_opt_mode_sidecar', 1 ), 1 ); ?> style="margin-top:2px;" />
+                                                        <div>
+                                                            <strong style="font-size:13px; color:var(--uwb-text); display:block;">Create Sidecar File (Default)</strong>
+                                                            <span style="font-size:12px; color:var(--uwb-text-muted);">Tạo file WebP/AVIF mới song song (ví dụ: <code>image.webp</code> hoặc <code>image.jpg.webp</code>)</span>
+                                                        </div>
+                                                    </label>
+
+                                                    <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                                                        <input type="hidden" name="uwb_media_opt_mode_overwrite" value="0" />
+                                                        <input type="checkbox" name="uwb_media_opt_mode_overwrite" value="1" <?php checked( get_option( 'uwb_media_opt_mode_overwrite', 0 ), 1 ); ?> style="margin-top:2px;" />
+                                                        <div>
+                                                            <strong style="font-size:13px; color:var(--uwb-text); display:block;">Overwrite File Content In-Place</strong>
+                                                            <span style="font-size:12px; color:var(--uwb-text-muted);">Ghi đè dữ liệu nhị phân (binary data) WebP/AVIF trực tiếp lên file gốc giữ nguyên đuôi mở rộng cũ</span>
+                                                        </div>
+                                                    </label>
+
+                                                    <label style="display:inline-flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                                                        <input type="hidden" name="uwb_media_opt_mode_replace_ext" value="0" />
+                                                        <input type="checkbox" name="uwb_media_opt_mode_replace_ext" value="1" <?php checked( get_option( 'uwb_media_opt_mode_replace_ext', 0 ), 1 ); ?> style="margin-top:2px;" />
+                                                        <div>
+                                                            <strong style="font-size:13px; color:var(--uwb-text); display:block;">Replace &amp; Change File Extension</strong>
+                                                            <span style="font-size:12px; color:var(--uwb-text-muted);">Chuyển đổi định dạng và đổi trực tiếp đuôi file thành <code>.webp</code> / <code>.avif</code>, cập nhật database WordPress</span>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <button type="button" id="btn-batch-optimize-images" class="button button-secondary" style="font-weight:600; padding:8px 16px; border-radius:6px; cursor:pointer;">
-                                            Optimize &amp; Convert Existing Media
-                                        </button>
-                                    </div>
-                                    <div id="uwb-optimize-progress-wrap" style="margin-top:14px; display:none;">
-                                        <div class="uwb-progress-bar-wrap" style="margin-bottom:6px;">
-                                            <div class="uwb-progress-bar-fill" id="uwb-optimize-progress-fill" style="width:0%;"></div>
+
+                                        <!-- Batch Optimizer Button -->
+                                        <div style="border-top:1px solid var(--uwb-border); padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                            <div>
+                                                <strong style="font-size:13px; color:var(--uwb-text); display:block;">Batch Optimize Media Library</strong>
+                                                <span style="font-size:12px; color:var(--uwb-text-muted);">Nén &amp; convert toàn bộ ảnh hiện có trong Thư viện Media (Tự động lưu cờ status để không nén lặp lại).</span>
+                                            </div>
+                                            <button type="button" id="btn-batch-optimize-images" class="button button-secondary" style="font-weight:600; padding:8px 16px; border-radius:6px; cursor:pointer;">
+                                                Optimize &amp; Convert Existing Media
+                                            </button>
                                         </div>
-                                        <div id="uwb-optimize-status-text" style="font-size:12px; font-weight:600; color:var(--uwb-text);">Processing batch optimization...</div>
+                                        <div id="uwb-optimize-progress-wrap" style="margin-top:14px; display:none;">
+                                            <div class="uwb-progress-bar-wrap" style="margin-bottom:6px;">
+                                                <div class="uwb-progress-bar-fill" id="uwb-optimize-progress-fill" style="width:0%;"></div>
+                                            </div>
+                                            <div id="uwb-optimize-status-text" style="font-size:12px; font-weight:600; color:var(--uwb-text);">Processing batch optimization...</div>
+                                        </div>
                                     </div>
+                                    <?php
+
+                                    $this->render_cdn_distribution_card(
+                                        'Cloudflare R2 / S3 CDN Distribution for Media Library & Files',
+                                        'uwb_cdn_distribute_media',
+                                        'Phân phối Media Library & Tập tin qua S3 CDN?',
+                                        'Đồng bộ và phân phối toàn bộ tập tin hình ảnh, tài liệu và thumbnails trong thư viện Media WordPress qua S3/R2 CDN.',
+                                        array(
+                                            'Upload to S3 when:' => array(
+                                                'uwb_cdn_auto_upload_attachment'     => 'upload',
+                                                'uwb_cdn_auto_rewrite_attachment_url' => 'get_url',
+                                            ),
+                                            'Update file to S3 when:' => array(
+                                                'uwb_cdn_auto_update_attachment'     => 'edit',
+                                            ),
+                                            'Delete From S3 when:' => array(
+                                                'uwb_cdn_auto_delete_attachment'     => 'Delete file',
+                                            ),
+                                            'Delete From Local when:' => array(
+                                                'uwb_cdn_delete_local'               => 'Uploaded to S3',
+                                            ),
+                                        )
+                                    );
+                                    $this->render_page_optimizer_tools_section( 'Media Tools' );
+                                    ?>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
-                                <?php
-
-                                $this->render_cdn_distribution_card(
-                                    'Cloudflare R2 / S3 CDN Distribution for Media Library & Files',
-                                    'uwb_cdn_distribute_media',
-                                    'Phân phối Media Library & Tập tin qua S3 CDN?',
-                                    'Đồng bộ và phân phối toàn bộ tập tin hình ảnh, tài liệu và thumbnails trong thư viện Media WordPress qua S3/R2 CDN.',
-                                    array(
-                                        'Upload to S3 when:' => array(
-                                            'uwb_cdn_auto_upload_attachment'     => 'upload',
-                                            'uwb_cdn_auto_rewrite_attachment_url' => 'get_url',
-                                        ),
-                                        'Update file to S3 when:' => array(
-                                            'uwb_cdn_auto_update_attachment'     => 'edit',
-                                        ),
-                                        'Delete From S3 when:' => array(
-                                            'uwb_cdn_auto_delete_attachment'     => 'Delete file',
-                                        ),
-                                        'Delete From Local when:' => array(
-                                            'uwb_cdn_delete_local'               => 'Uploaded to S3',
-                                        ),
-                                    )
-                                );
-                                $this->render_page_optimizer_tools_section( 'Media Tools' );
-                                ?>
-                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
                             <div id="subtab-opt_font" class="uwb-subtab-content">
-                                <?php $this->render_module_banner( 'uwb_module_font_enabled', 'Font Optimizer Submodule', 'Tối ưu hoá hiển thị font chữ (font-display: swap) và preload các font chữ quan trọng.' ); ?>
-                                <?php
-                                $this->render_toggle_switch( 'uwb_css_font_display_opt', 'Font Display Swap', 'Automatically injects <code>font-display: swap</code> into all CSS <code>@font-face</code> declarations (including theme icon fonts like <code>fl-icons.woff2</code>) and Google Fonts to ensure text remains visible during font load and pass PageSpeed Insights audit.' );
-                                $this->render_textarea_setting(
-                                    'uwb_preload_fonts',
-                                    'Preload Key Fonts',
-                                    "/wp-content/themes/flatsome/assets/css/icons/fl-icons.woff2?v=3.20.7\n/wp-content/themes/your-theme/fonts/font.woff2",
-                                    'Inject <code>&lt;link rel="preload" as="font" crossorigin&gt;</code> tags to prioritize critical font loading and eliminate FOUT/FOIT. One font URL per line (.woff2 recommended).'
-                                );
-                                $this->render_textarea_setting(
-                                    'uwb_preconnect_domains',
-                                    'Preconnect External Font Domains',
-                                    "https://fonts.googleapis.com\nhttps://fonts.gstatic.com",
-                                    'Inject <code>&lt;link rel="preconnect"&gt;</code> tags into HTML <code>&lt;head&gt;</code> to preconnect external font domains (one per line).'
-                                );
-                                $this->render_toggle_switch( 'uwb_html_remove_gfonts', 'Remove Google Fonts', 'Completely remove Google Fonts requests to improve page load speed and privacy compliance.' );
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <?php $this->render_submodule_header( 'uwb_module_font_enabled', 'Font Optimization Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>' ); ?>
+                                    <?php
+                                    $this->render_toggle_switch( 'uwb_css_font_display_opt', 'Font Display Swap', 'Automatically injects <code>font-display: swap</code> into all CSS <code>@font-face</code> declarations (including theme icon fonts like <code>fl-icons.woff2</code>) and Google Fonts to ensure text remains visible during font load and pass PageSpeed Insights audit.' );
+                                    $this->render_textarea_setting(
+                                        'uwb_preload_fonts',
+                                        'Preload Key Fonts',
+                                        "/wp-content/themes/flatsome/assets/css/icons/fl-icons.woff2?v=3.20.7\n/wp-content/themes/your-theme/fonts/font.woff2",
+                                        'Inject <code>&lt;link rel="preload" as="font" crossorigin&gt;</code> tags to prioritize critical font loading and eliminate FOUT/FOIT. One font URL per line (.woff2 recommended).'
+                                    );
+                                    $this->render_textarea_setting(
+                                        'uwb_preconnect_domains',
+                                        'Preconnect External Font Domains',
+                                        "https://fonts.googleapis.com\nhttps://fonts.gstatic.com",
+                                        'Inject <code>&lt;link rel="preconnect"&gt;</code> tags into HTML <code>&lt;head&gt;</code> to preconnect external font domains (one per line).'
+                                    );
+                                    $this->render_toggle_switch( 'uwb_html_remove_gfonts', 'Remove Google Fonts', 'Completely remove Google Fonts requests to improve page load speed and privacy compliance.' );
 
-                                $this->render_cdn_distribution_card(
-                                    'Cloudflare R2 / S3 CDN Distribution for Web Fonts',
-                                    'uwb_cdn_distribute_font',
-                                    'Phân phối Web Fonts qua S3 CDN?',
-                                    'Tải và phục vụ các font chữ tùy chỉnh (.woff2, .woff, .ttf) của theme từ S3/R2 CDN.',
-                                    array(
-                                        'Upload to S3 when:' => array(
-                                            'uwb_cdn_auto_upload_fonts'     => 'upload',
-                                            'uwb_cdn_auto_rewrite_font_urls' => 'get_url',
-                                        ),
-                                    )
-                                );
-                                ?>
-                                <?php $this->render_module_banner_end(); ?>
+                                    $this->render_cdn_distribution_card(
+                                        'Cloudflare R2 / S3 CDN Distribution for Web Fonts',
+                                        'uwb_cdn_distribute_font',
+                                        'Phân phối Web Fonts qua S3 CDN?',
+                                        'Tải và phục vụ các font chữ tùy chỉnh (.woff2, .woff, .ttf) của theme từ S3/R2 CDN.',
+                                        array(
+                                            'Upload to S3 when:' => array(
+                                                'uwb_cdn_auto_upload_fonts'     => 'upload',
+                                                'uwb_cdn_auto_rewrite_font_urls' => 'get_url',
+                                            ),
+                                        )
+                                    );
+                                    ?>
+                                    <?php $this->render_module_banner_end(); ?>
+                                </div>
                             </div>
 
                             <!-- SUB-TAB 6: CDN Offload Media -->
                             <div id="subtab-opt_cdn_media" class="uwb-subtab-content">
-                                <?php $this->render_module_banner( 'uwb_module_cdn_enabled', '☁️ CDN & S3 Storage Module', 'Upload ảnh/assets lên S3/R2, rewrite CDN URLs, quản lý media offload và Cloudflare zone cache.' ); ?>
-                                <!-- Section 1: Provider Settings -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-                                        Provider Settings &amp; Credentials
-                                    </h3>
-                                    <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Configure your Cloudflare R2 or S3-Compatible storage connection settings.</p>
+                                    <?php $this->render_submodule_header( 'uwb_module_cdn_enabled', 'CDN & S3 Storage Settings', '☁️' ); ?>
+                                    <!-- Section 1: Provider Settings -->
+                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                        <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                                            Provider Settings &amp; Credentials
+                                        </h3>
+                                        <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Configure your Cloudflare R2 or S3-Compatible storage connection settings.</p>
 
-                                    <div class="uwb-form-group" style="margin-bottom:20px;">
-                                        <label for="uwb_cdn_provider">CDN Storage Provider</label>
-                                        <select name="uwb_cdn_provider" id="uwb_cdn_provider" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px; background:#fff;">
-                                            <option value="cloudflare_r2" <?php selected( get_option( 'uwb_cdn_provider', 'cloudflare_r2' ), 'cloudflare_r2' ); ?>>Cloudflare R2 Storage (Recommended)</option>
-                                            <option value="other_s3" <?php selected( get_option( 'uwb_cdn_provider', 'cloudflare_r2' ), 'other_s3' ); ?>>Other S3 Compatible Storage (AWS S3, Wasabi, DigitalOcean Spaces, MinIO, Bunny S3)</option>
-                                        </select>
-                                        <p class="description uwb-cdn-cf-guide" style="margin-top:8px; font-size:12.5px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'cloudflare_r2' ? '' : 'display:none;'; ?>">
-                                            📖 <strong>Hướng dẫn lấy thông số Cloudflare R2:</strong>
-                                            <a href="https://developers.cloudflare.com/r2/api/s3/tokens/" target="_blank" rel="noopener noreferrer" style="color:var(--uwb-primary); font-weight:600; text-decoration:underline;">
-                                                Xem hướng dẫn tạo R2 API Tokens (Access Key &amp; Secret Key) &amp; Account ID trên Cloudflare Docs &rarr;
-                                            </a>
-                                        </p>
-                                    </div>
-
-                                    <!-- Cloudflare Account ID (CF R2 only) -->
-                                    <div class="uwb-form-group uwb-cdn-cf-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'cloudflare_r2' ? '' : 'display:none;'; ?>">
-                                        <label for="uwb_cdn_account_id">Cloudflare Account ID</label>
-                                        <input type="text" name="uwb_cdn_account_id" id="uwb_cdn_account_id" value="<?php echo esc_attr( get_option( 'uwb_cdn_account_id', '' ) ); ?>" placeholder="e.g. 56a84f3c7e0b9d123456789abcdef012" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
-                                        <p class="description">Your Cloudflare Account ID found in your Cloudflare Dashboard URL or R2 overview.</p>
-                                    </div>
-
-                                    <!-- Endpoint URL (Other S3 only) -->
-                                    <div class="uwb-form-group uwb-cdn-s3-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'other_s3' ? '' : 'display:none;'; ?>">
-                                        <label for="uwb_cdn_endpoint">S3 Endpoint URL</label>
-                                        <input type="url" name="uwb_cdn_endpoint" id="uwb_cdn_endpoint" value="<?php echo esc_attr( get_option( 'uwb_cdn_endpoint', '' ) ); ?>" placeholder="e.g. https://s3.wasabisys.com or https://ams3.digitaloceanspaces.com" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
-                                        <p class="description">The REST API Endpoint of your S3 compatible provider.</p>
-                                    </div>
-
-                                    <!-- Region (Other S3 only) -->
-                                    <div class="uwb-form-group uwb-cdn-s3-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'other_s3' ? '' : 'display:none;'; ?>">
-                                        <label for="uwb_cdn_region">S3 Region</label>
-                                        <input type="text" name="uwb_cdn_region" id="uwb_cdn_region" value="<?php echo esc_attr( get_option( 'uwb_cdn_region', 'auto' ) ); ?>" placeholder="e.g. us-east-1, us-west-1, ams3" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
-                                    </div>
-
-                                    <!-- Access Key & Secret Key Grid -->
-                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
-                                        <div class="uwb-form-group">
-                                            <label for="uwb_cdn_access_key">Access Key ID</label>
-                                            <input type="text" name="uwb_cdn_access_key" id="uwb_cdn_access_key" value="<?php echo esc_attr( get_option( 'uwb_cdn_access_key', '' ) ); ?>" placeholder="Access Key ID" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        <div class="uwb-form-group" style="margin-bottom:20px;">
+                                            <label for="uwb_cdn_provider">CDN Storage Provider</label>
+                                            <select name="uwb_cdn_provider" id="uwb_cdn_provider" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; font-size:14px; background:#fff;">
+                                                <option value="cloudflare_r2" <?php selected( get_option( 'uwb_cdn_provider', 'cloudflare_r2' ), 'cloudflare_r2' ); ?>>Cloudflare R2 Storage (Recommended)</option>
+                                                <option value="other_s3" <?php selected( get_option( 'uwb_cdn_provider', 'cloudflare_r2' ), 'other_s3' ); ?>>Other S3 Compatible Storage (AWS S3, Wasabi, DigitalOcean Spaces, MinIO, Bunny S3)</option>
+                                            </select>
+                                            <p class="description uwb-cdn-cf-guide" style="margin-top:8px; font-size:12.5px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'cloudflare_r2' ? '' : 'display:none;'; ?>">
+                                                📖 <strong>Hướng dẫn lấy thông số Cloudflare R2:</strong>
+                                                <a href="https://developers.cloudflare.com/r2/api/s3/tokens/" target="_blank" rel="noopener noreferrer" style="color:var(--uwb-primary); font-weight:600; text-decoration:underline;">
+                                                    Xem hướng dẫn tạo R2 API Tokens (Access Key &amp; Secret Key) &amp; Account ID trên Cloudflare Docs &rarr;
+                                                </a>
+                                            </p>
                                         </div>
-                                        <div class="uwb-form-group">
-                                            <label for="uwb_cdn_secret_key">Secret Access Key</label>
-                                            <input type="password" name="uwb_cdn_secret_key" id="uwb_cdn_secret_key" value="<?php echo esc_attr( get_option( 'uwb_cdn_secret_key', '' ) ); ?>" placeholder="Secret Access Key" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+
+                                        <!-- Cloudflare Account ID (CF R2 only) -->
+                                        <div class="uwb-form-group uwb-cdn-cf-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'cloudflare_r2' ? '' : 'display:none;'; ?>">
+                                            <label for="uwb_cdn_account_id">Cloudflare Account ID</label>
+                                            <input type="text" name="uwb_cdn_account_id" id="uwb_cdn_account_id" value="<?php echo esc_attr( get_option( 'uwb_cdn_account_id', '' ) ); ?>" placeholder="e.g. 56a84f3c7e0b9d123456789abcdef012" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                            <p class="description">Your Cloudflare Account ID found in your Cloudflare Dashboard URL or R2 overview.</p>
+                                        </div>
+
+                                        <!-- Endpoint URL (Other S3 only) -->
+                                        <div class="uwb-form-group uwb-cdn-s3-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'other_s3' ? '' : 'display:none;'; ?>">
+                                            <label for="uwb_cdn_endpoint">S3 Endpoint URL</label>
+                                            <input type="url" name="uwb_cdn_endpoint" id="uwb_cdn_endpoint" value="<?php echo esc_attr( get_option( 'uwb_cdn_endpoint', '' ) ); ?>" placeholder="e.g. https://s3.wasabisys.com or https://ams3.digitaloceanspaces.com" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                            <p class="description">The REST API Endpoint of your S3 compatible provider.</p>
+                                        </div>
+
+                                        <!-- Region (Other S3 only) -->
+                                        <div class="uwb-form-group uwb-cdn-s3-field" style="margin-bottom:20px; <?php echo get_option( 'uwb_cdn_provider', 'cloudflare_r2' ) === 'other_s3' ? '' : 'display:none;'; ?>">
+                                            <label for="uwb_cdn_region">S3 Region</label>
+                                            <input type="text" name="uwb_cdn_region" id="uwb_cdn_region" value="<?php echo esc_attr( get_option( 'uwb_cdn_region', 'auto' ) ); ?>" placeholder="e.g. us-east-1, us-west-1, ams3" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        </div>
+
+                                        <!-- Access Key & Secret Key Grid -->
+                                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                                            <div class="uwb-form-group">
+                                                <label for="uwb_cdn_access_key">Access Key ID</label>
+                                                <input type="text" name="uwb_cdn_access_key" id="uwb_cdn_access_key" value="<?php echo esc_attr( get_option( 'uwb_cdn_access_key', '' ) ); ?>" placeholder="Access Key ID" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                            </div>
+                                            <div class="uwb-form-group">
+                                                <label for="uwb_cdn_secret_key">Secret Access Key</label>
+                                                <input type="password" name="uwb_cdn_secret_key" id="uwb_cdn_secret_key" value="<?php echo esc_attr( get_option( 'uwb_cdn_secret_key', '' ) ); ?>" placeholder="Secret Access Key" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                            </div>
+                                        </div>
+
+                                        <!-- Bucket Name -->
+                                        <div class="uwb-form-group" style="margin-bottom:20px;">
+                                            <label for="uwb_cdn_bucket">Bucket Name</label>
+                                            <input type="text" name="uwb_cdn_bucket" id="uwb_cdn_bucket" value="<?php echo esc_attr( get_option( 'uwb_cdn_bucket', '' ) ); ?>" placeholder="e.g. my-website-assets" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                        </div>
+
+                                        <!-- Custom CDN Domain / CNAME -->
+                                        <div class="uwb-form-group" style="margin-bottom:20px;">
+                                            <label for="uwb_cdn_custom_domain">CDN Custom Domain / CNAME URL</label>
+                                            <input type="url" name="uwb_cdn_custom_domain" id="uwb_cdn_custom_domain" value="<?php echo esc_attr( get_option( 'uwb_cdn_custom_domain', '' ) ); ?>" placeholder="e.g. https://cdn.mysite.com or https://pub-xxx.r2.dev" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                            <p class="description">The public URL domain used to rewrite and serve static assets to website visitors.</p>
+                                        </div>
+
+                                        <!-- Test Connection Button -->
+                                        <div style="margin-top:16px;">
+                                            <button type="button" id="btn-test-cdn-connection" class="button button-secondary" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
+                                                Test CDN Connection
+                                            </button>
+                                            <div id="uwb-cdn-test-result" style="margin-top:12px; display:none;"></div>
                                         </div>
                                     </div>
 
-                                    <!-- Bucket Name -->
-                                    <div class="uwb-form-group" style="margin-bottom:20px;">
-                                        <label for="uwb_cdn_bucket">Bucket Name</label>
-                                        <input type="text" name="uwb_cdn_bucket" id="uwb_cdn_bucket" value="<?php echo esc_attr( get_option( 'uwb_cdn_bucket', '' ) ); ?>" placeholder="e.g. my-website-assets" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                    <!-- Section 2: File Types & Offloading Rules -->
+                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                        <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            File Types &amp; URL Rewriting Rules
+                                        </h3>
+
+                                        <?php $this->render_toggle_switch( 'uwb_cdn_enabled', 'Enable CDN Static Asset Offloading & URL Rewriter', 'Automatically rewrite static asset URLs in HTML output to serve from CDN Domain.' ); ?>
+
+                                        <div class="uwb-form-group" style="margin-bottom:0;">
+                                            <label for="uwb_cdn_cache_control">Object Cache-Control Header</label>
+                                            <input type="text" name="uwb_cdn_cache_control" id="uwb_cdn_cache_control" value="<?php echo esc_attr( get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' ) ); ?>" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
+                                            <p class="description">Cache-Control header set on uploaded S3/R2 objects.</p>
+                                        </div>
                                     </div>
 
-                                    <!-- Custom CDN Domain / CNAME -->
-                                    <div class="uwb-form-group" style="margin-bottom:20px;">
-                                        <label for="uwb_cdn_custom_domain">CDN Custom Domain / CNAME URL</label>
-                                        <input type="url" name="uwb_cdn_custom_domain" id="uwb_cdn_custom_domain" value="<?php echo esc_attr( get_option( 'uwb_cdn_custom_domain', '' ) ); ?>" placeholder="e.g. https://cdn.mysite.com or https://pub-xxx.r2.dev" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
-                                        <p class="description">The public URL domain used to rewrite and serve static assets to website visitors.</p>
-                                    </div>
+                                    <!-- Section 3: Batch Sync Tools -->
+                                    <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
+                                        <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            Batch Sync Media Library to CDN
+                                        </h3>
 
-                                    <!-- Test Connection Button -->
-                                    <div style="margin-top:16px;">
-                                        <button type="button" id="btn-test-cdn-connection" class="button button-secondary" style="padding:10px 18px; font-weight:600; height:auto; border-radius:8px; cursor:pointer;">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
-                                            Test CDN Connection
+                                        <p style="font-size:12.5px; color:var(--uwb-text-muted); margin-bottom:16px;">Bulk upload all existing media library files and thumbnails to your configured S3/R2 bucket.</p>
+
+                                        <button type="button" id="btn-sync-media-cdn" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">
+                                            Sync Existing Media Library to CDN
                                         </button>
-                                        <div id="uwb-cdn-test-result" style="margin-top:12px; display:none;"></div>
-                                    </div>
-                                </div>
 
-                                <!-- Section 2: File Types & Offloading Rules -->
-                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                        File Types &amp; URL Rewriting Rules
-                                    </h3>
-
-                                    <?php $this->render_toggle_switch( 'uwb_cdn_enabled', 'Enable CDN Static Asset Offloading & URL Rewriter', 'Automatically rewrite static asset URLs in HTML output to serve from CDN Domain.' ); ?>
-
-                                    <div class="uwb-form-group" style="margin-bottom:0;">
-                                        <label for="uwb_cdn_cache_control">Object Cache-Control Header</label>
-                                        <input type="text" name="uwb_cdn_cache_control" id="uwb_cdn_cache_control" value="<?php echo esc_attr( get_option( 'uwb_cdn_cache_control', 'public, max-age=31536000, immutable' ) ); ?>" style="width:100%; padding:12px; border:1px solid var(--uwb-border); border-radius:8px; font-size:13.5px;" />
-                                        <p class="description">Cache-Control header set on uploaded S3/R2 objects.</p>
-                                    </div>
-                                </div>
-
-                                <!-- Section 3: Batch Sync Tools -->
-                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                        Batch Sync Media Library to CDN
-                                    </h3>
-
-                                    <p style="font-size:12.5px; color:var(--uwb-text-muted); margin-bottom:16px;">Bulk upload all existing media library files and thumbnails to your configured S3/R2 bucket.</p>
-
-                                    <button type="button" id="btn-sync-media-cdn" class="button button-primary" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 20px; height:auto; border-radius:8px; font-weight:600; cursor:pointer;">
-                                        Sync Existing Media Library to CDN
-                                    </button>
-
-                                    <div id="uwb-sync-cdn-progress-wrap" style="margin-top:16px; display:none;">
-                                        <div class="uwb-progress-bar-wrap" style="margin-bottom:8px;">
-                                            <div class="uwb-progress-bar-fill" id="uwb-sync-cdn-progress-fill" style="width:0%;"></div>
+                                        <div id="uwb-sync-cdn-progress-wrap" style="margin-top:16px; display:none;">
+                                            <div class="uwb-progress-bar-wrap" style="margin-bottom:8px;">
+                                                <div class="uwb-progress-bar-fill" id="uwb-sync-cdn-progress-fill" style="width:0%;"></div>
+                                            </div>
+                                            <div id="uwb-sync-cdn-status-text" style="font-size:12.5px; font-weight:600; color:var(--uwb-text);">Initializing batch sync...</div>
                                         </div>
-                                        <div id="uwb-sync-cdn-status-text" style="font-size:12.5px; font-weight:600; color:var(--uwb-text);">Initializing batch sync...</div>
                                     </div>
+                                    <?php $this->render_page_optimizer_tools_section( 'CDN Offload Tools' ); ?>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
-                                <?php $this->render_page_optimizer_tools_section( 'CDN Offload Tools' ); ?>
-                                <?php $this->render_module_banner_end(); ?>
                             </div>
 
                             <div id="subtab-opt_database" class="uwb-subtab-content">
-                                <?php $this->render_module_banner( 'uwb_module_database_enabled', 'Database Optimizer Submodule', 'Dọn dẹp các bản nháp (revisions), spam comments, tối ưu hoá các bảng dữ liệu database.' ); ?>
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                    <h3 style="margin-top:0; margin-bottom:16px; font-size:15px; display:flex; align-items:center; gap:8px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                        Database Optimization &amp; Cleanup
-                                    </h3>
+                                    <?php $this->render_submodule_header( 'uwb_module_database_enabled', 'Database Optimization & Cleanup', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' ); ?>
                                     <p style="font-size:13px; color:var(--uwb-text-muted); margin-bottom:20px;">Clean up database overhead, remove post revisions, trashed posts/comments, and transients to improve database query speeds.</p>
 
                                     <table class="wp-list-table widefat fixed striped" style="border:none; box-shadow:none; background:transparent; margin-bottom:20px;">
@@ -5288,7 +5319,7 @@ js-(before|after)
                 var $radio = $(this);
                 var val = parseInt($radio.val());
                 var isEnabled = (val === 1);
-                var $banner = $radio.closest('.uwb-module-banner-inline');
+                var $banner = $radio.closest('[data-content-id]');
                 var contentId = $banner.data('content-id');
                 var $wrapper = $('#' + contentId);
 
