@@ -3,6 +3,19 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Views/scripts.php — All JavaScript for Admin panel
 ?>
         <script>
+        window.addEventListener('error', function(e) {
+            var errDiv = document.getElementById('uwb-js-error-log');
+            if (!errDiv) {
+                errDiv = document.createElement('div');
+                errDiv.id = 'uwb-js-error-log';
+                errDiv.style = 'background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; padding:16px; margin-bottom:20px; border-radius:8px; font-family:monospace; font-size:13px; position:relative; z-index:99999;';
+                var container = document.querySelector('.uwb-content-panel') || document.body;
+                container.insertBefore(errDiv, container.firstChild);
+            }
+            errDiv.innerHTML += '<div><strong>JS Error:</strong> ' + e.message + ' at ' + e.filename + ':' + e.lineno + '</div>';
+        });
+        </script>
+        <script>
         (function($) {
             var uroNonce = '<?php echo esc_js( wp_create_nonce( "uwb_uro_nonce" ) ); ?>';
             var uroRules = [];
