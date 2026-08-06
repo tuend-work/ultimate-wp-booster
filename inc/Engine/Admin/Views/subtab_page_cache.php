@@ -72,6 +72,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                                 <strong>Quick conversion (click to copy):</strong> <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">60</code> (1h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">600</code> (10h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">1440</code> (24h) | <code class="uwb-copy-val" style="cursor:pointer; background:#e2e8f0; padding:2px 6px; border-radius:4px;" title="Click to copy">10080</code> (7d)
                                             </p>
                                         </div>
+                                        <?php $this->render_module_banner_end(); ?>
                                     </div>
                                     <!-- End of Page Cache Settings Card -->
                                     <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
@@ -165,6 +166,5 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                                 Example: <code>paged</code> or <code>sort</code>.
                                             </p>
                                         </div>
-                                    <?php $this->render_module_banner_end(); ?>
+                                    </div>
                                 </div>
-                            </div>
