@@ -452,7 +452,10 @@ function uwb_advanced_cache_run() {
                 }
             } else {
                 $bc_enabled = isset( $config['browser_cache_enabled'] ) ? intval( $config['browser_cache_enabled'] ) : 1;
-                if ( $bc_enabled && ! $is_serving_404 ) { // Do not browser-cache 404 pages at edge level
+                
+                // For HTML pages, we should always prevent browser/CDN local caching to avoid logged-in user issues.
+                // XML sitemaps are safe to browser-cache.
+                if ( $bc_enabled && $is_xml && ! $is_serving_404 ) {
                     $bc_lifespan = isset( $config['browser_cache_lifespan'] ) ? intval( $config['browser_cache_lifespan'] ) : 3600;
                     header( 'Pragma: public' );
                     header( 'Cache-Control: max-age=' . $bc_lifespan . ', public' );
@@ -463,9 +466,19 @@ function uwb_advanced_cache_run() {
                         header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
                     }
                 } else {
+                    // Prevent browser/CDN caching for HTML pages or when browser cache is disabled
                     header( 'Cache-Control: no-cache, no-store, must-revalidate, private' );
                     header( 'Pragma: no-cache' );
-                    header( 'X-LiteSpeed-Cache-Control: no-cache' );
+                    
+                    $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
+                    if ( ! $is_serving_404 && ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) ) {
+                        // Still allow LiteSpeed server cache for guest HTML pages
+                        $bc_lifespan = isset( $config['browser_cache_lifespan'] ) ? intval( $config['browser_cache_lifespan'] ) : 3600;
+                        header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $bc_lifespan );
+                        header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+                    } else {
+                        header( 'X-LiteSpeed-Cache-Control: no-cache' );
+                    }
                 }
             }
             if ( isset( $is_xml ) && $is_xml ) {
