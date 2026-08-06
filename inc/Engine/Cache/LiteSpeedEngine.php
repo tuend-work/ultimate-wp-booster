@@ -63,12 +63,18 @@ class LiteSpeedEngine {
             }
         }
 
-        if ( $is_no_cache || $lifespan <= 0 || $is_logged_in ) {
+        if ( $is_no_cache || $lifespan <= 0 || ( $is_logged_in && $cache_logged_in !== 2 ) ) {
             header( 'X-LiteSpeed-Cache-Control: no-cache' );
             header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
         } else {
-            header( 'X-LiteSpeed-Cache-Control: public, max-age=' . intval( $lifespan ) );
-            header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+            if ( $is_logged_in && $cache_logged_in === 2 ) {
+                $user_lifespan = intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ) * 60;
+                header( 'X-LiteSpeed-Cache-Control: private, max-age=' . intval( $user_lifespan ) );
+                header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+            } else {
+                header( 'X-LiteSpeed-Cache-Control: public, max-age=' . intval( $lifespan ) );
+                header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+            }
         }
     }
 

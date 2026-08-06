@@ -171,20 +171,31 @@ class Activation {
             require_once ABSPATH . 'wp-admin/includes/misc.php';
         }
 
+        $cache_logged_in = (int) get_option( 'uwb_cache_logged_in', 0 );
+
         if ( function_exists( 'insert_with_markers' ) ) {
             $rules = array(
                 '<IfModule LiteSpeed>',
                 '    CacheLookup on',
                 '    RewriteEngine On',
-                '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions',
-                '    RewriteCond %{HTTP_COOKIE} (wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]',
-                '    RewriteRule .* - [E=Cache-Control:no-cache]',
-                '    # Bypass LiteSpeed cache for POST requests, admin & API endpoints',
-                '    RewriteCond %{REQUEST_METHOD} ^POST$ [OR]',
-                '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\.php) [NC]',
-                '    RewriteRule .* - [E=Cache-Control:no-cache]',
-                '</IfModule>'
             );
+
+            if ( $cache_logged_in !== 2 ) {
+                $rules[] = '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions';
+                $rules[] = '    RewriteCond %{HTTP_COOKIE} (wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
+                $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+            } else {
+                $rules[] = '    # Bypass LiteSpeed cache for commenters & WooCommerce sessions (Per-user Vary lookup enabled for wordpress_logged_in_)';
+                $rules[] = '    RewriteCond %{HTTP_COOKIE} (comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
+                $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+            }
+
+            $rules[] = '    # Bypass LiteSpeed cache for POST requests, admin & API endpoints';
+            $rules[] = '    RewriteCond %{REQUEST_METHOD} ^POST$ [OR]';
+            $rules[] = '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\.php) [NC]';
+            $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+            $rules[] = '</IfModule>';
+
             insert_with_markers( $htaccess_path, 'Ultimate WP Booster LiteSpeed', $rules );
         }
         
