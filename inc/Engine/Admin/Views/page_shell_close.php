@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Views/page_shell_close.php — Close form + content panel + layout + dashboard wrap
 ?>

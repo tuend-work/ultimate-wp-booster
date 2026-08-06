@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Views/tab_page_optimizes_nav.php — Page Optimizes module banner + subtab nav
 ?>

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Views/tab_preload_nav.php — Preload module banner + subtab nav
 ?>

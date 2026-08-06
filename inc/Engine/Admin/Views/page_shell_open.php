@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Views/page_shell_open.php — Outer page shell: header, sidebar nav, form open
 ?>

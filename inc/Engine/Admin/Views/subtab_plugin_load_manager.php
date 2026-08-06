@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Views/subtab_plugin_load_manager.php — Plugin Load Manager
 ?>
