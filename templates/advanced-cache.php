@@ -91,7 +91,7 @@ function uwb_advanced_cache_run() {
         // Dynamically check query bypass parameters from config (falls back to defaults if not set)
         $bypass_queries = isset( $config['bypass_query_params'] ) 
             ? $config['bypass_query_params'] 
-            : array( 'wc-ajax', 'wc-api', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset', 'rest_route', 'action', 'ajax', 'edd_action', 'xmlrpc', 'autoterm', 'app', 'uxbuilder', 'uxbuilder_action', 'uxbuilder_iframe', 'elementor-preview', 'et_fb', 'vc_editable', 'ct_builder', 'bricks', 'fl_builder' );
+            : array( 'wc-ajax', 'wc-api', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset', 'rest_route', 'action', 'ajax', 'edd_action', 'xmlrpc', 'autoterm', 'app', 'uxbuilder', 'uxbuilder_action', 'uxbuilder_iframe', 'uxb_iframe', 'elementor-preview', 'et_fb', 'vc_editable', 'ct_builder', 'bricks', 'fl_builder' );
 
         $intersect = array_intersect( array_keys( $query_params ), $bypass_queries );
         if ( ! empty( $intersect ) ) {
@@ -103,9 +103,9 @@ function uwb_advanced_cache_run() {
             return;
         }
 
-        // Check for any parameter starting or containing yith_wcan, yith-wcan, wc-api, rest_route, or page builder keys
+        // Check for any parameter starting or containing yith_wcan, yith-wcan, wc-api, rest_route, uxb, or page builder keys
         foreach ( array_keys( $query_params ) as $q_key ) {
-            if ( strpos( $q_key, 'yith_wcan' ) !== false || strpos( $q_key, 'yith-wcan' ) !== false || strpos( $q_key, 'wc-api' ) !== false || strpos( $q_key, 'rest_route' ) !== false || strpos( $q_key, 'uxbuilder' ) !== false || strpos( $q_key, 'elementor' ) !== false ) {
+            if ( strpos( $q_key, 'yith_wcan' ) !== false || strpos( $q_key, 'yith-wcan' ) !== false || strpos( $q_key, 'wc-api' ) !== false || strpos( $q_key, 'rest_route' ) !== false || strpos( $q_key, 'uxbuilder' ) !== false || strpos( $q_key, 'uxb' ) !== false || strpos( $q_key, 'elementor' ) !== false ) {
                 if ( $debug ) {
                     error_log( "UWB: Run bypassed: API/Filter/PageBuilder query parameter detected '{$q_key}'." );
                 }
@@ -126,10 +126,10 @@ function uwb_advanced_cache_run() {
             }
             
             // Core WordPress query variables that must never be ignored (they route to specific inner pages)
-            $core_wp_queries = array( 'p', 'page_id', 'cat', 'tag', 'm', 'name', 'category_name', 'post_type', 's', 'preview', 'orderby', 'order' );
+            $core_wp_queries = array( 'p', 'page_id', 'post_id', 'cat', 'tag', 'm', 'name', 'category_name', 'post_type', 's', 'preview', 'orderby', 'order' );
             if ( in_array( $param, $core_wp_queries, true ) ) {
-                // If it is 'p' or 'page_id', validate against the static valid post IDs JSON whitelist (Anti-DDoS 404)
-                if ( ( $param === 'p' || $param === 'page_id' ) && ! empty( $val ) ) {
+                // If it is 'p', 'page_id', or 'post_id', validate against the static valid post IDs JSON whitelist (Anti-DDoS 404)
+                if ( ( $param === 'p' || $param === 'page_id' || $param === 'post_id' ) && ! empty( $val ) ) {
                     $post_id_val = intval( $val );
                     $wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( __FILE__ );
                     $whitelist_json_path = $wp_content_dir . '/cache/uwb-valid-post-ids.json';

@@ -48,7 +48,12 @@ class LiteSpeedEngine {
     public static function is_page_builder_request() {
         if ( ! empty( $_GET ) ) {
             if ( isset( $_GET['app'] ) && $_GET['app'] === 'uxbuilder' ) return true;
-            if ( isset( $_GET['uxbuilder'] ) || isset( $_GET['uxbuilder_action'] ) || isset( $_GET['uxbuilder_iframe'] ) ) return true;
+            if ( isset( $_GET['uxbuilder'] ) || isset( $_GET['uxbuilder_action'] ) || isset( $_GET['uxbuilder_iframe'] ) || isset( $_GET['uxb_iframe'] ) ) return true;
+            foreach ( array_keys( $_GET ) as $g_key ) {
+                if ( strpos( $g_key, 'uxb' ) === 0 || strpos( $g_key, 'uxbuilder' ) !== false ) {
+                    return true;
+                }
+            }
             if ( isset( $_GET['elementor-preview'] ) || ( isset( $_GET['ver'] ) && $_GET['ver'] === 'elementor' ) ) return true;
             if ( isset( $_GET['et_fb'] ) || isset( $_GET['et_pb_preview'] ) ) return true;
             if ( isset( $_GET['vc_editable'] ) || isset( $_GET['vc_action'] ) ) return true;
@@ -57,7 +62,7 @@ class LiteSpeedEngine {
 
         $uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
         if ( ! empty( $uri ) ) {
-            if ( strpos( $uri, 'uxbuilder' ) !== false || strpos( $uri, 'elementor-preview' ) !== false || strpos( $uri, 'et_fb' ) !== false || strpos( $uri, 'vc_editable' ) !== false ) {
+            if ( strpos( $uri, 'uxbuilder' ) !== false || strpos( $uri, 'uxb_iframe' ) !== false || strpos( $uri, 'elementor-preview' ) !== false || strpos( $uri, 'et_fb' ) !== false || strpos( $uri, 'vc_editable' ) !== false ) {
                 return true;
             }
         }
