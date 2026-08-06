@@ -300,6 +300,14 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_priority_urls', array( $this, 'sanitize_priority_urls' ) );
         register_setting( 'uwb_settings_group', 'uwb_preload_batch_size', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_preload_links', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_user_agent', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_custom_cookies', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_custom_headers', 'sanitize_textarea_field' );
+        register_setting( 'uwb_settings_group', 'uwb_important_sitemap_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_imp_homepage_links', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_imp_taxonomies_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_imp_taxonomy_mode', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_imp_taxonomy_terms', array( $this, 'sanitize_taxonomy_terms_array' ) );
         register_setting( 'uwb_settings_group', 'uwb_cache_404', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_exclude_cookies', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_exclude_user_agents', 'sanitize_textarea_field' );
@@ -479,6 +487,13 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_general_heartbeat_frequency', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_general_limit_post_revisions', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_general_autosave_interval', 'sanitize_text_field' );
+    }
+
+    public function sanitize_taxonomy_terms_array( $input ) {
+        if ( ! is_array( $input ) ) {
+            return array();
+        }
+        return array_map( 'sanitize_text_field', $input );
     }
 
     public function sanitize_object_cache_enabled( $val ) {
@@ -684,6 +699,44 @@ class Admin {
             }
         }
         return implode( "\n", $urls );
+    }
+
+    public function render_taxonomy_terms_checklist() {
+        $selected_terms = get_option( 'uwb_imp_taxonomy_terms', array() );
+        if ( ! is_array( $selected_terms ) ) {
+            $selected_terms = array();
+        }
+
+        $taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
+        if ( empty( $taxonomies ) ) {
+            echo '<p style="color:var(--uwb-text-muted);">No public taxonomies found.</p>';
+            return;
+        }
+
+        echo '<div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">';
+        foreach ( $taxonomies as $tax_slug => $tax ) {
+            $terms = get_terms( array(
+                'taxonomy'   => $tax_slug,
+                'hide_empty' => false,
+                'number'     => 100,
+            ) );
+            if ( empty( $terms ) || is_wp_error( $terms ) ) continue;
+
+            echo '<div style="background:#fff; border:1px solid var(--uwb-border); border-radius:8px; padding:16px;">';
+            echo '<strong style="font-size:13px; color:var(--uwb-primary); display:block; margin-bottom:10px;">🏷️ ' . esc_html( $tax->label ) . ' (' . esc_html( $tax_slug ) . ')</strong>';
+            echo '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">';
+            foreach ( $terms as $term ) {
+                $term_key = $tax_slug . ':' . $term->term_id;
+                $checked = in_array( $term_key, $selected_terms, true ) ? 'checked' : '';
+                echo '<label style="display:flex; align-items:center; gap:8px; font-size:12.5px; cursor:pointer; color:var(--uwb-text);">';
+                echo '<input type="checkbox" name="uwb_imp_taxonomy_terms[]" value="' . esc_attr( $term_key ) . '" ' . $checked . ' />';
+                echo esc_html( $term->name );
+                echo '</label>';
+            }
+            echo '</div>';
+            echo '</div>';
+        }
+        echo '</div>';
     }
 
     private function migrate_default_important_sitemap() {
@@ -2955,7 +3008,7 @@ class Admin {
                                     <?php else : ?>
                                         <div style="padding:16px; background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; border-radius:8px; font-size:13.5px; font-weight:600;">
                                             OPcache is not active or enabled on this server. Check your PHP configuration (<code>opcache.enable</code> directive).
-                                        </div>
+                                    </div>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -2970,6 +3023,8 @@ class Admin {
                             <div class="uwb-sub-tabs-nav" style="margin-bottom: 24px;">
                                 <div class="uwb-sub-tab-item active" data-subtab="preload_status">Status</div>
                                 <div class="uwb-sub-tab-item" data-subtab="preload_settings_sub">Settings</div>
+                                <div class="uwb-sub-tab-item" data-subtab="preload_sitemap_sub">Sitemap</div>
+                                <div class="uwb-sub-tab-item" data-subtab="preload_simulation_sub">Simulation</div>
                             </div>
 
                             <!-- SUB-TAB 1: Preload Status & Queue Viewer -->
@@ -3073,6 +3128,7 @@ class Admin {
                                             </h3>
                                             
                                             <?php
+                                            $last_urls = get_option( 'uwb_preload_last_run_urls', array() );
                                             if ( ! empty( $last_urls ) && is_array( $last_urls ) ) :
                                             ?>
                                                 <div style="overflow-y:auto; max-height:165px; border:1px solid var(--uwb-border); border-radius:8px; background:#fff; margin-top:12px;">
@@ -3120,7 +3176,7 @@ class Admin {
                                     </div>
                                 </div>
 
-                                <!-- Toolbar & Preloading Queue Table -->
+                                <!-- Toolbar -->
                                 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
                                     <input type="text" id="uwb-url-search" placeholder="Search URL..." style="border:1px solid var(--uwb-border); border-radius:8px; padding:9px 12px; font-size:13px; flex:1; min-width:180px; max-width:320px;" />
                                     <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -3130,10 +3186,6 @@ class Admin {
                                         <button type="button" class="uwb-filter-btn" data-status="completed" style="border:1px solid #6ee7b7; background:#d1fae5; color:#065f46; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Completed</button>
                                         <button type="button" class="uwb-filter-btn" data-status="failed" style="border:1px solid #fca5a5; background:#fee2e2; color:#991b1b; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Failed</button>
                                     </div>
-                                    <button type="button" id="uwb-filter-wc" style="border:1px solid #cbd5e1; background:#fff; color:var(--uwb-text); border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-                                        WooCommerce
-                                    </button>
                                     <button type="button" id="uwb-url-refresh" style="margin-left:auto; border:1px solid var(--uwb-border); background:#fff; border-radius:6px; padding:7px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">⟳ Refresh</button>
                                 </div>
 
@@ -3158,29 +3210,30 @@ class Admin {
                                 <!-- Pagination -->
                                 <div id="uwb-url-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:13px; color:var(--uwb-text-muted);"></div>
 
-                                <!-- Real-time Preloader Debug Logs -->
-                                <div class="uwb-form-group" style="margin-top:24px;">
-                                    <label style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                                        <span>Preloader Crawl Logs</span>
-                                        <button type="button" id="uwb-clear-preload-log-btn" class="button button-secondary button-small" style="font-size:11px; height:24px; line-height:22px; padding:0 8px;">Clear Logs</button>
-                                    </label>
-                                    <?php
-                                    $log_file = WP_CONTENT_DIR . '/cache/ultimate-wp-booster/preload-debug.log';
-                                    $log_content = 'No logs available. Start a preload run to generate logs.';
-                                    if ( file_exists( $log_file ) ) {
-                                        $log_content = esc_html( @file_get_contents( $log_file ) );
-                                    }
-                                    ?>
-                                    <textarea id="uwb-preload-log" readonly rows="8" style="width:100%; font-family:monospace; font-size:11px; background:#fafafa; border:1px solid var(--uwb-border); border-radius:8px; padding:12px; margin-top:8px; line-height:1.4; color:#334155; white-space:pre; overflow-x:auto;"><?php echo $log_content; ?></textarea>
-                                    <p class="description">Live logs for the crawler's sitemap parsing and batch processing stages. Updates automatically during preloading.</p>
+                                <!-- Toast notification -->
+                                <div id="uwb-url-toast" style="display:none; position:fixed; bottom:24px; right:24px; background:#1e293b; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.2);"></div>
+
+                                <!-- Real-time Debug Logs Section -->
+                                <div style="margin-top:32px; background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px;">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                                        <h3 style="margin:0; font-size:15px; display:flex; align-items:center; gap:8px;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                                            Preloader Crawl Debug Logs
+                                        </h3>
+                                        <div style="display:flex; gap:8px;">
+                                            <button type="button" id="btn-refresh-preload-log" class="uwb-btn-mini">⟳ Refresh Log</button>
+                                            <button type="button" id="btn-clear-preload-log" class="uwb-btn-mini uwb-btn-mini-danger">Clear Log</button>
+                                        </div>
+                                    </div>
+                                    <div id="uwb-preload-log-viewer" style="background:#0f172a; color:#38bdf8; font-family:monospace; font-size:12px; padding:16px; border-radius:8px; height:180px; overflow-y:auto; white-space:pre-wrap; line-height:1.5;">Loading logs...</div>
                                 </div>
                             </div>
 
-                            <!-- SUB-TAB 2: Settings -->
+                            <!-- SUB-TAB 2: Preload Settings -->
                             <div id="subtab-preload_settings_sub" class="uwb-subtab-content">
                                 <div class="uwb-form-group">
                                     <label for="uwb_preload_enabled">Enable Automatic Preloading</label>
-                                    <select name="uwb_preload_enabled" id="uwb_preload_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                    <select name="uwb_preload_enabled" id="uwb_preload_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;" onchange="toggleCronFields(this.value)">
                                         <option value="0" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 0 ); ?>>Disabled</option>
                                         <option value="1" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 1 ); ?>>Enabled (via WP-Cron)</option>
                                         <option value="2" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 2 ); ?>>Enabled (via Custom Linux Cron)</option>
@@ -3225,30 +3278,6 @@ class Admin {
                                             </div>
                                         </div>
                                     </div>
-
-                                    <!-- LiteSpeed Server Native Crawler Info -->
-                                    <div id="uwb-litespeed-cron-info" style="margin-top: 16px; padding: 20px; background: #f0fdf4; border: 1px solid #10b981; border-radius: 12px; display: <?php echo ( get_option( 'uwb_preload_enabled', 0 ) == 3 ) ? 'block' : 'none'; ?>;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-                                            <h4 style="margin: 0; font-size: 14px; color: #047857; display: flex; align-items: center; gap: 6px;">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                                                LiteSpeed Server Native Crawler Status
-                                            </h4>
-                                            <span style="font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; background: <?php echo esc_attr( $ls_status['bg'] ); ?>; color: <?php echo esc_attr( $ls_status['color'] ); ?>; border: 1px solid <?php echo esc_attr( $ls_status['color'] ); ?>;">
-                                                ● <?php echo esc_html( $ls_status['label'] ); ?>
-                                            </span>
-                                        </div>
-                                        <p style="font-size: 13px; color: #065f46; margin: 0 0 12px 0; line-height: 1.4;">
-                                            LiteSpeed Web Server's C-engine crawler is controlled via the <code>CacheEngine on crawler</code> directive in your <code>.htaccess</code> file. Zero PHP overhead on your server!
-                                            <?php if ( $ls_status['htaccess_enabled'] ) : ?>
-                                                <br/><span style="font-weight: 600; color: #047857; display: block; margin-top: 4px;">✓ Verified: <code>CacheEngine on crawler</code> directive is present & active in your .htaccess file.</span>
-                                            <?php else : ?>
-                                                <br/><span style="font-weight: 600; color: #b45309; display: block; margin-top: 4px;">⚠️ Note: Click "Save Changes" below to write the <code>CacheEngine on crawler</code> directive into your .htaccess file.</span>
-                                            <?php endif; ?>
-                                        </p>
-                                        <div style="font-size: 12px; background: #fff; padding: 10px 14px; border: 1px solid #a7f3d0; border-radius: 6px; color: #047857; font-family: monospace;">
-                                            Sitemap Endpoint for LiteSpeed Server: <strong><?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?></strong>
-                                        </div>
-                                    </div>
                                 </div>
      
                                 <div class="uwb-form-group">
@@ -3256,16 +3285,7 @@ class Admin {
                                     <input type="number" min="1" max="50" name="uwb_preload_batch_size" id="uwb_preload_batch_size" value="<?php echo esc_attr( get_option( 'uwb_preload_batch_size', 5 ) ); ?>" />
                                     <p class="description">The number of URLs to crawl per batch to minimize CPU and server overhead.</p>
                                 </div>
-                                <div class="uwb-form-group">
-                                    <label for="uwb_preload_sitemap">Sitemap XML URLs</label>
-                                    <textarea name="uwb_preload_sitemap" id="uwb_preload_sitemap" rows="5" placeholder="<?php echo esc_attr( home_url( '/important-sitemap.xml' ) . "\n" . home_url( '/wp-sitemap.xml' ) ); ?>"><?php echo esc_textarea( $this->get_preload_sitemap_setting_value() ); ?></textarea>
-                                </div>
 
-                                <div class="uwb-form-group">
-                                    <label for="uwb_priority_urls">Important URLs (Preloaded first)</label>
-                                    <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( $this->get_priority_urls_setting_value() ); ?></textarea>
-                                    <p class="description">Important URLs or matching keywords, one per line. Valid URLs and paths are also published at <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code>.</p>
-                                </div>
                                 <div class="uwb-form-group">
                                     <label for="uwb_preload_links">Preload Links</label>
                                     <select name="uwb_preload_links" id="uwb_preload_links" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
@@ -3273,6 +3293,114 @@ class Admin {
                                         <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
                                     </select>
                                     <p class="description">Link preloading improves the perceived load time by downloading a page when a user hovers over the link. <a href="https://instant.page" target="_blank" rel="noopener noreferrer">More info</a></p>
+                                </div>
+                            </div>
+
+                            <!-- SUB-TAB 3: Sitemap Settings & Important Sitemap Builder -->
+                            <div id="subtab-preload_sitemap_sub" class="uwb-subtab-content">
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_sitemap">Sitemap XML URLs</label>
+                                    <textarea name="uwb_preload_sitemap" id="uwb_preload_sitemap" rows="5" placeholder="<?php echo esc_attr( home_url( '/important-sitemap.xml' ) . "\n" . home_url( '/wp-sitemap.xml' ) ); ?>"><?php echo esc_textarea( $this->get_preload_sitemap_setting_value() ); ?></textarea>
+                                    <p class="description">Enter full URLs or relative paths of your XML sitemaps to crawl (one per line). Example: <code><?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?></code></p>
+                                </div>
+
+                                <!-- Important Sitemap Section -->
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-top:24px; margin-bottom:24px;">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                                        <div>
+                                            <h3 style="margin:0; font-size:15px; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                                Important Sitemap Builder (<code>/important-sitemap.xml</code>)
+                                            </h3>
+                                            <p style="font-size:12.5px; color:var(--uwb-text-muted); margin:4px 0 0 0;">
+                                                Generates a high-priority XML feed at <code><?php echo esc_url( home_url( '/important-sitemap.xml' ) ); ?></code> containing essential URLs.
+                                            </p>
+                                        </div>
+                                        
+                                        <!-- Toggle Switch for Important Sitemap Section -->
+                                        <label class="uwb-switch" style="position:relative; display:inline-block; width:44px; height:24px;">
+                                            <input type="checkbox" name="uwb_important_sitemap_enabled" id="uwb_important_sitemap_enabled" value="1" <?php checked( get_option( 'uwb_important_sitemap_enabled', 1 ), 1 ); ?> style="opacity:0; width:0; height:0;" onchange="jQuery('#uwb-important-sitemap-wrap').toggle(this.checked);" />
+                                            <span class="uwb-slider round" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#cbd5e1; transition:.4s; border-radius:24px;"></span>
+                                        </label>
+                                    </div>
+
+                                    <div id="uwb-important-sitemap-wrap" style="display: <?php echo get_option( 'uwb_important_sitemap_enabled', 1 ) ? 'block' : 'none'; ?>; border-top:1px solid var(--uwb-border); padding-top:20px; margin-top:16px;">
+                                        <!-- Checkbox: Homepage links -->
+                                        <div class="uwb-form-group" style="margin-bottom:20px;">
+                                            <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
+                                                <input type="checkbox" name="uwb_imp_homepage_links" value="1" <?php checked( get_option( 'uwb_imp_homepage_links', 1 ), 1 ); ?> />
+                                                🌐 Toàn bộ link trên trang chủ (Scrape &amp; prioritize all internal links found on Home page)
+                                            </label>
+                                        </div>
+
+                                        <!-- Checkbox: Taxonomies -->
+                                        <div class="uwb-form-group" style="margin-bottom:20px;">
+                                            <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
+                                                <input type="checkbox" name="uwb_imp_taxonomies_enabled" id="uwb_imp_taxonomies_enabled" value="1" <?php checked( get_option( 'uwb_imp_taxonomies_enabled', 1 ), 1 ); ?> onchange="jQuery('#uwb-imp-tax-options-wrap').toggle(this.checked);" />
+                                                📂 Danh sách các loại Taxonomy (Categories, Tags, Product Categories, Product Tags)
+                                            </label>
+
+                                            <div id="uwb-imp-tax-options-wrap" style="display: <?php echo get_option( 'uwb_imp_taxonomies_enabled', 1 ) ? 'block' : 'none'; ?>; margin-left:26px; margin-top:14px; padding-left:16px; border-left:3px solid var(--uwb-primary);">
+                                                <div style="display:flex; gap:20px; margin-bottom:14px;">
+                                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600; font-size:13px;">
+                                                        <input type="radio" name="uwb_imp_taxonomy_mode" value="all" <?php checked( get_option( 'uwb_imp_taxonomy_mode', 'all' ), 'all' ); ?> onchange="jQuery('#uwb-imp-tax-terms-list').hide();" />
+                                                        All terms (Tất cả taxonomy terms công khai)
+                                                    </label>
+                                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600; font-size:13px;">
+                                                        <input type="radio" name="uwb_imp_taxonomy_mode" value="specific" <?php checked( get_option( 'uwb_imp_taxonomy_mode', 'all' ), 'specific' ); ?> onchange="jQuery('#uwb-imp-tax-terms-list').show();" />
+                                                        Chọn từng term cụ thể (HOT, NEW, ...)
+                                                    </label>
+                                                </div>
+
+                                                <div id="uwb-imp-tax-terms-list" style="display: <?php echo get_option( 'uwb_imp_taxonomy_mode', 'all' ) === 'specific' ? 'block' : 'none'; ?>;">
+                                                    <?php $this->render_taxonomy_terms_checklist(); ?>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Manual Important URLs -->
+                                        <div class="uwb-form-group" style="margin-bottom:0;">
+                                            <label for="uwb_priority_urls">Custom Important URLs (Hand-picked priority links)</label>
+                                            <textarea name="uwb_priority_urls" id="uwb_priority_urls" rows="4"><?php echo esc_textarea( $this->get_priority_urls_setting_value() ); ?></textarea>
+                                            <p class="description">Additional custom URLs or matching keywords to include in the important sitemap (one per line).</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-TAB 4: Simulation & Custom Headers -->
+                            <div id="subtab-preload_simulation_sub" class="uwb-subtab-content">
+                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+                                    <h3 style="margin-top:0; font-size:15px; color:var(--uwb-text); display:flex; align-items:center; gap:8px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                                        Crawler Simulation &amp; Custom Headers/Cookies
+                                    </h3>
+                                    <p style="font-size:12.5px; color:var(--uwb-text-muted); margin:4px 0 0 0;">
+                                        Customize the User-Agent, HTTP Cookies, and Headers sent during preloader requests to emulate specific devices, currencies, or user contexts.
+                                    </p>
+                                </div>
+
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_user_agent">Crawler User-Agent String</label>
+                                    <input type="text" name="uwb_preload_user_agent" id="uwb_preload_user_agent" value="<?php echo esc_attr( get_option( 'uwb_preload_user_agent', 'Ultimate-WP-Booster-Preloader' ) ); ?>" placeholder="Ultimate-WP-Booster-Preloader" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;" />
+                                    <p class="description">HTTP User-Agent header sent when warming up pages.</p>
+                                    <div style="display:flex; gap:8px; margin-top:8px;">
+                                        <button type="button" class="uwb-btn-mini" onclick="document.getElementById('uwb_preload_user_agent').value='Ultimate-WP-Booster-Preloader';">Default</button>
+                                        <button type="button" class="uwb-btn-mini" onclick="document.getElementById('uwb_preload_user_agent').value='lscache_runner';">LiteSpeed Native (lscache_runner)</button>
+                                        <button type="button" class="uwb-btn-mini" onclick="document.getElementById('uwb_preload_user_agent').value='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';">Chrome Desktop</button>
+                                    </div>
+                                </div>
+
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_custom_cookies">Custom HTTP Cookies</label>
+                                    <textarea name="uwb_preload_custom_cookies" id="uwb_preload_custom_cookies" rows="4" placeholder="currency=USD&#10;location=VN&#10;theme=dark"><?php echo esc_textarea( get_option( 'uwb_preload_custom_cookies', '' ) ); ?></textarea>
+                                    <p class="description">Specify HTTP cookies to attach to every preloading HTTP request (one per line in <code>cookie_name=cookie_value</code> format). Useful for multi-currency or multi-language sites.</p>
+                                </div>
+
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_custom_headers">Custom HTTP Headers</label>
+                                    <textarea name="uwb_preload_custom_headers" id="uwb_preload_custom_headers" rows="4" placeholder="Accept-Language: vi-VN,vi;q=0.9&#10;X-Preload-Simulation: 1"><?php echo esc_textarea( get_option( 'uwb_preload_custom_headers', '' ) ); ?></textarea>
+                                    <p class="description">Specify custom HTTP request headers to include during preloading (one per line in <code>Header-Name: Header-Value</code> format).</p>
                                 </div>
                             </div>
 

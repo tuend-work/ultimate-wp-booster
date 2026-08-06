@@ -79,9 +79,17 @@ class Preloader {
             return;
         }
 
+        $enabled = intval( get_option( 'uwb_important_sitemap_enabled', 1 ) );
+        if ( ! $enabled ) {
+            status_header( 404 );
+            nocache_headers();
+            echo 'Important sitemap disabled.';
+            exit;
+        }
+
         $manual_urls = $this->get_manual_priority_urls();
-        $homepage_urls = $this->scrape_homepage_links();
-        $taxonomy_urls = $this->collect_public_taxonomy_urls();
+        $homepage_urls = intval( get_option( 'uwb_imp_homepage_links', 1 ) ) ? $this->scrape_homepage_links() : array();
+        $taxonomy_urls = intval( get_option( 'uwb_imp_taxonomies_enabled', 1 ) ) ? $this->collect_public_taxonomy_urls() : array();
 
         $all_urls = array_values( array_unique( array_merge( $manual_urls, $homepage_urls, $taxonomy_urls ) ) );
 
@@ -289,10 +297,70 @@ class Preloader {
         return $path . $query . $fragment;
     }
 
+    public function get_crawl_request_args() {
+        $is_litespeed = \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_litespeed_server();
+        $custom_ua = trim( (string) get_option( 'uwb_preload_user_agent', '' ) );
+
+        if ( ! empty( $custom_ua ) ) {
+            $ua = $custom_ua;
+        } else {
+            $ua = $is_litespeed ? 'lscache_runner' : 'Ultimate-WP-Booster-Preloader';
+        }
+
+        $headers = array(
+            'X-Ultimate-WP-Booster-Preload' => '1'
+        );
+
+        $custom_headers_raw = get_option( 'uwb_preload_custom_headers', '' );
+        if ( ! empty( $custom_headers_raw ) ) {
+            $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $custom_headers_raw ) ) ) );
+            foreach ( $lines as $line ) {
+                if ( strpos( $line, ':' ) !== false ) {
+                    list( $h_key, $h_val ) = explode( ':', $line, 2 );
+                    $headers[ trim( $h_key ) ] = trim( $h_val );
+                }
+            }
+        }
+
+        $cookies = array();
+        $custom_cookies_raw = get_option( 'uwb_preload_custom_cookies', '' );
+        if ( ! empty( $custom_cookies_raw ) ) {
+            $lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $custom_cookies_raw ) ) ) );
+            foreach ( $lines as $line ) {
+                if ( strpos( $line, '=' ) !== false ) {
+                    list( $c_key, $c_val ) = explode( '=', $line, 2 );
+                    $cookies[] = new \WP_Http_Cookie( array(
+                        'name'  => trim( $c_key ),
+                        'value' => trim( $c_val ),
+                    ) );
+                }
+            }
+        }
+
+        $args = array(
+            'timeout'    => 15,
+            'sslverify'  => false,
+            'user-agent' => $ua,
+            'headers'    => $headers,
+        );
+
+        if ( ! empty( $cookies ) ) {
+            $args['cookies'] = $cookies;
+        }
+
+        return $args;
+    }
+
     private function collect_public_taxonomy_urls() {
         $urls = array();
         $home_url = home_url( '/' );
         $urls[] = $home_url;
+
+        $mode = get_option( 'uwb_imp_taxonomy_mode', 'all' );
+        $selected_terms = get_option( 'uwb_imp_taxonomy_terms', array() );
+        if ( ! is_array( $selected_terms ) ) {
+            $selected_terms = array();
+        }
 
         if ( function_exists( 'get_taxonomies' ) && function_exists( 'get_terms' ) ) {
             $taxonomies = get_taxonomies( array( 'public' => true ), 'names' );
@@ -305,6 +373,12 @@ class Preloader {
 
                     if ( ! is_wp_error( $terms ) && ! empty( $terms ) && is_array( $terms ) ) {
                         foreach ( $terms as $term ) {
+                            if ( $mode === 'specific' ) {
+                                $term_key = $taxonomy . ':' . $term->term_id;
+                                if ( ! in_array( $term_key, $selected_terms, true ) ) {
+                                    continue;
+                                }
+                            }
                             $link = get_term_link( $term );
                             if ( ! is_wp_error( $link ) && filter_var( $link, FILTER_VALIDATE_URL ) ) {
                                 $urls[] = $link;
@@ -593,15 +667,7 @@ class Preloader {
 
             $wpdb->query( $wpdb->prepare( "UPDATE {$this->table_name} SET attempts = attempts + 1, last_attempt = %s WHERE id = %d", current_time( 'mysql' ), $id ) );
 
-            $is_litespeed = \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_litespeed_server();
-            $args = array(
-                'timeout'    => 15,
-                'sslverify'  => false,
-                'user-agent' => $is_litespeed ? 'lscache_runner' : 'Ultimate-WP-Booster-Preloader',
-                'headers'    => array(
-                    'X-Ultimate-WP-Booster-Preload' => '1'
-                )
-            );
+            $args = $this->get_crawl_request_args();
 
             $response = wp_remote_get( $url, $args );
 
@@ -825,13 +891,7 @@ class Preloader {
             $url = home_url( '/' . ltrim( $url, '/' ) );
         }
 
-        $is_litespeed = \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_litespeed_server();
-        $args = array(
-            'timeout'    => 15,
-            'sslverify'  => false,
-            'user-agent' => $is_litespeed ? 'lscache_runner' : 'Ultimate-WP-Booster-Preloader',
-            'headers'    => array( 'X-Ultimate-WP-Booster-Preload' => '1' )
-        );
+        $args = $this->get_crawl_request_args();
 
         $response = wp_remote_get( $url, $args );
         $status = 'failed';
