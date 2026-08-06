@@ -3489,25 +3489,10 @@ class Admin {
                             <!-- SUB-TAB 1: General Settings -->
                             <div id="subtab-opt_general" class="uwb-subtab-content active">
                                 <?php $this->render_module_banner( 'uwb_module_general_enabled', '⚙️ General WP Tweaks Module', 'Disable emojis, embeds, XML-RPC, limit revisions, control Heartbeat và các tweak WordPress chung.' ); ?>
-                                
-                                <div class="uwb-form-group" style="margin-bottom:20px;">
-                                    <label for="uwb_preload_links">Preload Links (Hover Instant Page)</label>
-                                    <select name="uwb_preload_links" id="uwb_preload_links" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                        <option value="0" <?php selected( get_option( 'uwb_preload_links', 0 ), 0 ); ?>>Disabled</option>
-                                        <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
-                                    </select>
-                                    <p class="description">Link preloading improves perceived load time by downloading HTML when a user hovers over a link on the frontend. Powered by <a href="https://instant.page" target="_blank" rel="noopener noreferrer">instant.page</a>.</p>
-                                </div>
-
-                                <div class="uwb-form-group" style="margin-bottom:20px;">
-                                    <label for="uwb_optimize_logged_in">Optimize for Logged-in Users</label>
-                                    <select name="uwb_optimize_logged_in" id="uwb_optimize_logged_in" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                        <option value="0" <?php selected( get_option( 'uwb_optimize_logged_in', 0 ), 0 ); ?>>None</option>
-                                        <option value="1" <?php selected( get_option( 'uwb_optimize_logged_in', 0 ), 1 ); ?>>Enable</option>
-                                    </select>
-                                    <p class="description">Run page optimization (minify HTML/CSS/JS, lazy load, etc.) for logged-in users. By default, optimization is skipped for admin/logged-in sessions to avoid conflicts.</p>
-                                </div>
-
+                                <?php
+                                $this->render_toggle_switch( 'uwb_preload_links', 'Preload Links (Hover Instant Page)', 'Link preloading improves perceived load time by downloading HTML when a user hovers over a link on the frontend. Powered by <a href="https://instant.page" target="_blank" rel="noopener noreferrer">instant.page</a>.' );
+                                $this->render_toggle_switch( 'uwb_optimize_logged_in', 'Optimize for Logged-in Users', 'Run page optimization (minify HTML/CSS/JS, lazy load, etc.) for logged-in users. By default, optimization is skipped for admin/logged-in sessions to avoid conflicts.' );
+                                ?>
                                 <?php
                                 $this->render_select_setting( 'uwb_general_autosave_interval', 'Autosave Interval', array(
                                     'default' => 'Default',
