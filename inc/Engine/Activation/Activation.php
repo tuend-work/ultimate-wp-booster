@@ -174,7 +174,15 @@ class Activation {
         if ( function_exists( 'insert_with_markers' ) ) {
             $rules = array(
                 '<IfModule LiteSpeed>',
-                '    CacheLookup public on',
+                '    CacheLookup on',
+                '    RewriteEngine On',
+                '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions',
+                '    RewriteCond %{HTTP_COOKIE} (wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]',
+                '    RewriteRule .* - [E=Cache-Control:no-cache]',
+                '    # Bypass LiteSpeed cache for POST requests, admin & API endpoints',
+                '    RewriteCond %{REQUEST_METHOD} ^POST$ [OR]',
+                '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\.php) [NC]',
+                '    RewriteRule .* - [E=Cache-Control:no-cache]',
                 '</IfModule>'
             );
             insert_with_markers( $htaccess_path, 'Ultimate WP Booster LiteSpeed', $rules );

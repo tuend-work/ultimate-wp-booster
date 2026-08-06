@@ -31,9 +31,14 @@ class CacheSubscriber implements Subscriber_Interface {
 
     public function send_litespeed_headers( $headers ) {
         if ( LiteSpeedEngine::is_litespeed_server() ) {
-            $lifespan = intval( get_option( 'uwb_cache_lifespan', 36000 ) );
-            LiteSpeedEngine::send_cache_control_headers( $lifespan );
-            LiteSpeedEngine::send_tag_headers();
+            $lifespan           = intval( get_option( 'uwb_cache_lifespan', 36000 ) );
+            $cache_page_enabled = intval( get_option( 'uwb_cache_page_enabled', 1 ) );
+            $is_no_cache        = ( $cache_page_enabled === 0 );
+
+            LiteSpeedEngine::send_cache_control_headers( $lifespan, $is_no_cache );
+            if ( ! $is_no_cache ) {
+                LiteSpeedEngine::send_tag_headers();
+            }
         }
         return $headers;
     }
