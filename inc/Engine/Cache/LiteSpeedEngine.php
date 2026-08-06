@@ -191,6 +191,30 @@ class LiteSpeedEngine {
     }
 
     /**
+     * Issue X-LiteSpeed-Purge header for a specific URL path.
+     *
+     * @param string $url
+     */
+    public static function purge_url( $url ) {
+        if ( ! self::is_litespeed_server() || headers_sent() ) {
+            return;
+        }
+
+        $path = wp_parse_url( $url, PHP_URL_PATH );
+        if ( empty( $path ) ) {
+            $path = '/';
+        }
+
+        $purge_targets = array( $path );
+        $normalized_path = trim( $path, '/' );
+        if ( $normalized_path !== '' ) {
+            $purge_targets[] = '/' . $normalized_path . '/';
+        }
+
+        header( 'X-LiteSpeed-Purge: ' . implode( ',', array_unique( $purge_targets ) ) );
+    }
+
+    /**
      * Issue X-LiteSpeed-Purge: * header to purge all LiteSpeed server cache.
      */
     public static function purge_all() {

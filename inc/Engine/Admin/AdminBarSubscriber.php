@@ -274,11 +274,14 @@ class AdminBarSubscriber implements Subscriber_Interface {
         check_admin_referer( 'uwb_purge_url_action' );
 
         $url = isset( $_GET['url'] ) ? esc_url_raw( urldecode( $_GET['url'] ) ) : '';
+
+        $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
         
-        if ( $post_id > 0 && function_exists( 'rocket_clean_post' ) ) {
-            rocket_clean_post( $post_id );
-        } elseif ( ! empty( $url ) ) {
-            $uwb_cache = new \Ultimate_WP_Booster\Engine\Cache\CacheManager();
+        if ( $post_id > 0 ) {
+            $uwb_cache->purge_post_cache( $post_id );
+        }
+
+        if ( ! empty( $url ) ) {
             $uwb_cache->purge_url( $url );
         }
 

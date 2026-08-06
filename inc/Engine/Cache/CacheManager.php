@@ -96,6 +96,10 @@ class CacheManager {
             \Ultimate_WP_Booster\Engine\CDN\CloudflareAPI::purge_urls( array( $url ) );
         }
 
+        if ( LiteSpeedEngine::is_litespeed_server() ) {
+            LiteSpeedEngine::purge_url( $url );
+        }
+
         $host = wp_parse_url( $url, PHP_URL_HOST );
         $path = wp_parse_url( $url, PHP_URL_PATH );
         
