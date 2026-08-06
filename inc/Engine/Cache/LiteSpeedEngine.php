@@ -63,7 +63,7 @@ class LiteSpeedEngine {
             }
         }
 
-        if ( $is_no_cache || $lifespan <= 0 || ( $is_logged_in && $cache_logged_in !== 2 ) ) {
+        if ( $is_no_cache || $lifespan <= 0 || $is_logged_in ) {
             header( 'X-LiteSpeed-Cache-Control: no-cache' );
             header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
         } else {
