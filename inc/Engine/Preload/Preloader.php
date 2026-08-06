@@ -593,10 +593,11 @@ class Preloader {
 
             $wpdb->query( $wpdb->prepare( "UPDATE {$this->table_name} SET attempts = attempts + 1, last_attempt = %s WHERE id = %d", current_time( 'mysql' ), $id ) );
 
+            $is_litespeed = \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_litespeed_server();
             $args = array(
                 'timeout'    => 15,
                 'sslverify'  => false,
-                'user-agent' => 'Ultimate-WP-Booster-Preloader',
+                'user-agent' => $is_litespeed ? 'lscache_runner' : 'Ultimate-WP-Booster-Preloader',
                 'headers'    => array(
                     'X-Ultimate-WP-Booster-Preload' => '1'
                 )
@@ -824,10 +825,11 @@ class Preloader {
             $url = home_url( '/' . ltrim( $url, '/' ) );
         }
 
+        $is_litespeed = \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_litespeed_server();
         $args = array(
             'timeout'    => 15,
             'sslverify'  => false,
-            'user-agent' => 'Ultimate-WP-Booster-Preloader',
+            'user-agent' => $is_litespeed ? 'lscache_runner' : 'Ultimate-WP-Booster-Preloader',
             'headers'    => array( 'X-Ultimate-WP-Booster-Preload' => '1' )
         );
 
