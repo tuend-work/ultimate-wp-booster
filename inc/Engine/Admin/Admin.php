@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 namespace Ultimate_WP_Booster\Engine\Admin;
 
 /**
