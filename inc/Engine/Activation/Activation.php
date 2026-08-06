@@ -181,8 +181,14 @@ class Activation {
             );
 
             if ( $preload_enabled === 3 ) {
-                $rules[] = '    # Enable LiteSpeed Server Native Crawler Engine';
+                $usleep = (int) get_option( 'uwb_preload_usleep', 500 );
+                $load_limit = (float) get_option( 'uwb_preload_server_load_limit', 1.0 );
+                $threads = (int) get_option( 'uwb_preload_threads', 3 );
+                $rules[] = '    # Enable LiteSpeed Server Native Crawler Engine & Directives';
                 $rules[] = '    CacheEngine on crawler';
+                $rules[] = '    SetEnv CRAWLER_USLEEP ' . $usleep;
+                $rules[] = '    SetEnv CRAWLER_LOAD_LIMIT ' . $load_limit;
+                $rules[] = '    SetEnv CRAWLER_THREADS ' . $threads;
             }
 
             $rules[] = '    RewriteEngine On';

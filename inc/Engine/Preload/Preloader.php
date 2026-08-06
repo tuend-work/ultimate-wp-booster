@@ -661,25 +661,171 @@ class Preloader {
         $processed_count = 0;
         $processed_urls = array();
 
-        foreach ( $queue_items as $item ) {
+        $threads = max( 1, min( 16, intval( get_option( 'uwb_preload_threads', 3 ) ) ) );
+
+        // If threads > 1 and curl_multi is available, run multi-threaded concurrent requests
+        if ( $threads > 1 && function_exists( 'curl_multi_init' ) ) {
+            $chunks = array_chunk( $queue_items, $threads );
+            foreach ( $chunks as $chunk ) {
+                // Server load check
+                if ( function_exists( 'sys_getloadavg' ) ) {
+                    $load = sys_getloadavg();
+                    $limit = floatval( get_option( 'uwb_preload_server_load_limit', 1.0 ) );
+                    if ( is_array( $load ) && isset( $load[0] ) && $load[0] > $limit ) {
+                        $this->log( 'Server load too high (' . $load[0] . ' > ' . $limit . '). Pausing preloader batch.' );
+                        break;
+                    }
+                }
+
+                $chunk_processed = $this->process_concurrent_batch( $chunk );
+                if ( is_array( $chunk_processed ) ) {
+                    $processed_urls = array_merge( $processed_urls, $chunk_processed );
+                    $processed_count += count( $chunk_processed );
+                }
+
+                $usleep_val = intval( get_option( 'uwb_preload_usleep', 500 ) );
+                if ( $usleep_val > 0 ) {
+                    usleep( min( $usleep_val, 30000000 ) );
+                }
+            }
+        } else {
+            // Single-threaded sequential crawling
+            foreach ( $queue_items as $item ) {
+                $url = $item->url;
+                if ( strpos( $url, 'http' ) !== 0 ) {
+                    $url = home_url( '/' . ltrim( $url, '/' ) );
+                }
+                $id = $item->id;
+
+                $wpdb->query( $wpdb->prepare( "UPDATE {$this->table_name} SET attempts = attempts + 1, last_attempt = %s WHERE id = %d", current_time( 'mysql' ), $id ) );
+
+                $args = $this->get_crawl_request_args();
+
+                $response = wp_remote_get( $url, $args );
+
+                if ( is_wp_error( $response ) ) {
+                    $status = 'failed';
+                } else {
+                    $code = wp_remote_retrieve_response_code( $response );
+                    $status = ( $code === 200 ) ? 'completed' : 'failed';
+                }
+
+                $wpdb->update(
+                    $this->table_name,
+                    array( 'status' => $status ),
+                    array( 'id' => $id ),
+                    array( '%s' ),
+                    array( '%d' )
+                );
+
+                $processed_urls[] = array(
+                    'url'    => $url,
+                    'status' => $status,
+                    'time'   => current_time( 'mysql' )
+                );
+
+                $processed_count++;
+
+                // Server load check
+                if ( function_exists( 'sys_getloadavg' ) ) {
+                    $load = sys_getloadavg();
+                    $limit = floatval( get_option( 'uwb_preload_server_load_limit', 1.0 ) );
+                    if ( is_array( $load ) && isset( $load[0] ) && $load[0] > $limit ) {
+                        $this->log( 'Server load too high (' . $load[0] . ' > ' . $limit . '). Pausing preloader batch.' );
+                        break;
+                    }
+                }
+
+                $usleep_val = intval( get_option( 'uwb_preload_usleep', 500 ) );
+                if ( $usleep_val > 0 ) {
+                    usleep( min( $usleep_val, 30000000 ) );
+                }
+            }
+        }
+
+        if ( ! empty( $processed_urls ) ) {
+            update_option( 'uwb_preload_last_run_time', current_time( 'mysql' ) );
+            update_option( 'uwb_preload_last_run_urls', $processed_urls );
+        }
+
+        return array(
+            'count' => $processed_count,
+            'urls'  => wp_list_pluck( $processed_urls, 'url' )
+        );
+    }
+
+    private function process_concurrent_batch( $items ) {
+        $mh = curl_multi_init();
+        $curl_handles = array();
+        $processed_urls = array();
+
+        $base_args = $this->get_crawl_request_args();
+        global $wpdb;
+
+        foreach ( $items as $item ) {
             $url = $item->url;
             if ( strpos( $url, 'http' ) !== 0 ) {
                 $url = home_url( '/' . ltrim( $url, '/' ) );
             }
             $id = $item->id;
-
             $wpdb->query( $wpdb->prepare( "UPDATE {$this->table_name} SET attempts = attempts + 1, last_attempt = %s WHERE id = %d", current_time( 'mysql' ), $id ) );
 
-            $args = $this->get_crawl_request_args();
+            $ch = curl_init();
+            curl_setopt( $ch, CURLOPT_URL, $url );
+            curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
+            curl_setopt( $ch, CURLOPT_TIMEOUT, $base_args['timeout'] );
+            curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+            curl_setopt( $ch, CURLOPT_USERAGENT, $base_args['user-agent'] );
 
-            $response = wp_remote_get( $url, $args );
-
-            if ( is_wp_error( $response ) ) {
-                $status = 'failed';
-            } else {
-                $code = wp_remote_retrieve_response_code( $response );
-                $status = ( $code === 200 ) ? 'completed' : 'failed';
+            $formatted_headers = array();
+            if ( isset( $base_args['headers'] ) && is_array( $base_args['headers'] ) ) {
+                foreach ( $base_args['headers'] as $hk => $hv ) {
+                    $formatted_headers[] = $hk . ': ' . $hv;
+                }
             }
+            curl_setopt( $ch, CURLOPT_HTTPHEADER, $formatted_headers );
+
+            if ( isset( $base_args['cookies'] ) && is_array( $base_args['cookies'] ) ) {
+                $cookie_strs = array();
+                foreach ( $base_args['cookies'] as $cookie ) {
+                    if ( $cookie instanceof \WP_Http_Cookie ) {
+                        $cookie_strs[] = $cookie->name . '=' . $cookie->value;
+                    }
+                }
+                if ( ! empty( $cookie_strs ) ) {
+                    curl_setopt( $ch, CURLOPT_COOKIE, implode( '; ', $cookie_strs ) );
+                }
+            }
+
+            curl_multi_add_handle( $mh, $ch );
+            $curl_handles[ (int) $ch ] = array(
+                'handle' => $ch,
+                'item'   => $item,
+                'url'    => $url,
+            );
+        }
+
+        $active = null;
+        do {
+            $mrc = curl_multi_exec( $mh, $active );
+        } while ( $mrc === CURLM_CALL_MULTI_PER_SELECT || $active );
+
+        while ( $active && $mrc === CURLM_OK ) {
+            if ( curl_multi_select( $mh ) === -1 ) {
+                usleep( 100 );
+            }
+            do {
+                $mrc = curl_multi_exec( $mh, $active );
+            } while ( $mrc === CURLM_CALL_MULTI_PER_SELECT );
+        }
+
+        foreach ( $curl_handles as $info ) {
+            $ch = $info['handle'];
+            $id = $info['item']->id;
+            $url = $info['url'];
+
+            $http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+            $status = ( $http_code === 200 ) ? 'completed' : 'failed';
 
             $wpdb->update(
                 $this->table_name,
@@ -695,33 +841,13 @@ class Preloader {
                 'time'   => current_time( 'mysql' )
             );
 
-            $processed_count++;
-
-            // Server load check
-            if ( function_exists( 'sys_getloadavg' ) ) {
-                $load = sys_getloadavg();
-                $limit = floatval( get_option( 'uwb_preload_server_load_limit', 1.0 ) );
-                if ( is_array( $load ) && isset( $load[0] ) && $load[0] > $limit ) {
-                    $this->log( 'Server load too high (' . $load[0] . ' > ' . $limit . '). Pausing preloader batch.' );
-                    break;
-                }
-            }
-
-            $usleep_val = intval( get_option( 'uwb_preload_usleep', 500 ) );
-            if ( $usleep_val > 0 ) {
-                usleep( min( $usleep_val, 30000000 ) );
-            }
+            curl_multi_remove_handle( $mh, $ch );
+            curl_close( $ch );
         }
 
-        if ( ! empty( $processed_urls ) ) {
-            update_option( 'uwb_preload_last_run_time', current_time( 'mysql' ) );
-            update_option( 'uwb_preload_last_run_urls', $processed_urls );
-        }
+        curl_multi_close( $mh );
 
-        return array(
-            'count' => $processed_count,
-            'urls'  => wp_list_pluck( $processed_urls, 'url' )
-        );
+        return $processed_urls;
     }
 
     // --- AJAX HANDLERS ---
