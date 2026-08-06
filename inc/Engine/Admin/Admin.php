@@ -2242,9 +2242,9 @@ class Admin {
                                                 Example: <code>paged</code> or <code>sort</code>.
                                             </p>
                                         </div>
-                                    </div>
                                     <?php $this->render_module_banner_end(); ?>
                                 </div>
+                            </div>
 
                             <!-- SUB-TAB 2: CDN Cache -->
                             <div id="subtab-cdn_cache" class="uwb-subtab-content">
@@ -2284,6 +2284,7 @@ class Admin {
                                         </button>
                                     </div>
                                     <div id="uwb-cf-test-result" style="margin-top:12px; display:none;"></div>
+                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
 
                                 <!-- Section 2: CDN Offload Media Notice Card -->
@@ -2297,7 +2298,6 @@ class Admin {
                                     <button type="button" class="button button-primary" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" style="background:var(--uwb-primary); border-color:var(--uwb-primary); padding:10px 18px; height:auto; border-radius:8px; font-weight:600; cursor:pointer; white-space:nowrap;">
                                         Go to Page Optimizes &rarr; [6] CDN Offload Media
                                     </button>
-                                    <?php $this->render_module_banner_end(); ?>
                                 </div>
                             </div>
 
