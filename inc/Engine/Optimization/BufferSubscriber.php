@@ -18,6 +18,10 @@ class BufferSubscriber implements Subscriber_Interface {
             return;
         }
 
+        if ( \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_page_builder_request() ) {
+            return; // Do not optimize/buffer for UX Builder & visual page builders
+        }
+
         if ( defined( 'UWB_BUFFER_STARTED' ) ) {
             return; // Handled by early drop-in advanced-cache.php
         }

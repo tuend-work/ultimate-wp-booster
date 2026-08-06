@@ -91,7 +91,7 @@ function uwb_advanced_cache_run() {
         // Dynamically check query bypass parameters from config (falls back to defaults if not set)
         $bypass_queries = isset( $config['bypass_query_params'] ) 
             ? $config['bypass_query_params'] 
-            : array( 'wc-ajax', 'wc-api', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset', 'rest_route', 'action', 'ajax', 'edd_action', 'xmlrpc', 'autoterm' );
+            : array( 'wc-ajax', 'wc-api', 'add-to-cart', 'pay_for_order', 'magic_login', 'orderby', 'order', 'yith_wcan', 'yith-wcan-ajax', 'preset', 'rest_route', 'action', 'ajax', 'edd_action', 'xmlrpc', 'autoterm', 'app', 'uxbuilder', 'uxbuilder_action', 'uxbuilder_iframe', 'elementor-preview', 'et_fb', 'vc_editable', 'ct_builder', 'bricks', 'fl_builder' );
 
         $intersect = array_intersect( array_keys( $query_params ), $bypass_queries );
         if ( ! empty( $intersect ) ) {
@@ -103,13 +103,13 @@ function uwb_advanced_cache_run() {
             return;
         }
 
-        // Check for any parameter starting or containing yith_wcan, yith-wcan, wc-api, or rest_route
+        // Check for any parameter starting or containing yith_wcan, yith-wcan, wc-api, rest_route, or page builder keys
         foreach ( array_keys( $query_params ) as $q_key ) {
-            if ( strpos( $q_key, 'yith_wcan' ) !== false || strpos( $q_key, 'yith-wcan' ) !== false || strpos( $q_key, 'wc-api' ) !== false || strpos( $q_key, 'rest_route' ) !== false ) {
+            if ( strpos( $q_key, 'yith_wcan' ) !== false || strpos( $q_key, 'yith-wcan' ) !== false || strpos( $q_key, 'wc-api' ) !== false || strpos( $q_key, 'rest_route' ) !== false || strpos( $q_key, 'uxbuilder' ) !== false || strpos( $q_key, 'elementor' ) !== false ) {
                 if ( $debug ) {
-                    error_log( "UWB: Run bypassed: API/Filter query parameter detected '{$q_key}'." );
+                    error_log( "UWB: Run bypassed: API/Filter/PageBuilder query parameter detected '{$q_key}'." );
                 }
-                $GLOBALS['uwb_bypass_reason'] = 'API/Filter parameter: ' . $q_key;
+                $GLOBALS['uwb_bypass_reason'] = 'API/Filter/PageBuilder parameter: ' . $q_key;
                 return;
             }
         }
@@ -266,15 +266,17 @@ function uwb_advanced_cache_run() {
     $uri_path       = rawurldecode( $uri_parts[0] );
     $normalized_uri = trim( $uri_path, '/' );
 
-    // 6.0. Bypass REST API, Admin, XML-RPC, Non-HTML Accept requests, and WooCommerce protected pages
+    // 6.0. Bypass REST API, Admin, XML-RPC, Non-HTML Accept requests, Page Builders, and WooCommerce protected pages
     $http_accept = isset( $_SERVER['HTTP_ACCEPT'] ) ? $_SERVER['HTTP_ACCEPT'] : '';
     if ( strpos( $uri_path, '/wp-json' ) === 0 || strpos( $normalized_uri, 'wp-json' ) === 0 || 
          strpos( $uri_path, '/wp-admin' ) === 0 || strpos( $uri_path, '/xmlrpc.php' ) === 0 ||
-         isset( $_GET['rest_route'] ) || ( strpos( $http_accept, 'application/json' ) !== false && strpos( $http_accept, 'text/html' ) === false ) ) {
+         strpos( $uri_path, 'uxbuilder' ) !== false || strpos( $uri_path, 'elementor-preview' ) !== false ||
+         isset( $_GET['rest_route'] ) || isset( $_GET['uxbuilder'] ) || ( isset( $_GET['app'] ) && $_GET['app'] === 'uxbuilder' ) ||
+         ( strpos( $http_accept, 'application/json' ) !== false && strpos( $http_accept, 'text/html' ) === false ) ) {
         if ( $debug ) {
-            error_log( "UWB: Run bypassed: REST API / Non-HTML request detected ({$uri_path})." );
+            error_log( "UWB: Run bypassed: REST API / Page Builder / Non-HTML request detected ({$uri_path})." );
         }
-        $GLOBALS['uwb_bypass_reason'] = 'REST API / Non-HTML request: ' . $uri_path;
+        $GLOBALS['uwb_bypass_reason'] = 'REST API / Page Builder / Non-HTML request: ' . $uri_path;
         return;
     }
 

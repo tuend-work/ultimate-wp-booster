@@ -190,9 +190,10 @@ class Activation {
                 $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
             }
 
-            $rules[] = '    # Bypass LiteSpeed cache for POST requests, admin & API endpoints';
+            $rules[] = '    # Bypass LiteSpeed cache for POST requests, admin, page builders & API endpoints';
             $rules[] = '    RewriteCond %{REQUEST_METHOD} ^POST$ [OR]';
-            $rules[] = '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\.php) [NC]';
+            $rules[] = '    RewriteCond %{QUERY_STRING} (app=uxbuilder|uxbuilder|elementor-preview|et_fb|vc_editable|ct_builder|bricks|fl_builder) [NC,OR]';
+            $rules[] = '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\.php|uxbuilder) [NC]';
             $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
             $rules[] = '</IfModule>';
 

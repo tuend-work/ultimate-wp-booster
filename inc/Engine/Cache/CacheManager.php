@@ -318,7 +318,7 @@ class CacheManager {
         $cache_qs_raw = get_option( 'uwb_cache_query_strings', '' );
         $cache_qs = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", "", $cache_qs_raw ) ) ) );
 
-        $bypass_queries = array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'change_payment_method', 'logout', 'wc-api', 'magic_login' );
+        $bypass_queries = array( 'wc-ajax', 'add-to-cart', 'pay_for_order', 'change_payment_method', 'logout', 'wc-api', 'magic_login', 'app', 'uxbuilder', 'uxbuilder_action', 'uxbuilder_iframe', 'elementor-preview', 'et_fb', 'vc_editable', 'ct_builder', 'bricks', 'fl_builder' );
 
         $xml_lifespan_minutes = intval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) );
         $xml_lifespan_seconds = $xml_lifespan_minutes * 60;
