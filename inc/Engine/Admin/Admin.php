@@ -3015,13 +3015,24 @@ class Admin {
                                 </div>
 
                                 <!-- LiteSpeed Server Native Crawler Info -->
+                                <?php $ls_status = \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::get_crawler_status(); ?>
                                 <div id="uwb-litespeed-cron-info" style="margin-top: 16px; padding: 20px; background: #f0fdf4; border: 1px solid #10b981; border-radius: 12px; display: <?php echo ( get_option( 'uwb_preload_enabled', 0 ) == 3 ) ? 'block' : 'none'; ?>;">
-                                    <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #047857; display: flex; align-items: center; gap: 6px;">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                                        LiteSpeed Server Native Crawler Active
-                                    </h4>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                                        <h4 style="margin: 0; font-size: 14px; color: #047857; display: flex; align-items: center; gap: 6px;">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                            LiteSpeed Server Native Crawler Status
+                                        </h4>
+                                        <span style="font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; background: <?php echo esc_attr( $ls_status['bg'] ); ?>; color: <?php echo esc_attr( $ls_status['color'] ); ?>; border: 1px solid <?php echo esc_attr( $ls_status['color'] ); ?>;">
+                                            ● <?php echo esc_html( $ls_status['label'] ); ?>
+                                        </span>
+                                    </div>
                                     <p style="font-size: 13px; color: #065f46; margin: 0 0 12px 0; line-height: 1.4;">
-                                        LiteSpeed Web Server's C-engine crawler is enabled via <code>CacheEngine on crawler</code> directive in your <code>.htaccess</code> file. Zero PHP overhead on your server!
+                                        LiteSpeed Web Server's C-engine crawler is controlled via the <code>CacheEngine on crawler</code> directive in your <code>.htaccess</code> file. Zero PHP overhead on your server!
+                                        <?php if ( $ls_status['htaccess_enabled'] ) : ?>
+                                            <br/><span style="font-weight: 600; color: #047857; display: block; margin-top: 4px;">✓ Verified: <code>CacheEngine on crawler</code> directive is present & active in your .htaccess file.</span>
+                                        <?php else : ?>
+                                            <br/><span style="font-weight: 600; color: #b45309; display: block; margin-top: 4px;">⚠️ Note: Click "Save Changes" below to write the <code>CacheEngine on crawler</code> directive into your .htaccess file.</span>
+                                        <?php endif; ?>
                                     </p>
                                     <div style="font-size: 12px; background: #fff; padding: 10px 14px; border: 1px solid #a7f3d0; border-radius: 6px; color: #047857; font-family: monospace;">
                                         Sitemap Endpoint for LiteSpeed Server: <strong><?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?></strong>

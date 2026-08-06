@@ -234,4 +234,53 @@ class LiteSpeedEngine {
             @touch( $htaccess );
         }
     }
+
+    /**
+     * Detect LiteSpeed Server Native Crawler status.
+     *
+     * @return array
+     */
+    public static function get_crawler_status() {
+        $is_litespeed = self::is_litespeed_server();
+        $htaccess_path = ABSPATH . '.htaccess';
+        $htaccess_enabled = false;
+
+        if ( file_exists( $htaccess_path ) ) {
+            $content = @file_get_contents( $htaccess_path );
+            if ( $content && preg_match( '/CacheEngine\s+on\s+crawler/i', $content ) ) {
+                $htaccess_enabled = true;
+            }
+        }
+
+        $env_active = ! empty( $_SERVER['CRAWLER_LOAD_LIMIT'] ) || ! empty( getenv( 'CRAWLER_LOAD_LIMIT' ) );
+
+        $state = 'disabled';
+        $label = 'Non-LiteSpeed Server Detected';
+        $color = '#ef4444';
+        $bg    = '#fef2f2';
+
+        if ( $is_litespeed ) {
+            if ( $htaccess_enabled || $env_active ) {
+                $state = 'active';
+                $label = 'Active & Running';
+                $color = '#10b981';
+                $bg    = '#ecfdf5';
+            } else {
+                $state = 'ready';
+                $label = 'LiteSpeed Server Detected (Not Activated)';
+                $color = '#f59e0b';
+                $bg    = '#fffbeb';
+            }
+        }
+
+        return array(
+            'is_litespeed'     => $is_litespeed,
+            'htaccess_enabled' => $htaccess_enabled,
+            'env_active'       => $env_active,
+            'state'            => $state,
+            'label'            => $label,
+            'color'            => $color,
+            'bg'               => $bg,
+        );
+    }
 }
