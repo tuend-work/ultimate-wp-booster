@@ -308,6 +308,13 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_imp_taxonomies_enabled', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_imp_taxonomy_mode', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_imp_taxonomy_terms', array( $this, 'sanitize_taxonomy_terms_array' ) );
+        register_setting( 'uwb_settings_group', 'uwb_preload_usleep', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_run_duration', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_run_interval', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_crawl_interval', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_threads', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_request_timeout', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_preload_server_load_limit', 'floatval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_404', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_exclude_cookies', 'sanitize_textarea_field' );
         register_setting( 'uwb_settings_group', 'uwb_exclude_user_agents', 'sanitize_textarea_field' );
@@ -3229,17 +3236,17 @@ class Admin {
                                 </div>
                             </div>
 
-                            <!-- SUB-TAB 2: Preload Settings -->
+                            <!-- SUB-TAB 2: Preload Settings (General Crawler Settings) -->
                             <div id="subtab-preload_settings_sub" class="uwb-subtab-content">
                                 <div class="uwb-form-group">
-                                    <label for="uwb_preload_enabled">Enable Automatic Preloading</label>
+                                    <label for="uwb_preload_enabled">Enable Automatic Preloading (Trình thu thập thông tin)</label>
                                     <select name="uwb_preload_enabled" id="uwb_preload_enabled" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;" onchange="toggleCronFields(this.value)">
-                                        <option value="0" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 0 ); ?>>Disabled</option>
-                                        <option value="1" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 1 ); ?>>Enabled (via WP-Cron)</option>
-                                        <option value="2" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 2 ); ?>>Enabled (via Custom Linux Cron)</option>
-                                        <option value="3" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 3 ); ?>>Enabled (via LiteSpeed Server Native Crawler)</option>
+                                        <option value="0" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 0 ); ?>>TẮT (Disabled)</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 1 ); ?>>BẬT (via WP-Cron)</option>
+                                        <option value="2" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 2 ); ?>>BẬT (via Custom Linux Cron)</option>
+                                        <option value="3" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 3 ); ?>>BẬT (via LiteSpeed Server Native Crawler)</option>
                                     </select>
-                                    <p class="description">When enabled, the crawler runs in the background to fetch URLs in the preloading queue in small batches.</p>
+                                    <p class="description">Điều này sẽ cho phép cron trình thu thập thông tin tự động cào trước bộ nhớ cache.</p>
 
                                     <!-- Custom Cron Instructions -->
                                     <?php
@@ -3279,20 +3286,76 @@ class Admin {
                                         </div>
                                     </div>
                                 </div>
-     
+
+                                <!-- 1. Usleep Delay -->
                                 <div class="uwb-form-group">
-                                    <label for="uwb_preload_batch_size">Preload Batch Size</label>
-                                    <input type="number" min="1" max="50" name="uwb_preload_batch_size" id="uwb_preload_batch_size" value="<?php echo esc_attr( get_option( 'uwb_preload_batch_size', 5 ) ); ?>" />
-                                    <p class="description">The number of URLs to crawl per batch to minimize CPU and server overhead.</p>
+                                    <label for="uwb_preload_usleep">Độ trễ (Usleep Delay)</label>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <input type="number" min="0" max="30000" step="50" name="uwb_preload_usleep" id="uwb_preload_usleep" value="<?php echo esc_attr( get_option( 'uwb_preload_usleep', 500 ) ); ?>" style="flex:1; max-width:320px;" />
+                                        <span style="font-weight:600; font-size:13px; color:var(--uwb-text-muted);">micro giây</span>
+                                    </div>
+                                    <p class="description">Chỉ định thời gian tính bằng micro giây cho độ trễ giữa các yêu cầu trong khi thu thập thông tin. Giá trị mặc định: <code>500</code>. Phạm vi giá trị: nhỏ hơn <code>30000</code>.</p>
                                 </div>
 
+                                <!-- 2. Run Duration -->
                                 <div class="uwb-form-group">
-                                    <label for="uwb_preload_links">Preload Links</label>
-                                    <select name="uwb_preload_links" id="uwb_preload_links" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
-                                        <option value="0" <?php selected( get_option( 'uwb_preload_links', 0 ), 0 ); ?>>Disabled</option>
-                                        <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
-                                    </select>
-                                    <p class="description">Link preloading improves the perceived load time by downloading a page when a user hovers over the link. <a href="https://instant.page" target="_blank" rel="noopener noreferrer">More info</a></p>
+                                    <label for="uwb_preload_run_duration">Thời lượng chạy (Run Duration)</label>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <input type="number" min="10" max="3600" name="uwb_preload_run_duration" id="uwb_preload_run_duration" value="<?php echo esc_attr( get_option( 'uwb_preload_run_duration', 400 ) ); ?>" style="flex:1; max-width:320px;" />
+                                        <span style="font-weight:600; font-size:13px; color:var(--uwb-text-muted);">giây</span>
+                                    </div>
+                                    <p class="description">Chỉ định thời gian tính bằng giây trong khoảng thời gian thu thập thông tin của mỗi đợt chạy. Giá trị mặc định: <code>400</code>.</p>
+                                </div>
+
+                                <!-- 3. Interval Between Runs -->
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_run_interval">Khoảng thời gian giữa các lần chạy (Interval Between Runs)</label>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <input type="number" min="60" max="86400" name="uwb_preload_run_interval" id="uwb_preload_run_interval" value="<?php echo esc_attr( get_option( 'uwb_preload_run_interval', 600 ) ); ?>" style="flex:1; max-width:320px;" />
+                                        <span style="font-weight:600; font-size:13px; color:var(--uwb-text-muted);">giây</span>
+                                    </div>
+                                    <p class="description">Chỉ định thời gian tính bằng giây cho thời gian giữa mỗi khoảng thời gian chạy. Giá trị mặc định: <code>600</code>. Phạm vi giá trị: Lớn hơn <code>60</code>.</p>
+                                </div>
+
+                                <!-- 4. Complete Crawl Interval -->
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_crawl_interval">Khoảng thời gian thu thập thông tin toàn bộ (Complete Crawl Interval)</label>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <input type="number" min="3600" max="2592000" name="uwb_preload_crawl_interval" id="uwb_preload_crawl_interval" value="<?php echo esc_attr( get_option( 'uwb_preload_crawl_interval', 302400 ) ); ?>" style="flex:1; max-width:320px;" />
+                                        <span style="font-weight:600; font-size:13px; color:var(--uwb-text-muted);">giây</span>
+                                    </div>
+                                    <p class="description">Chỉ định khoảng thời gian tính bằng giây trước khi trình thu thập thông tin bắt đầu thu thập lại toàn bộ sơ đồ trang web. Giá trị mặc định: <code>302400</code> (3.5 ngày).</p>
+                                </div>
+
+                                <!-- 5. Threads / Concurrency -->
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_threads">Chủ đề / Số luồng đồng thời (Concurrent Threads)</label>
+                                    <input type="number" min="1" max="16" name="uwb_preload_threads" id="uwb_preload_threads" value="<?php echo esc_attr( get_option( 'uwb_preload_threads', 3 ) ); ?>" style="max-width:320px;" />
+                                    <p class="description">Chỉ định số lượng chủ đề / luồng đồng thời để sử dụng trong khi thu thập dữ liệu. Giá trị mặc định: <code>3</code>. Phạm vi giá trị: <code>1 - 16</code>.</p>
+                                </div>
+
+                                <!-- 6. Request Timeout -->
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_request_timeout">Hết giờ / Timeout per URL (Request Timeout)</label>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <input type="number" min="10" max="300" name="uwb_preload_request_timeout" id="uwb_preload_request_timeout" value="<?php echo esc_attr( get_option( 'uwb_preload_request_timeout', 30 ) ); ?>" style="flex:1; max-width:320px;" />
+                                        <span style="font-weight:600; font-size:13px; color:var(--uwb-text-muted);">giây</span>
+                                    </div>
+                                    <p class="description">Chỉ định thời gian chờ trong khi thu thập thông tin từng URL. Giá trị mặc định: <code>30</code>. Phạm vi giá trị: <code>10 - 300</code>.</p>
+                                </div>
+
+                                <!-- 7. Server Load Limit -->
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_server_load_limit">Giới hạn tải máy chủ (Server Load Limit)</label>
+                                    <input type="number" step="0.1" min="0.1" max="50" name="uwb_preload_server_load_limit" id="uwb_preload_server_load_limit" value="<?php echo esc_attr( get_option( 'uwb_preload_server_load_limit', 1.0 ) ); ?>" style="max-width:320px;" />
+                                    <p class="description">Quá trình tải từ máy chủ trung bình tối đa được phép trong khi thu thập thông tin. Số lượng luồng thu thập thông tin đang sử dụng sẽ được giảm tích cực cho đến khi quá trình tải từ máy chủ rơi vào giới hạn này. Giá trị mặc định: <code>1</code>.</p>
+                                </div>
+
+                                <!-- 8. Preload Batch Size -->
+                                <div class="uwb-form-group">
+                                    <label for="uwb_preload_batch_size">Kích thước lô mỗi đợt cào (Preload Batch Size)</label>
+                                    <input type="number" min="1" max="50" name="uwb_preload_batch_size" id="uwb_preload_batch_size" value="<?php echo esc_attr( get_option( 'uwb_preload_batch_size', 5 ) ); ?>" style="max-width:320px;" />
+                                    <p class="description">Số lượng URL được cào trong mỗi lô để giảm thiểu tải CPU và máy chủ.</p>
                                 </div>
                             </div>
 
@@ -3426,6 +3489,15 @@ class Admin {
                             <!-- SUB-TAB 1: General Settings -->
                             <div id="subtab-opt_general" class="uwb-subtab-content active">
                                 <?php $this->render_module_banner( 'uwb_module_general_enabled', '⚙️ General WP Tweaks Module', 'Disable emojis, embeds, XML-RPC, limit revisions, control Heartbeat và các tweak WordPress chung.' ); ?>
+                                
+                                <div class="uwb-form-group" style="margin-bottom:20px;">
+                                    <label for="uwb_preload_links">Preload Links (Hover Instant Page)</label>
+                                    <select name="uwb_preload_links" id="uwb_preload_links" style="width:100%; border:1px solid var(--uwb-border); border-radius:8px; padding:12px;">
+                                        <option value="0" <?php selected( get_option( 'uwb_preload_links', 0 ), 0 ); ?>>Disabled</option>
+                                        <option value="1" <?php selected( get_option( 'uwb_preload_links', 0 ), 1 ); ?>>Enabled</option>
+                                    </select>
+                                    <p class="description">Link preloading improves perceived load time by downloading HTML when a user hovers over a link on the frontend. Powered by <a href="https://instant.page" target="_blank" rel="noopener noreferrer">instant.page</a>.</p>
+                                </div>
                                 <?php
                                 $this->render_select_setting( 'uwb_general_autosave_interval', 'Autosave Interval', array(
                                     'default' => 'Default',

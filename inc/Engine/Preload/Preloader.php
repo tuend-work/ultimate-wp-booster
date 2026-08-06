@@ -337,8 +337,11 @@ class Preloader {
             }
         }
 
+        $timeout = intval( get_option( 'uwb_preload_request_timeout', 30 ) );
+        if ( $timeout < 5 ) $timeout = 5;
+
         $args = array(
-            'timeout'    => 15,
+            'timeout'    => $timeout,
             'sslverify'  => false,
             'user-agent' => $ua,
             'headers'    => $headers,
@@ -693,7 +696,21 @@ class Preloader {
             );
 
             $processed_count++;
-            usleep( 100000 );
+
+            // Server load check
+            if ( function_exists( 'sys_getloadavg' ) ) {
+                $load = sys_getloadavg();
+                $limit = floatval( get_option( 'uwb_preload_server_load_limit', 1.0 ) );
+                if ( is_array( $load ) && isset( $load[0] ) && $load[0] > $limit ) {
+                    $this->log( 'Server load too high (' . $load[0] . ' > ' . $limit . '). Pausing preloader batch.' );
+                    break;
+                }
+            }
+
+            $usleep_val = intval( get_option( 'uwb_preload_usleep', 500 ) );
+            if ( $usleep_val > 0 ) {
+                usleep( min( $usleep_val, 30000000 ) );
+            }
         }
 
         if ( ! empty( $processed_urls ) ) {
