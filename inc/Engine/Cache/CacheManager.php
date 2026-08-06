@@ -336,6 +336,7 @@ class CacheManager {
             'cache_lifespan'           => $lifespan_seconds,
             'cache_logged_in'          => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
             'cache_logged_in_lifespan' => intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ) * 60,
+            'optimize_logged_in'       => intval( get_option( 'uwb_optimize_logged_in', 0 ) ),
             'browser_cache_enabled'    => intval( get_option( 'uwb_browser_cache_html', 1 ) ) && intval( get_option( 'uwb_browser_cache_enabled', 1 ) ),
             'browser_cache_lifespan'   => $browser_cache_seconds,
             'excluded_urls'            => array_values( $exclusions ),

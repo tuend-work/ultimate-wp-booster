@@ -46,10 +46,11 @@ function uwb_advanced_cache_run() {
     // 3. Load config file
     $config_path = WP_CONTENT_DIR . '/cache/ultimate-wp-booster-config.php';
     $config      = array(
-        'cache_lifespan'  => 36000,
-        'cache_logged_in' => false,
-        'excluded_urls'   => array(),
-        'ignored_query'   => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
+        'cache_lifespan'    => 36000,
+        'cache_logged_in'   => false,
+        'optimize_logged_in'=> false,
+        'excluded_urls'     => array(),
+        'ignored_query'     => array( 'utm_source', 'utm_medium', 'utm_campaign', 'fbclid', 'gclid', 'age-verified' ),
     );
 
     if ( file_exists( $config_path ) ) {
@@ -236,14 +237,17 @@ function uwb_advanced_cache_run() {
         foreach ( $_COOKIE as $key => $val ) {
             if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
                 if ( intval( $cache_logged_in ) === 0 ) {
-                    if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
-                        define( 'UWB_BUFFER_STARTED', true );
+                    $optimize_logged_in = isset( $config['optimize_logged_in'] ) ? intval( $config['optimize_logged_in'] ) : 0;
+                    if ( $optimize_logged_in === 0 ) {
+                        if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
+                            define( 'UWB_BUFFER_STARTED', true );
+                        }
+                        if ( $debug ) {
+                            error_log( "UWB: Run bypassed: User is logged in but both cache_logged_in and optimize_logged_in are 0 (None)." );
+                        }
+                        $GLOBALS['uwb_bypass_reason'] = 'Logged-in user (cache & optimize for logged-in users is disabled)';
+                        return;
                     }
-                    if ( $debug ) {
-                        error_log( "UWB: Run bypassed: User is logged in but cache_logged_in is 0 (None)." );
-                    }
-                    $GLOBALS['uwb_bypass_reason'] = 'Logged-in user (cache & optimize for logged-in users is disabled)';
-                    return;
                 }
                 $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
                 $GLOBALS['uwb_logged_in_hash'] = $logged_in_cookie_hash;
@@ -689,7 +693,8 @@ function uwb_advanced_cache_shutdown() {
         }
     }
 
-    $cache_logged_in = isset( $config['cache_logged_in'] ) ? intval( $config['cache_logged_in'] ) : 0;
+    $cache_logged_in    = isset( $config['cache_logged_in'] ) ? intval( $config['cache_logged_in'] ) : 0;
+    $optimize_logged_in = isset( $config['optimize_logged_in'] ) ? intval( $config['optimize_logged_in'] ) : 0;
     $timezone_str    = isset( $config['timezone'] ) && ! is_numeric( $config['timezone'] ) ? $config['timezone'] : 'UTC';
     $timezone_offset = isset( $config['timezone'] ) && is_numeric( $config['timezone'] ) ? floatval( $config['timezone'] ) * 3600 : 0;
     if ( is_numeric( isset( $config['timezone'] ) ? $config['timezone'] : '' ) ) {
@@ -870,10 +875,10 @@ function uwb_advanced_cache_shutdown() {
             $plugin_dir = (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : dirname( __FILE__ )) . '/plugins/ultimate-wp-booster/';
             $optimizer_path = $plugin_dir . 'inc/Engine/Optimization/Optimizer.php';
         }
-        // Skip Optimizer if user is logged in and cache_logged_in setting is 0 (None)
+        // Skip Optimizer if user is logged in and both cache_logged_in and optimize_logged_in are None (0)
         $logged_in_hash        = isset( $GLOBALS['uwb_logged_in_hash'] ) ? $GLOBALS['uwb_logged_in_hash'] : '';
         $is_user_logged_in_req = ( $logged_in_hash !== '' || ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) );
-        $skip_optimization     = ( $is_user_logged_in_req && intval( $cache_logged_in ) === 0 );
+        $skip_optimization     = ( $is_user_logged_in_req && intval( $cache_logged_in ) === 0 && intval( $optimize_logged_in ) === 0 );
 
         if ( ! $skip_optimization && file_exists( $optimizer_path ) ) {
             require_once $optimizer_path;
