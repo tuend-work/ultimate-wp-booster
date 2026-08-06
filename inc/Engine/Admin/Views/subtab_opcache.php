@@ -189,5 +189,3 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            <?php $this->render_module_banner_end(); ?>
-                        </div>

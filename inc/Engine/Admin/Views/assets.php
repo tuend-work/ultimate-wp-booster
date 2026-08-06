@@ -2,7 +2,6 @@
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Views/assets.php — CSS styles for the admin panel
 ?>
-        ?>
         <style>
             :root {
                 --uwb-primary: <?php echo esc_attr( $primary_color ); ?>;
