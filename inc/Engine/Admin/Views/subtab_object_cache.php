@@ -3,8 +3,8 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Views/subtab_object_cache.php
 ?>
                             <div id="subtab-object_cache" class="uwb-subtab-content">
-                                <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
-                                    <?php $this->render_submodule_header( 'uwb_module_object_cache_enabled', 'Object Cache Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>' ); ?>
+                                <?php $this->render_submodule_header( 'uwb_module_object_cache_enabled', 'Object Cache Settings', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>' ); ?>
+                                    <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
                                 <?php
                                 $oc_active = wp_using_ext_object_cache();
                                 $oc_dropin = file_exists( WP_CONTENT_DIR . '/object-cache.php' );
@@ -310,6 +310,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                         <p style="margin:8px 0 0 0; font-size:13px; color:var(--uwb-text-muted);"><?php echo esc_html($stats_error); ?></p>
                                     </div>
                                 <?php endif; ?>
+                                </div>
 
                                 <!-- Group 4: Object Cache Settings -->
                                 <div style="background:#f8fafc; border:1px solid var(--uwb-border); border-radius:12px; padding:24px; margin-bottom:24px;">
