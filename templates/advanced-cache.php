@@ -81,7 +81,7 @@ function uwb_advanced_cache_run() {
         return;
     }
 
-    $cache_logged_in = (bool) $config['cache_logged_in'];
+    $cache_logged_in = isset( $config['cache_logged_in'] ) ? intval( $config['cache_logged_in'] ) : 0;
 
     // 4. Check query string bypass & caching
     $active_cache_query_params = array();
@@ -687,7 +687,7 @@ function uwb_advanced_cache_shutdown() {
         }
     }
 
-    $cache_logged_in = ! empty( $config['cache_logged_in'] );
+    $cache_logged_in = isset( $config['cache_logged_in'] ) ? intval( $config['cache_logged_in'] ) : 0;
     $timezone_str    = isset( $config['timezone'] ) && ! is_numeric( $config['timezone'] ) ? $config['timezone'] : 'UTC';
     $timezone_offset = isset( $config['timezone'] ) && is_numeric( $config['timezone'] ) ? floatval( $config['timezone'] ) * 3600 : 0;
     if ( is_numeric( isset( $config['timezone'] ) ? $config['timezone'] : '' ) ) {
