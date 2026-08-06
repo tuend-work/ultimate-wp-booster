@@ -171,14 +171,21 @@ class Activation {
             require_once ABSPATH . 'wp-admin/includes/misc.php';
         }
 
-        $cache_logged_in = (int) get_option( 'uwb_cache_logged_in', 0 );
+        $cache_logged_in  = (int) get_option( 'uwb_cache_logged_in', 0 );
+        $preload_enabled = (int) get_option( 'uwb_preload_enabled', 0 );
 
         if ( function_exists( 'insert_with_markers' ) ) {
             $rules = array(
                 '<IfModule LiteSpeed>',
                 '    CacheLookup on',
-                '    RewriteEngine On',
             );
+
+            if ( $preload_enabled === 3 ) {
+                $rules[] = '    # Enable LiteSpeed Server Native Crawler Engine';
+                $rules[] = '    CacheEngine on crawler';
+            }
+
+            $rules[] = '    RewriteEngine On';
 
             if ( $cache_logged_in !== 2 ) {
                 $rules[] = '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions';

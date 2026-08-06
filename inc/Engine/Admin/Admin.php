@@ -206,6 +206,10 @@ class Admin {
         add_action( 'update_option_gmt_offset', array( $this, 'write_config_file_and_purge' ) );
         add_action( 'add_option_gmt_offset', array( $this, 'write_config_file_and_purge' ) );
 
+        // Auto-update .htaccess when Preload Engine mode changes (LiteSpeed Native Crawler support)
+        add_action( 'update_option_uwb_preload_enabled', array( '\Ultimate_WP_Booster\Engine\Activation\Activation', 'update_litespeed_htaccess' ) );
+        add_action( 'add_option_uwb_preload_enabled', array( '\Ultimate_WP_Booster\Engine\Activation\Activation', 'update_litespeed_htaccess' ) );
+
         // Redis AJAX hooks
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
         add_action( 'wp_ajax_uwb_flush_redis_cache', array( $this, 'ajax_flush_redis_cache' ) );
@@ -2968,6 +2972,7 @@ class Admin {
                                     <option value="0" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 0 ); ?>>Disabled</option>
                                     <option value="1" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 1 ); ?>>Enabled (via WP-Cron)</option>
                                     <option value="2" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 2 ); ?>>Enabled (via Custom Linux Cron)</option>
+                                    <option value="3" <?php selected( get_option( 'uwb_preload_enabled', 0 ), 3 ); ?>>Enabled (via LiteSpeed Server Native Crawler)</option>
                                 </select>
                                 <p class="description">When enabled, the crawler runs in the background to fetch URLs in the preloading queue in small batches.</p>
 
@@ -3006,6 +3011,20 @@ class Admin {
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                                             </button>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- LiteSpeed Server Native Crawler Info -->
+                                <div id="uwb-litespeed-cron-info" style="margin-top: 16px; padding: 20px; background: #f0fdf4; border: 1px solid #10b981; border-radius: 12px; display: <?php echo ( get_option( 'uwb_preload_enabled', 0 ) == 3 ) ? 'block' : 'none'; ?>;">
+                                    <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #047857; display: flex; align-items: center; gap: 6px;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                        LiteSpeed Server Native Crawler Active
+                                    </h4>
+                                    <p style="font-size: 13px; color: #065f46; margin: 0 0 12px 0; line-height: 1.4;">
+                                        LiteSpeed Web Server's C-engine crawler is enabled via <code>CacheEngine on crawler</code> directive in your <code>.htaccess</code> file. Zero PHP overhead on your server!
+                                    </p>
+                                    <div style="font-size: 12px; background: #fff; padding: 10px 14px; border: 1px solid #a7f3d0; border-radius: 6px; color: #047857; font-family: monospace;">
+                                        Sitemap Endpoint for LiteSpeed Server: <strong><?php echo esc_url( home_url( '/wp-sitemap.xml' ) ); ?></strong>
                                     </div>
                                 </div>
                             </div>
@@ -5300,8 +5319,13 @@ js-(before|after)
                 var preloadEnabled = $('#uwb_preload_enabled').val();
                 if (preloadEnabled === '2') {
                     $('#uwb-custom-cron-info').slideDown(250);
+                    $('#uwb-litespeed-cron-info').slideUp(250);
+                } else if (preloadEnabled === '3') {
+                    $('#uwb-custom-cron-info').slideUp(250);
+                    $('#uwb-litespeed-cron-info').slideDown(250);
                 } else {
                     $('#uwb-custom-cron-info').slideUp(250);
+                    $('#uwb-litespeed-cron-info').slideUp(250);
                 }
             }
             $('#uwb_preload_enabled').on('change', toggleCronFields);
