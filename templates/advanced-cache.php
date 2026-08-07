@@ -448,7 +448,7 @@ function uwb_advanced_cache_run() {
                 $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
                 if ( ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) ) {
                     header( 'X-LiteSpeed-Cache-Control: private, max-age=' . $logged_in_lifespan );
-                    header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+                    header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
                 }
             } else {
                 $bc_enabled = isset( $config['browser_cache_enabled'] ) ? intval( $config['browser_cache_enabled'] ) : 1;
@@ -463,7 +463,7 @@ function uwb_advanced_cache_run() {
                     $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
                     if ( ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) ) {
                         header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $bc_lifespan );
-                        header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+                        header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
                     }
                 } else {
                     // Prevent browser/CDN caching for HTML pages or when browser cache is disabled
@@ -475,7 +475,7 @@ function uwb_advanced_cache_run() {
                         // Still allow LiteSpeed server cache for guest HTML pages
                         $bc_lifespan = isset( $config['browser_cache_lifespan'] ) ? intval( $config['browser_cache_lifespan'] ) : 3600;
                         header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $bc_lifespan );
-                        header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+                        header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
                     } else {
                         header( 'X-LiteSpeed-Cache-Control: no-cache' );
                     }

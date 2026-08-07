@@ -100,10 +100,10 @@ class LiteSpeedEngine {
             if ( $is_logged_in && $cache_logged_in === 2 ) {
                 $user_lifespan = intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ) * 60;
                 header( 'X-LiteSpeed-Cache-Control: private, max-age=' . intval( $user_lifespan ) );
-                header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+                header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
             } else {
                 header( 'X-LiteSpeed-Cache-Control: public, max-age=' . intval( $lifespan ) );
-                header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in_*' );
+                header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
             }
         }
     }
