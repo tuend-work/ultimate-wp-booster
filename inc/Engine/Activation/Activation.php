@@ -211,6 +211,28 @@ class Activation {
             $rules[] = '</IfModule>';
 
             insert_with_markers( $htaccess_path, 'Ultimate WP Booster LiteSpeed', $rules );
+
+            // Ensure the rules are at the very top of .htaccess to execute before WordPress rules
+            $new_content = @file_get_contents( $htaccess_path );
+            if ( $new_content ) {
+                $marker_start = '# BEGIN Ultimate WP Booster LiteSpeed';
+                $marker_end   = '# END Ultimate WP Booster LiteSpeed';
+                $start_pos    = strpos( $new_content, $marker_start );
+                $end_pos      = strpos( $new_content, $marker_end );
+                
+                if ( $start_pos !== false && $end_pos !== false && $end_pos > $start_pos ) {
+                    $block_len = ($end_pos + strlen( $marker_end )) - $start_pos;
+                    $block = substr( $new_content, $start_pos, $block_len );
+                    
+                    // Remove the block from its current position
+                    $cleaned = str_replace( $block, '', $new_content );
+                    $cleaned = trim( $cleaned );
+                    
+                    // Prepend it to the top
+                    $final_content = $block . "\n\n" . $cleaned;
+                    @file_put_contents( $htaccess_path, $final_content );
+                }
+            }
         }
         
         \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::touch_htaccess();
