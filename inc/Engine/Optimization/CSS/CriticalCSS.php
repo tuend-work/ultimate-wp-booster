@@ -215,6 +215,7 @@ class CriticalCSS {
             payload.append('action', 'uwb_save_viewport_data');
             payload.append('url_hash', '<?php echo esc_js( $url_hash ); ?>');
             payload.append('token', '<?php echo esc_js( $token ); ?>');
+            payload.append('url', window.location.href);
             payload.append('viewport_data', JSON.stringify(viewportData));
 
             var sendUrl = '<?php echo esc_url( $ajax_url ); ?>';

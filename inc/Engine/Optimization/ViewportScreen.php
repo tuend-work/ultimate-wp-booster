@@ -19,7 +19,12 @@ class ViewportScreen {
     public static function ajax_save_viewport_data() {
         $url_hash = isset( $_POST['url_hash'] ) ? (string) $_POST['url_hash'] : '';
         $token    = isset( $_POST['token'] ) ? (string) $_POST['token'] : '';
+        $url      = isset( $_POST['url'] ) ? esc_url_raw( (string) $_POST['url'] ) : '';
         $viewport_json = isset( $_POST['viewport_data'] ) ? wp_unslash( (string) $_POST['viewport_data'] ) : '';
+
+        if ( empty( $url ) && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+            $url = esc_url_raw( $_SERVER['HTTP_REFERER'] );
+        }
 
         // 1. Strict MD5 Hex Validation (Prevents Path Traversal)
         if ( empty( $url_hash ) || ! preg_match( '/^[a-f0-9]{32}$/i', $url_hash ) ) {
@@ -67,6 +72,11 @@ class ViewportScreen {
 
         // 5. Directly update static HTML cache files
         $updated_count = self::update_static_html_cache_files( $url_hash, $minified_css, $images );
+
+        // Purge LiteSpeed server-side cache so the updated HTML cache gets read
+        if ( ! empty( $url ) ) {
+            \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::purge_url( $url );
+        }
 
         wp_send_json_success( array(
             'message' => 'Viewport data processed, static HTML cache updated.',
