@@ -234,23 +234,48 @@ function uwb_advanced_cache_run() {
     // WooCommerce pages (cart/checkout/my-account) are bypassed by URL pattern, not cookies.
     $logged_in_cookie_hash = '';
     if ( ! empty( $_COOKIE ) ) {
-        foreach ( $_COOKIE as $key => $val ) {
-            if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
-                if ( intval( $cache_logged_in ) === 0 ) {
-                    $optimize_logged_in = isset( $config['optimize_logged_in'] ) ? intval( $config['optimize_logged_in'] ) : 0;
-                    if ( $optimize_logged_in === 0 ) {
-                        if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
-                            define( 'UWB_BUFFER_STARTED', true );
-                        }
-                        if ( $debug ) {
-                            error_log( "UWB: Run bypassed: User is logged in but both cache_logged_in and optimize_logged_in are 0 (None)." );
-                        }
-                        $GLOBALS['uwb_bypass_reason'] = 'Logged-in user (cache & optimize for logged-in users is disabled)';
-                        return;
+        if ( isset( $_COOKIE['uwb_logged_in'] ) && $_COOKIE['uwb_logged_in'] === '1' ) {
+            if ( intval( $cache_logged_in ) === 0 ) {
+                $optimize_logged_in = isset( $config['optimize_logged_in'] ) ? intval( $config['optimize_logged_in'] ) : 0;
+                if ( $optimize_logged_in === 0 ) {
+                    if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
+                        define( 'UWB_BUFFER_STARTED', true );
                     }
+                    if ( $debug ) {
+                        error_log( "UWB: Run bypassed: User has uwb_logged_in cookie but both cache_logged_in and optimize_logged_in are 0 (None)." );
+                    }
+                    $GLOBALS['uwb_bypass_reason'] = 'Logged-in user (cache & optimize for logged-in users is disabled)';
+                    return;
                 }
-                $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
-                $GLOBALS['uwb_logged_in_hash'] = $logged_in_cookie_hash;
+            }
+            $wp_cookie_val = '';
+            foreach ( $_COOKIE as $key => $val ) {
+                if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
+                    $wp_cookie_val = $val;
+                    break;
+                }
+            }
+            $logged_in_cookie_hash = 'user-' . substr( md5( ! empty( $wp_cookie_val ) ? $wp_cookie_val : 'uwb_cookie_salt' ), 0, 12 );
+            $GLOBALS['uwb_logged_in_hash'] = $logged_in_cookie_hash;
+        } else {
+            foreach ( $_COOKIE as $key => $val ) {
+                if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
+                    if ( intval( $cache_logged_in ) === 0 ) {
+                        $optimize_logged_in = isset( $config['optimize_logged_in'] ) ? intval( $config['optimize_logged_in'] ) : 0;
+                        if ( $optimize_logged_in === 0 ) {
+                            if ( ! defined( 'UWB_BUFFER_STARTED' ) ) {
+                                define( 'UWB_BUFFER_STARTED', true );
+                            }
+                            if ( $debug ) {
+                                error_log( "UWB: Run bypassed: User is logged in but both cache_logged_in and optimize_logged_in are 0 (None)." );
+                            }
+                            $GLOBALS['uwb_bypass_reason'] = 'Logged-in user (cache & optimize for logged-in users is disabled)';
+                            return;
+                        }
+                    }
+                    $logged_in_cookie_hash = 'user-' . substr( md5( $val ), 0, 12 );
+                    $GLOBALS['uwb_logged_in_hash'] = $logged_in_cookie_hash;
+                }
             }
         }
     }
@@ -448,7 +473,7 @@ function uwb_advanced_cache_run() {
                 $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
                 if ( ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) ) {
                     header( 'X-LiteSpeed-Cache-Control: private, max-age=' . $logged_in_lifespan );
-                    header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
+                    header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
                 }
             } else {
                 $bc_enabled = isset( $config['browser_cache_enabled'] ) ? intval( $config['browser_cache_enabled'] ) : 1;
@@ -463,7 +488,7 @@ function uwb_advanced_cache_run() {
                     $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
                     if ( ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) ) {
                         header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $bc_lifespan );
-                        header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
+                        header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
                     }
                 } else {
                     // Prevent browser/CDN caching for HTML pages or when browser cache is disabled
@@ -475,7 +500,7 @@ function uwb_advanced_cache_run() {
                         // Still allow LiteSpeed server cache for guest HTML pages
                         $bc_lifespan = isset( $config['browser_cache_lifespan'] ) ? intval( $config['browser_cache_lifespan'] ) : 3600;
                         header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $bc_lifespan );
-                        header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
+                        header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
                     } else {
                         header( 'X-LiteSpeed-Cache-Control: no-cache' );
                     }

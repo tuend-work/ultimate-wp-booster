@@ -195,10 +195,10 @@ class Activation {
 
             if ( $cache_logged_in !== 2 ) {
                 $rules[] = '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions';
-                $rules[] = '    RewriteCond %{HTTP_COOKIE} (wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
+                $rules[] = '    RewriteCond %{HTTP_COOKIE} (uwb_logged_in|wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
                 $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
             } else {
-                $rules[] = '    # Bypass LiteSpeed cache for commenters & WooCommerce sessions (Per-user Vary lookup enabled for wordpress_logged_in_)';
+                $rules[] = '    # Bypass LiteSpeed cache for commenters & WooCommerce sessions (Per-user Vary lookup enabled for uwb_logged_in)';
                 $rules[] = '    RewriteCond %{HTTP_COOKIE} (comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
                 $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
             }

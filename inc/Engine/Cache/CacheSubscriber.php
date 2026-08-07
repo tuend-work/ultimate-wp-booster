@@ -24,7 +24,10 @@ class CacheSubscriber implements Subscriber_Interface {
             'switch_theme'                  => 'purge_all',
             'update_option_sidebars_widgets' => 'purge_all',
             'uwb_clean_expired_cache'       => 'clean_expired_cache',
-            'init'                          => 'schedule_cleanup_cron',
+            'init'                          => array(
+                array( 'schedule_cleanup_cron', 10 ),
+                array( 'sync_logged_in_cookie', 10 ),
+            ),
             'wp_headers'                    => 'send_litespeed_headers',
         );
     }
@@ -62,6 +65,24 @@ class CacheSubscriber implements Subscriber_Interface {
     public function schedule_cleanup_cron() {
         if ( ! wp_next_scheduled( 'uwb_clean_expired_cache' ) ) {
             wp_schedule_event( time(), 'hourly', 'uwb_clean_expired_cache' );
+        }
+    }
+
+    public function sync_logged_in_cookie() {
+        $is_ssl = is_ssl();
+        $cookie_path = defined( 'COOKIEPATH' ) ? COOKIEPATH : '/';
+        $cookie_domain = defined( 'COOKIE_DOMAIN' ) ? COOKIE_DOMAIN : '';
+
+        if ( is_user_logged_in() ) {
+            if ( ! isset( $_COOKIE['uwb_logged_in'] ) ) {
+                setcookie( 'uwb_logged_in', '1', time() + 2 * 86400, $cookie_path, $cookie_domain, $is_ssl, true );
+                $_COOKIE['uwb_logged_in'] = '1';
+            }
+        } else {
+            if ( isset( $_COOKIE['uwb_logged_in'] ) ) {
+                setcookie( 'uwb_logged_in', '', time() - 3600, $cookie_path, $cookie_domain, $is_ssl, true );
+                unset( $_COOKIE['uwb_logged_in'] );
+            }
         }
     }
 }

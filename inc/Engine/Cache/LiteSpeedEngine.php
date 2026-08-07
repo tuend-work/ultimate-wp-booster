@@ -85,10 +85,14 @@ class LiteSpeedEngine {
         $is_logged_in    = ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() );
 
         if ( ! $is_logged_in && ! empty( $_COOKIE ) ) {
-            foreach ( $_COOKIE as $key => $val ) {
-                if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
-                    $is_logged_in = true;
-                    break;
+            if ( isset( $_COOKIE['uwb_logged_in'] ) && $_COOKIE['uwb_logged_in'] === '1' ) {
+                $is_logged_in = true;
+            } else {
+                foreach ( $_COOKIE as $key => $val ) {
+                    if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
+                        $is_logged_in = true;
+                        break;
+                    }
                 }
             }
         }
@@ -100,10 +104,10 @@ class LiteSpeedEngine {
             if ( $is_logged_in && $cache_logged_in === 2 ) {
                 $user_lifespan = intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ) * 60;
                 header( 'X-LiteSpeed-Cache-Control: private, max-age=' . intval( $user_lifespan ) );
-                header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
+                header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
             } else {
                 header( 'X-LiteSpeed-Cache-Control: public, max-age=' . intval( $lifespan ) );
-                header( 'X-LiteSpeed-Vary: cookie=wordpress_logged_in' );
+                header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
             }
         }
     }
