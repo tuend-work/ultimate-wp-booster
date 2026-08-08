@@ -7,12 +7,15 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 class CDNSubscriber implements Subscriber_Interface {
 
+    private static $is_optimizing = false;
+
     public static function get_subscribed_events() {
         return array(
             'add_attachment'                  => 'on_add_attachment',
             'edit_attachment'                 => 'on_edit_attachment',
             'delete_attachment'               => 'on_delete_attachment',
             'wp_generate_attachment_metadata' => array( 'on_generate_attachment_metadata', 10, 2 ),
+            'wp_get_attachment_metadata'      => array( 'filter_attachment_metadata', 10, 2 ),
             'wp_get_attachment_url'           => array( 'filter_attachment_url', 10, 2 ),
             'wp_calculate_image_srcset'       => array( 'filter_attachment_srcset', 10, 5 ),
             'wp_get_attachment_image_src'     => array( 'filter_attachment_image_src', 10, 4 ),
@@ -182,6 +185,19 @@ class CDNSubscriber implements Subscriber_Interface {
         return $metadata;
     }
 
+    public function filter_attachment_metadata( $data, $post_id ) {
+        if ( ! self::$is_optimizing && get_option( 'uwb_media_opt_enabled', 0 ) && get_option( 'uwb_img_opt_event_get_url', 0 ) ) {
+            if ( ! get_post_meta( $post_id, '_uwb_img_compress_status', true ) ) {
+                self::$is_optimizing = true;
+                \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $post_id, array(), false );
+                self::$is_optimizing = false;
+                
+                $data = get_post_meta( $post_id, '_wp_attachment_metadata', true );
+            }
+        }
+        return $data;
+    }
+
     // -------------------------------------------------------------------------
     // EVENT 3: Get attachment URL  (wp_get_attachment_url filter)
     // Checkbox: uwb_cdn_auto_rewrite_attachment_url
@@ -198,9 +214,11 @@ class CDNSubscriber implements Subscriber_Interface {
                 get_option( 'uwb_cdn_custom_domain', '' )
             ) );
         }
-        if ( get_option( 'uwb_media_opt_enabled', 0 ) && get_option( 'uwb_img_opt_event_get_url', 0 ) ) {
+        if ( ! self::$is_optimizing && get_option( 'uwb_media_opt_enabled', 0 ) && get_option( 'uwb_img_opt_event_get_url', 0 ) ) {
             if ( ! get_post_meta( $post_id, '_uwb_img_compress_status', true ) ) {
+                self::$is_optimizing = true;
                 \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $post_id, array(), false );
+                self::$is_optimizing = false;
             }
         }
         if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
