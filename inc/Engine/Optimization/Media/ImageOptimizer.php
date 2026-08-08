@@ -51,6 +51,13 @@ class ImageOptimizer {
             return false;
         }
 
+        // Bypass SVG files entirely (GD/Imagick should not rasterize or compress vector SVGs)
+        $ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+        $mime = get_post_mime_type( $attachment_id );
+        if ( 'svg' === $ext || ( $mime && strpos( $mime, 'svg' ) !== false ) ) {
+            return false;
+        }
+
         // Config settings
         $quality = isset( $override_config['quality'] ) ? intval( $override_config['quality'] ) : intval( get_option( 'uwb_media_opt_quality', 80 ) );
         $quality = max( 1, min( 100, $quality ) );
