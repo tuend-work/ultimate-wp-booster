@@ -8,7 +8,6 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                     <?php
                                     $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
                                     $this->render_toggle_switch( 'uwb_media_optimize_viewport_images', 'Disable Lazy Load for First-Screen Images (Above The Fold)', 'Automatically disable lazy loading and add fetchpriority="high" to images detected in the first screen (viewport) to improve LCP.' );
-                                    $this->render_toggle_switch( 'uwb_media_compress_viewport_images', 'Compress &amp; Optimize First-Screen Images (Above The Fold)', 'Automatically trigger compression and WebP/AVIF format conversion in the background for detected first-screen images to minimize LCP download times.' );
                                     $this->render_toggle_switch( 'uwb_media_lazy_load_iframes', 'Lazy Load Iframes / Videos', 'Delay iframe (YouTube/Vimeo) and HTML5 video loading until visible in viewport.' );
                                     $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
                                     $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
@@ -51,6 +50,11 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                                         <input type="hidden" name="uwb_img_opt_event_get_url" value="0" />
                                                         <input type="checkbox" name="uwb_img_opt_event_get_url" value="1" <?php checked( get_option( 'uwb_img_opt_event_get_url', 0 ), 1 ); ?> />
                                                         get_url
+                                                    </label>
+                                                    <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#334155;" title="Tự động nén và tối ưu các hình ảnh xuất hiện trong màn hình đầu tiên (Above The Fold)">
+                                                        <input type="hidden" name="uwb_img_opt_event_viewport" value="0" />
+                                                        <input type="checkbox" name="uwb_img_opt_event_viewport" value="1" <?php checked( get_option( 'uwb_img_opt_event_viewport', 0 ), 1 ); ?> />
+                                                        viewport
                                                     </label>
                                                 </div>
                                             </div>

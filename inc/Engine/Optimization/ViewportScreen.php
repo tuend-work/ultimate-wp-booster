@@ -74,7 +74,7 @@ class ViewportScreen {
         $updated_count = self::update_static_html_cache_files( $url_hash, $minified_css, $images );
 
         // Compress detected above-the-fold images if enabled
-        if ( ! empty( $images ) && get_option( 'uwb_media_compress_viewport_images', 0 ) ) {
+        if ( ! empty( $images ) && get_option( 'uwb_img_opt_event_viewport', 0 ) ) {
             $home_url = home_url();
             $home_host = wp_parse_url( $home_url, PHP_URL_HOST );
             foreach ( $images as $image_url ) {
