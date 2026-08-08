@@ -73,6 +73,29 @@ class ViewportScreen {
         // 5. Directly update static HTML cache files
         $updated_count = self::update_static_html_cache_files( $url_hash, $minified_css, $images );
 
+        // Compress detected above-the-fold images if enabled
+        if ( ! empty( $images ) && get_option( 'uwb_media_compress_viewport_images', 0 ) ) {
+            $home_url = home_url();
+            $home_host = wp_parse_url( $home_url, PHP_URL_HOST );
+            foreach ( $images as $image_url ) {
+                $image_url = trim( $image_url );
+                if ( empty( $image_url ) ) {
+                    continue;
+                }
+                
+                // Convert CDN domain back to local home URL for attachment ID lookup
+                $parsed_url = wp_parse_url( $image_url );
+                if ( isset( $parsed_url['host'] ) && $parsed_url['host'] !== $home_host ) {
+                    $image_url = str_replace( $parsed_url['scheme'] . '://' . $parsed_url['host'], $home_url, $image_url );
+                }
+                
+                $attachment_id = attachment_url_to_postid( $image_url );
+                if ( $attachment_id ) {
+                    \Ultimate_WP_Booster\Engine\Optimization\Media\ImageOptimizer::optimize_attachment( $attachment_id, array(), false );
+                }
+            }
+        }
+
         // Purge LiteSpeed server-side cache so the updated HTML cache gets read
         if ( ! empty( $url ) ) {
             \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::purge_url( $url );

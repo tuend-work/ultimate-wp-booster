@@ -106,6 +106,7 @@ class Admin {
             'uwb_html_lazy_load_elements_excludes',
             'uwb_media_lazy_load_images',
             'uwb_media_optimize_viewport_images',
+            'uwb_media_compress_viewport_images',
             'uwb_media_lazy_load_iframes',
             'uwb_media_image_placeholder',
             'uwb_media_add_missing_sizes',
@@ -362,6 +363,7 @@ class Admin {
 
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_images', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_optimize_viewport_images', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_media_compress_viewport_images', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_lazy_load_iframes', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_image_placeholder', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_media_add_missing_sizes', 'intval' );

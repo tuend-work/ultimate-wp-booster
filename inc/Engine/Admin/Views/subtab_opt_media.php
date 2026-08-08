@@ -8,6 +8,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                     <?php
                                     $this->render_toggle_switch( 'uwb_media_lazy_load_images', 'Lazy Load Images', 'Delay image loading until visible in viewport.' );
                                     $this->render_toggle_switch( 'uwb_media_optimize_viewport_images', 'Optimize Viewport Images (Above The Fold)', 'Automatically disable lazy loading and add fetchpriority="high" to images detected in the first screen (viewport) to improve LCP.' );
+                                    $this->render_toggle_switch( 'uwb_media_compress_viewport_images', 'Compress Viewport Images (Above The Fold)', 'Automatically trigger compression/optimization for the detected above-the-fold images to reduce their byte size and LCP time.' );
                                     $this->render_toggle_switch( 'uwb_media_lazy_load_iframes', 'Lazy Load Iframes / Videos', 'Delay iframe (YouTube/Vimeo) and HTML5 video loading until visible in viewport.' );
                                     $this->render_toggle_switch( 'uwb_media_add_missing_sizes', 'Add Missing Sizes', 'Automatically add width and height attributes to images.' );
                                     $this->render_textarea_setting( 'uwb_media_lazy_load_excludes', 'Lazy Load Image Excludes', "/wp-content/uploads/logo.png\nimage-class-name", 'URLs or class names of images to exclude from lazy loading (one per line).' );
