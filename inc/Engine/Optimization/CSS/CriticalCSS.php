@@ -26,6 +26,24 @@ class CriticalCSS {
             return $html;
         }
 
+        $is_logged_in = false;
+        if ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
+            $is_logged_in = true;
+        } else {
+            if ( ! empty( $_COOKIE ) ) {
+                if ( isset( $_COOKIE['uwb_logged_in'] ) && $_COOKIE['uwb_logged_in'] === '1' ) {
+                    $is_logged_in = true;
+                } else {
+                    foreach ( $_COOKIE as $key => $val ) {
+                        if ( strpos( $key, 'wordpress_logged_in_' ) === 0 ) {
+                            $is_logged_in = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         $manual_clean = ! empty( $manual_css ) ? self::minify_css( self::sanitize_critical_css( $manual_css ) ) : '';
 
         // Inject Custom Manual Critical CSS in a separate tag with highest priority
@@ -43,7 +61,7 @@ class CriticalCSS {
             $html = preg_replace( '#<style\b[^>]*?id=[\'"]uwb-manual-critical-css[\'"][^>]*?>.*?</style>\s*#is', '', $html, substr_count( $html, 'id="uwb-manual-critical-css"' ) - 1 );
         }
 
-        if ( ! $enabled ) {
+        if ( ! $enabled || $is_logged_in ) {
             return $html;
         }
 
