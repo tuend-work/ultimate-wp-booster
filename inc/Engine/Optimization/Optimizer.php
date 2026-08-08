@@ -214,6 +214,12 @@ class Optimizer {
             $debug_logs[] = "Font Display Swap: Disabled in settings";
         }
 
+        // Force disable JS Combine at runtime if Delay JS is enabled
+        if ( ! empty( $config['delay_js'] ) ) {
+            $config['js_combine'] = 0;
+            $config['js_combine_ext_inline'] = 0;
+        }
+
         // 11. Combine or Minify JS
         if ( ! empty( $config['js_combine'] ) ) {
             $js_excludes = isset( $config['tuning_js_excludes'] ) ? $config['tuning_js_excludes'] : '';

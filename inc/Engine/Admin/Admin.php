@@ -524,7 +524,8 @@ class Admin {
      */
     public function sanitize_js_combine( $val ) {
         $val = intval( $val );
-        if ( $val === 1 && intval( get_option( 'uwb_delay_js', 0 ) ) === 1 ) {
+        $delay_js = isset( $_POST['uwb_delay_js'] ) ? intval( $_POST['uwb_delay_js'] ) : intval( get_option( 'uwb_delay_js', 0 ) );
+        if ( $val === 1 && $delay_js === 1 ) {
             add_settings_error(
                 'uwb_js_combine',
                 'js_combine_delay_conflict',
