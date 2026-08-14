@@ -88,14 +88,6 @@ class CDNManager {
         $home_host_quoted = preg_quote( $home_host, '/' );
         $version = defined( 'UWB_VERSION' ) ? UWB_VERSION : time();
 
-        // Protect link rel="icon" / rel="shortcut icon" / rel="apple-touch-icon" tags from CDN rewriting
-        $icon_tags = array();
-        $html = preg_replace_callback( '/<link\b[^>]*\brel=[\'"][^\'"]*icon[^\'"]*[\'"][^>]*>/i', function( $m ) use ( &$icon_tags ) {
-            $key = '<!--UWB_PROTECTED_ICON_' . count( $icon_tags ) . '-->';
-            $icon_tags[ $key ] = $m[0];
-            return $key;
-        }, $html );
-
         // 1. Rewrite single URL attributes: href, src, data-src
         $pattern = '/(href|src|data-src)=([\'"])((?:https?:\/\/(?:[a-z0-9\-]+\.)*' . $home_host_quoted . ')?\/(?:wp-content|wp-includes)\/[^\'"]+\.(' . $ext_pattern . ')(\?[^\'"]*)?)\2/i';
 
@@ -191,11 +183,6 @@ class CDNManager {
 
             return $attr . '=' . $quote . implode( ', ', $new_entries ) . $quote;
         }, $html );
-
-        // Restore protected icon tags
-        if ( ! empty( $icon_tags ) ) {
-            $html = strtr( $html, $icon_tags );
-        }
 
         return $html;
     }
