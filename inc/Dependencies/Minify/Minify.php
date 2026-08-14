@@ -1,4 +1,6 @@
 <?php
+namespace Ultimate_WP_Booster\Dependencies\Minify;
+
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 /**
@@ -10,8 +12,6 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
  * @copyright Copyright (c) 2012, Matthias Mullie. All rights reserved
  * @license MIT License
  */
-
-namespace Ultimate_WP_Booster\Dependencies\Minify;
 
 use Ultimate_WP_Booster\Dependencies\Minify\Exceptions\IOException;
 use Ultimate_WP_Booster\Dependencies\Minify\Exceptions\PatternMatchException;

@@ -1,7 +1,7 @@
 <?php
-defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
-
 namespace Ultimate_WP_Booster\Dependencies\PathConverter;
+
+defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 /**
  * Convert file paths.

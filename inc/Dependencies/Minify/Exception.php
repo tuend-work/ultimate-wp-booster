@@ -1,4 +1,6 @@
 <?php
+namespace Ultimate_WP_Booster\Dependencies\Minify;
+
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 /**
@@ -8,8 +10,6 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
  *
  * @author Matthias Mullie <minify@mullie.eu>
  */
-
-namespace Ultimate_WP_Booster\Dependencies\Minify;
 
 /**
  * Base Exception Class.
