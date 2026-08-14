@@ -135,10 +135,13 @@ class Lazyload {
                     $is_excluded = true;
                 }
 
-                // 3. Markings Exclusion (no-lazy, skip-lazy, data-no-lazy, loading=eager)
+                // 3. Markings Exclusion (no-lazy, skip-lazy, site-icon, favicon, custom-logo, data-no-lazy, loading=eager)
                 if ( ! $is_excluded ) {
                     if ( strpos( $class, 'no-lazy' ) !== false ||
                          strpos( $class, 'skip-lazy' ) !== false ||
+                         strpos( $class, 'site-icon' ) !== false ||
+                         strpos( $class, 'favicon' ) !== false ||
+                         strpos( $class, 'custom-logo' ) !== false ||
                          $img->hasAttribute( 'data-no-lazy' ) ||
                          $loading === 'eager' ) {
                         $is_excluded = true;

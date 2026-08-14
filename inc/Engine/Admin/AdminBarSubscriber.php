@@ -608,10 +608,10 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 <div style="padding:12px 24px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; background:#fff;">
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#1e293b; cursor:pointer; font-weight:600; user-select:none;">
                         <input type="checkbox" id="uwb-quick-pm-profile-toggle" style="width:16px; height:16px; margin:0; cursor:pointer;">
-                        <span>Đo hiệu năng trang hiện tại (Profile Request)</span>
+                        <span><?php _e( 'Measure performance of current page (Profile Request)', 'ultimate-wp-booster' ); ?></span>
                     </label>
                     <div id="uwb-quick-pm-total-time-wrap" style="display:none; font-size:12px; font-weight:600; color:#dc2626; background:#fee2e2; padding:4px 10px; border-radius:6px; align-items:center; gap:4px;">
-                        <span>Tổng thời gian:</span>
+                        <span><?php _e( 'Total time:', 'ultimate-wp-booster' ); ?></span>
                         <strong id="uwb-quick-pm-total-time">0ms</strong>
                     </div>
                 </div>
@@ -619,7 +619,7 @@ class AdminBarSubscriber implements Subscriber_Interface {
                 <!-- Body / Plugins List -->
                 <div style="padding:16px 24px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:10px; background:#fff;" id="uwb-quick-pm-list">
                     <?php if ( empty( $plugins_data ) ) : ?>
-                        <div style="text-align:center; padding:30px; color:#64748b; font-size:13px;">Không tìm thấy plugin hoạt động.</div>
+                        <div style="text-align:center; padding:30px; color:#64748b; font-size:13px;"><?php _e( 'No active plugins found.', 'ultimate-wp-booster' ); ?></div>
                     <?php else : ?>
                         <?php foreach ( $plugins_data as $p ) : 
                             $is_loaded = in_array( $p['file'], $currently_loaded, true );
@@ -780,12 +780,12 @@ class AdminBarSubscriber implements Subscriber_Interface {
                             // Reload page to reflect changes
                             window.location.reload();
                         } else {
-                            alert('Lỗi: ' + (resp.data || 'Không thể lưu.'));
+                            alert('<?php echo esc_js( __( 'Error:', 'ultimate-wp-booster' ) ); ?> ' + (resp.data || '<?php echo esc_js( __( 'Failed to save.', 'ultimate-wp-booster' ) ); ?>'));
                             $btn.prop('disabled', false).text('Save & Reload');
                         }
                     },
                     error: function() {
-                        alert('Yêu cầu server thất bại.');
+                        alert('<?php echo esc_js( __( 'Server request failed.', 'ultimate-wp-booster' ) ); ?>');
                         $btn.prop('disabled', false).text('Save & Reload');
                     }
                 });

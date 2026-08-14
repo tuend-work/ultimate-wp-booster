@@ -35,7 +35,7 @@ class CloudflareAPI {
                 'Content-Type'  => 'application/json',
             ),
             'timeout'   => 12,
-            'sslverify' => false,
+            'sslverify' => true,
         );
 
         $response = wp_remote_request( $url, $args );
@@ -82,7 +82,7 @@ class CloudflareAPI {
             ),
             'body'      => wp_json_encode( array( 'purge_everything' => true ) ),
             'timeout'   => 15,
-            'sslverify' => false,
+            'sslverify' => true,
         );
 
         $response = wp_remote_request( $url, $args );
@@ -129,7 +129,7 @@ class CloudflareAPI {
             ),
             'body'      => wp_json_encode( array( 'files' => array_values( $urls ) ) ),
             'timeout'   => 15,
-            'sslverify' => false,
+            'sslverify' => true,
         );
 
         $response = wp_remote_request( $url, $args );

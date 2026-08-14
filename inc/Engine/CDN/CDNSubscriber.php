@@ -39,7 +39,7 @@ class CDNSubscriber implements Subscriber_Interface {
     // $force = true  → always upload (e.g. edit_attachment: file has changed)
     // $force = false → skip if already offloaded flag is set
     // -------------------------------------------------------------------------
-    private function upload_attachment_to_s3( $attachment_id, $force = false ) {
+    public function upload_attachment_to_s3( $attachment_id, $force = false ) {
         if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
             return false;
         }
@@ -205,7 +205,7 @@ class CDNSubscriber implements Subscriber_Interface {
     // Behaviour B: if NOT on S3 yet → upload first, then rewrite URL
     // -------------------------------------------------------------------------
     public function filter_attachment_url( $url, $post_id ) {
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && intval( get_option( 'uwb_debug_mode', 0 ) ) === 1 ) {
             error_log( sprintf( 'UWB CDN Trace - Input URL: %s | Post ID: %d | Distribute: %s | AutoRewrite: %s | CustomDomainOption: %s',
                 $url,
                 $post_id,
@@ -222,7 +222,7 @@ class CDNSubscriber implements Subscriber_Interface {
             }
         }
         if ( ! get_option( 'uwb_cdn_distribute_media', 0 ) ) {
-            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG && intval( get_option( 'uwb_debug_mode', 0 ) ) === 1 ) {
                 error_log( 'UWB CDN Trace - Bypassed because uwb_cdn_distribute_media is disabled.' );
             }
             return $url;
@@ -234,7 +234,7 @@ class CDNSubscriber implements Subscriber_Interface {
             $cdn_domain = get_option( 'uwb_cdn_custom_domain', '' );
         }
         if ( empty( $cdn_domain ) ) {
-            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG && intval( get_option( 'uwb_debug_mode', 0 ) ) === 1 ) {
                 error_log( 'UWB CDN Trace - Bypassed because uwb_cdn_custom_domain is empty.' );
             }
             return $url;
@@ -266,7 +266,7 @@ class CDNSubscriber implements Subscriber_Interface {
             }
         }
 
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && intval( get_option( 'uwb_debug_mode', 0 ) ) === 1 ) {
             error_log( 'UWB CDN Trace - Output URL: ' . $output_url );
         }
         return $output_url;
@@ -843,7 +843,7 @@ class CDNSubscriber implements Subscriber_Interface {
                 var $msg    = $box.length ? $box.find('.uwb-modal-opt-msg') : null;
                 var oldText = $btn.text();
 
-                $btn.css('pointer-events', 'none').text('⚡ Đang nén...');
+                $btn.css('pointer-events', 'none').text('⚡ ' + '<?php echo esc_js( __( 'Optimizing...', 'ultimate-wp-booster' ) ); ?>');
                 if ($msg && $msg.length) {
                     $msg.show().css('color', '#0284c7').text('Processing optimization...');
                 }
@@ -857,7 +857,7 @@ class CDNSubscriber implements Subscriber_Interface {
                         if ($msg && $msg.length) {
                             $msg.css('color', '#16a34a').text('Successfully optimized! Reloading...');
                         }
-                        $btn.text('✔ Đã nén!');
+                        $btn.text('✔ ' + '<?php echo esc_js( __( 'Optimized!', 'ultimate-wp-booster' ) ); ?>');
                         setTimeout(function() { location.reload(); }, 600);
                     } else {
                         alert('Error: ' + (res.data ? res.data.message : 'Failed'));
@@ -881,7 +881,7 @@ class CDNSubscriber implements Subscriber_Interface {
                 var $msg    = $box.length ? $box.find('.uwb-modal-opt-msg') : null;
                 var oldText = $btn.text();
 
-                $btn.css('pointer-events', 'none').text('☁️ Đang đồng bộ...');
+                $btn.css('pointer-events', 'none').text('☁️ ' + '<?php echo esc_js( __( 'Syncing...', 'ultimate-wp-booster' ) ); ?>');
                 if ($msg && $msg.length) {
                     $msg.show().css('color', '#16a34a').text('Uploading file to S3 CDN...');
                 }
@@ -895,7 +895,7 @@ class CDNSubscriber implements Subscriber_Interface {
                         if ($msg && $msg.length) {
                             $msg.css('color', '#16a34a').text('Successfully uploaded to S3 CDN!');
                         }
-                        $btn.text('✔ Đã đồng bộ S3!');
+                        $btn.text('✔ ' + '<?php echo esc_js( __( 'Synced to S3!', 'ultimate-wp-booster' ) ); ?>');
                         setTimeout(function() { location.reload(); }, 600);
                     } else {
                         alert('Error: ' + (res.data ? res.data.message : 'Upload failed'));
@@ -919,7 +919,7 @@ class CDNSubscriber implements Subscriber_Interface {
                 var $msg    = $box.length ? $box.find('.uwb-modal-opt-msg') : null;
                 var oldText = $btn.text();
 
-                $btn.css('pointer-events', 'none').text('📥 Đang tải về...');
+                $btn.css('pointer-events', 'none').text('📥 ' + '<?php echo esc_js( __( 'Downloading...', 'ultimate-wp-booster' ) ); ?>');
                 if ($msg && $msg.length) {
                     $msg.show().css('color', '#d97706').text('Downloading file from S3...');
                 }
@@ -933,7 +933,7 @@ class CDNSubscriber implements Subscriber_Interface {
                         if ($msg && $msg.length) {
                             $msg.css('color', '#16a34a').text('Successfully downloaded to local!');
                         }
-                        $btn.text('✔ Đã tải về!');
+                        $btn.text('✔ ' + '<?php echo esc_js( __( 'Downloaded!', 'ultimate-wp-booster' ) ); ?>');
                         setTimeout(function() { location.reload(); }, 600);
                     } else {
                         alert('Error: ' + (res.data ? res.data.message : 'Download failed'));
@@ -957,11 +957,11 @@ class CDNSubscriber implements Subscriber_Interface {
                 var $msg    = $box.length ? $box.find('.uwb-modal-opt-msg') : null;
                 var oldText = $btn.text();
 
-                if (!confirm('Bạn có chắc chắn muốn khôi phục ảnh gốc từ file backup .bak?')) {
+                if (!confirm('<?php echo esc_js( __( 'Are you sure you want to restore the original image from the .bak backup file?', 'ultimate-wp-booster' ) ); ?>')) {
                     return;
                 }
 
-                $btn.css('pointer-events', 'none').text('↺ Đang khôi phục...');
+                $btn.css('pointer-events', 'none').text('↺ ' + '<?php echo esc_js( __( 'Restoring...', 'ultimate-wp-booster' ) ); ?>');
                 if ($msg && $msg.length) {
                     $msg.show().css('color', '#dc2626').text('Restoring original file...');
                 }
@@ -975,7 +975,7 @@ class CDNSubscriber implements Subscriber_Interface {
                         if ($msg && $msg.length) {
                             $msg.css('color', '#16a34a').text('Successfully restored from .bak!');
                         }
-                        $btn.text('✔ Đã khôi phục!');
+                        $btn.text('✔ ' + '<?php echo esc_js( __( 'Restored!', 'ultimate-wp-booster' ) ); ?>');
                         setTimeout(function() { location.reload(); }, 600);
                     }
                 }).fail(function() {

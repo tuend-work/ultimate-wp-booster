@@ -306,7 +306,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                     </div>
                                 <?php elseif ( $oc_active && ! empty( $stats_error ) ) : ?>
                                     <div style="background:#fff; border:1px solid var(--uwb-border); border-radius:12px; padding:20px; margin-bottom:24px; border-left: 4px solid var(--uwb-danger);">
-                                        <p style="margin:0; font-size:13.5px; font-weight:600; color:var(--uwb-danger);">Không thể lấy thông tin chi tiết Object Cache:</p>
+                                        <p style="margin:0; font-size:13.5px; font-weight:600; color:var(--uwb-danger);"><?php _e( 'Could not retrieve Object Cache details:', 'ultimate-wp-booster' ); ?></p>
                                         <p style="margin:8px 0 0 0; font-size:13px; color:var(--uwb-text-muted);"><?php echo esc_html($stats_error); ?></p>
                                     </div>
                                 <?php endif; ?>

@@ -281,7 +281,7 @@ class RuntimeManager {
             wp_send_json_error( 'Invalid URL path.' );
         }
 
-        $blocked_plugins = isset( $_POST['blocked_plugins'] ) ? (array) $_POST['blocked_plugins'] : [];
+        $blocked_plugins = isset( $_POST['blocked_plugins'] ) ? array_map( 'sanitize_text_field', (array) $_POST['blocked_plugins'] ) : [];
         $rules_json = get_option( 'uwb_uro_rules', '[]' );
         $rules = json_decode( $rules_json, true );
         if ( ! is_array( $rules ) ) {

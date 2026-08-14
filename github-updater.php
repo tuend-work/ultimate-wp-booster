@@ -216,13 +216,14 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             }
 
             // Include required WP file functions
-            // Add temporary filter to disable SSL verification for GitHub URLs only
-            add_filter( 'http_request_args', function( $args, $url ) {
+            // Add temporary filter to disable SSL verification for GitHub URLs only (some shared hosts lack CA bundles)
+            $uwb_github_ssl_filter = function( $args, $url ) {
                 if ( strpos( $url, 'github.com' ) !== false ) {
                     $args['sslverify'] = false;
                 }
                 return $args;
-            }, 10, 2 );
+            };
+            add_filter( 'http_request_args', $uwb_github_ssl_filter, 10, 2 );
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/misc.php';
             require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
@@ -237,7 +238,7 @@ if ( ! class_exists( 'Uwb_Github_Updater' ) ) {
             $zip_url   = "https://github.com/{$this->username}/{$this->repository}/archive/refs/heads/main.zip";
             $temp_file = download_url( $zip_url );
             // Remove the temporary SSL filter
-            remove_filter( 'http_request_args', '__return_false' );
+            remove_filter( 'http_request_args', $uwb_github_ssl_filter, 10 );
             if ( is_wp_error( $temp_file ) ) {
                 if ( $was_active ) {
                     activate_plugin( $this->basename );

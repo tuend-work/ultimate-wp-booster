@@ -48,15 +48,15 @@ js-(before|after)
                                     $this->render_cdn_distribution_card(
                                         'Cloudflare R2 / S3 CDN Distribution for JS',
                                         'uwb_cdn_distribute_js',
-                                        'Phân phối JS qua S3 CDN?',
-                                        'Tải các tập tin JavaScript đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để phục vụ khách truy cập.',
+                                        __( 'Distribute JS via S3 CDN?', 'ultimate-wp-booster' ),
+                                        __( 'Upload minified or combined JS files to S3/R2 CDN to serve them to visitors.', 'ultimate-wp-booster' ),
                                         array(
                                             'Upload to S3 when:' => array(
-                                                'uwb_cdn_auto_upload_combined_js' => 'upload (gộp file JS)',
-                                                'uwb_cdn_auto_upload_minified_js' => 'edit (nén file JS)',
+                                                'uwb_cdn_auto_upload_combined_js' => __( 'Combined JS file creation', 'ultimate-wp-booster' ),
+                                                'uwb_cdn_auto_upload_minified_js' => __( 'Minified JS file creation', 'ultimate-wp-booster' ),
                                             ),
                                             'Delete From S3 when:' => array(
-                                                'uwb_cdn_auto_purge_js_cdn' => 'Delete file (xả cache JS)',
+                                                'uwb_cdn_auto_purge_js_cdn' => __( 'Purge JS cache', 'ultimate-wp-booster' ),
                                             ),
                                         )
                                     );
@@ -65,4 +65,3 @@ js-(before|after)
                                     <?php $this->render_module_banner_end(); ?>
                                 </div>
                             </div>
-

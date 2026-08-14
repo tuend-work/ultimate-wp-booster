@@ -331,7 +331,7 @@ class Admin {
         register_setting( 'uwb_settings_group', 'uwb_redis_conn_type', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_host', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_port', 'intval' );
-        register_setting( 'uwb_redis_socket', 'uwb_redis_socket', 'sanitize_text_field' );
+        register_setting( 'uwb_settings_group', 'uwb_redis_socket', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_password', 'sanitize_text_field' );
         register_setting( 'uwb_settings_group', 'uwb_redis_db', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_redis_prefix', 'sanitize_text_field' );
@@ -508,11 +508,11 @@ class Admin {
     public function sanitize_object_cache_enabled( $val ) {
         $val = intval( $val );
         if ( $val === 1 && ! ( extension_loaded( 'redis' ) || class_exists( 'Redis' ) ) ) {
-            add_settings_error( 'uwb_redis_enabled', 'redis_missing', 'Không thể kích hoạt Redis Object Cache do PHP Redis extension chưa được cài đặt trên máy chủ.', 'error' );
+            add_settings_error( 'uwb_redis_enabled', 'redis_missing', __( 'Cannot enable Redis Object Cache because the PHP Redis extension is not installed on this server.', 'ultimate-wp-booster' ), 'error' );
             return 0;
         }
         if ( $val === 2 && ! extension_loaded( 'memcached' ) ) {
-            add_settings_error( 'uwb_redis_enabled', 'memcached_missing', 'Không thể kích hoạt Memcached Object Cache do PHP Memcached extension chưa được cài đặt trên máy chủ.', 'error' );
+            add_settings_error( 'uwb_redis_enabled', 'memcached_missing', __( 'Cannot enable Memcached Object Cache because the PHP Memcached extension is not installed on this server.', 'ultimate-wp-booster' ), 'error' );
             return 0;
         }
         return $val;
@@ -837,7 +837,7 @@ class Admin {
 
         \Ultimate_WP_Booster\Engine\CDN\CDNManager::clear_cdn_cache();
 
-        wp_send_json_success( array( 'message' => '☁️ Đã xóa CDN Cache thành công!' ) );
+        wp_send_json_success( array( 'message' => __( 'CDN Cache cleared successfully!', 'ultimate-wp-booster' ) ) );
     }
 
     public function ajax_get_redis_memory_info() {
@@ -889,7 +889,7 @@ class Admin {
             \Ultimate_WP_Booster\Engine\Optimization\CSS\CriticalCSS::purge_cache();
         }
 
-        wp_send_json_success( array( 'message' => '⚡ Đã xóa Critical CSS Cache thành công!' ) );
+        wp_send_json_success( array( 'message' => __( 'Critical CSS Cache cleared successfully!', 'ultimate-wp-booster' ) ) );
     }
 
     public function ajax_get_database_stats() {
@@ -916,7 +916,9 @@ class Admin {
             require_once dirname( __DIR__ ) . '/Optimization/DatabaseOptimizer.php';
         }
 
-        $options = isset( $_POST['options'] ) ? $_POST['options'] : array();
+        $allowed_keys = array( 'revisions', 'auto_drafts', 'trash_posts', 'spam_comments', 'trash_comments', 'expired_transients', 'optimize_tables' );
+        $raw_options  = isset( $_POST['options'] ) ? (array) $_POST['options'] : array();
+        $options      = array_intersect_key( $raw_options, array_flip( $allowed_keys ) );
         $results = \Ultimate_WP_Booster\Engine\Optimization\DatabaseOptimizer::optimize( $options );
 
         wp_send_json_success( array(
@@ -1100,16 +1102,16 @@ class Admin {
                     CacheManager::write_config_file();
 
                     add_action( 'admin_notices', function() {
-                        echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> Cấu hình đã được nhập thành công!</p></div>';
+                        echo '<div class="notice notice-success is-dismissible"><p><strong>Ultimate WP Booster:</strong> ' . esc_html__( 'Settings imported successfully!', 'ultimate-wp-booster' ) . '</p></div>';
                     } );
                 } else {
                     add_action( 'admin_notices', function() {
-                        echo '<div class="notice notice-error is-dismissible"><p><strong>Ultimate WP Booster:</strong> Tệp JSON không hợp lệ hoặc bị lỗi!</p></div>';
+                        echo '<div class="notice notice-error is-dismissible"><p><strong>Ultimate WP Booster:</strong> ' . esc_html__( 'Invalid or corrupted JSON file!', 'ultimate-wp-booster' ) . '</p></div>';
                     } );
                 }
             } else {
                 add_action( 'admin_notices', function() {
-                    echo '<div class="notice notice-error is-dismissible"><p><strong>Ultimate WP Booster:</strong> Vui lòng chọn tệp tin JSON trước khi nhấn Import!</p></div>';
+                    echo '<div class="notice notice-error is-dismissible"><p><strong>Ultimate WP Booster:</strong> ' . esc_html__( 'Please select a JSON file before clicking Import!', 'ultimate-wp-booster' ) . '</p></div>';
                 } );
             }
         }
@@ -1783,9 +1785,7 @@ class Admin {
 
         if ( get_option( 'uwb_cdn_distribute_media', 0 ) ) {
             $subscriber = new \Ultimate_WP_Booster\Engine\CDN\CDNSubscriber();
-            $reflector = new \ReflectionMethod( $subscriber, 'upload_attachment_to_s3' );
-            $reflector->setAccessible( true );
-            $reflector->invoke( $subscriber, $attachment_id, true );
+            $subscriber->upload_attachment_to_s3( $attachment_id, true );
         }
 
         if ( $res ) {
@@ -1827,9 +1827,7 @@ class Admin {
         }
 
         $subscriber = new \Ultimate_WP_Booster\Engine\CDN\CDNSubscriber();
-        $reflector  = new \ReflectionMethod( $subscriber, 'upload_attachment_to_s3' );
-        $reflector->setAccessible( true );
-        $res = $reflector->invoke( $subscriber, $attachment_id, true );
+        $res = $subscriber->upload_attachment_to_s3( $attachment_id, true );
 
         if ( $res ) {
             wp_send_json_success( array( 'message' => 'Attachment uploaded to S3 successfully.' ) );
@@ -1906,10 +1904,10 @@ class Admin {
                 <div style="background:#fffbeb; border:1px solid #fbbf24; border-radius:10px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
                     <div style="display:flex; align-items:center; gap:12px; color:#92400e; font-size:13px; font-weight:500;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <span><strong>CDN Storage chưa được cấu hình:</strong> Vui lòng cấu hình tài khoản Cloudflare R2 / S3 Storage trước tại <strong>[6] CDN Offload Media</strong> để bật tính năng này.</span>
+                        <span><strong><?php _e( 'CDN Storage is not configured:', 'ultimate-wp-booster' ); ?></strong> <?php _e( 'Please configure your Cloudflare R2 / S3 Storage first under the CDN Offload Media tab to enable this feature.', 'ultimate-wp-booster' ); ?></span>
                     </div>
                     <button type="button" class="button button-secondary button-small" onclick="jQuery('.uwb-nav-item[data-tab=\'page_optimizes\']').trigger('click'); jQuery('.uwb-sub-tab-item[data-subtab=\'opt_cdn_media\']').trigger('click');" style="font-weight:600; border-radius:6px; cursor:pointer;">
-                        Cấu hình CDN Offload Media &rarr;
+                        <?php _e( 'Configure CDN Offload Media &rarr;', 'ultimate-wp-booster' ); ?>
                     </button>
                 </div>
             <?php else : ?>
@@ -2013,19 +2011,19 @@ if ( ! function_exists( 'ultimate_wp_render_dashboard' ) ) {
         $ecosystem_plugins = array(
             'ultimate-wp-booster' => array(
                 'name'         => 'Ultimate WP Booster',
-                'description'  => 'Tối ưu hóa tốc độ tải trang toàn diện, dọn dẹp và tối ưu hóa cơ sở dữ liệu, nén ảnh, gộp và nén CSS/JS, tích hợp Redis Cache.',
+                'description'  => __( 'Comprehensive page load speed optimization, database cleaning and optimization, image compression, CSS/JS combining and minification, Redis Cache integration.', 'ultimate-wp-booster' ),
                 'path'         => 'ultimate-wp-booster/ultimate-wp-booster.php',
                 'settings_url' => admin_url( 'admin.php?page=ultimate-wp-booster' ),
             ),
             'ultimate-wp-flatsome' => array(
                 'name'         => 'Ultimate WP Flatsome',
-                'description'  => 'Mở rộng khả năng thiết kế của Flatsome. Cho phép sử dụng UX Builder kéo thả layout trực tiếp cho taxonomy và single page của custom post types.',
+                'description'  => __( 'Expand the design capabilities of Flatsome. Allows using UX Builder drag-and-drop layouts directly for taxonomy and single pages of custom post types.', 'ultimate-wp-booster' ),
                 'path'         => 'ultimate-wp-flatsome/ultimate-wp-flatsome.php',
                 'settings_url' => admin_url( 'admin.php?page=ultimate-wp-flatsome' ),
             ),
             'ultimate-wp-smtp-queue' => array(
                 'name'         => 'Ultimate WP SMTP Queue',
-                'description'  => 'Cấu hình gửi email qua giao thức SMTP chuyên nghiệp kết hợp hệ thống hàng đợi gửi ngầm chạy nền (Queue) hiệu năng cao, giảm tải máy chủ.',
+                'description'  => __( 'Configure professional SMTP email sending combined with a high-performance background email queue system, reducing server load.', 'ultimate-wp-booster' ),
                 'path'         => 'ultimate-wp-smtp-queue/ultimate-wp-smtp-queue.php',
                 'settings_url' => admin_url( 'options-general.php?page=ultimate-wp-smtp-queue' ),
             ),
@@ -2274,15 +2272,15 @@ if ( ! function_exists( 'ultimate_wp_render_dashboard' ) ) {
                                 <?php echo esc_html( $data['name'] ); ?>
                                 <?php if ( $is_active ) : ?>
                                     <span class="uwp-status uwp-status-active">
-                                        <span class="uwp-status-dot"></span> Đang hoạt động
+                                        <span class="uwp-status-dot"></span> <?php _e( 'Active', 'ultimate-wp-booster' ); ?>
                                     </span>
                                 <?php elseif ( $is_installed ) : ?>
                                     <span class="uwp-status uwp-status-inactive">
-                                        <span class="uwp-status-dot"></span> Chưa kích hoạt
+                                        <span class="uwp-status-dot"></span> <?php _e( 'Inactive', 'ultimate-wp-booster' ); ?>
                                     </span>
                                 <?php else : ?>
                                     <span class="uwp-status uwp-status-notinstalled">
-                                        Chưa cài đặt
+                                        <?php _e( 'Not Installed', 'ultimate-wp-booster' ); ?>
                                     </span>
                                 <?php endif; ?>
                             </div>
@@ -2293,19 +2291,19 @@ if ( ! function_exists( 'ultimate_wp_render_dashboard' ) ) {
 
                         <div class="uwp-card-actions">
                             <?php if ( $is_active ) : ?>
-                                <a href="<?php echo esc_url( $settings_url ); ?>" class="uwp-btn uwp-btn-primary">
-                                    <span class="dashicons dashicons-admin-settings" style="font-size:17px; line-height:22px; margin-right:4px;"></span> Cấu hình ngay
+                                a href="<?php echo esc_url( $settings_url ); ?>" class="uwp-btn uwp-btn-primary">
+                                    <span class="dashicons dashicons-admin-settings" style="font-size:17px; line-height:22px; margin-right:4px;"></span> <?php _e( 'Configure Now', 'ultimate-wp-booster' ); ?>
                                 </a>
                             <?php elseif ( $is_installed ) : ?>
                                 <?php
                                 $activate_url = wp_nonce_url( admin_url( 'plugins.php?action=activate&plugin=' . $data['path'] ), 'activate-plugin_' . $data['path'] );
                                 ?>
                                 <a href="<?php echo esc_url( $activate_url ); ?>" class="uwp-btn uwp-btn-secondary" style="background-color: #fef3c7; color: #d97706;">
-                                    <span class="dashicons dashicons-admin-plugins" style="font-size:17px; line-height:22px; margin-right:4px;"></span> Kích hoạt Plugin
+                                    <span class="dashicons dashicons-admin-plugins" style="font-size:17px; line-height:22px; margin-right:4px;"></span> <?php _e( 'Activate Plugin', 'ultimate-wp-booster' ); ?>
                                 </a>
                             <?php else : ?>
                                 <button class="uwp-btn uwp-btn-disabled" disabled>
-                                    Chưa cài đặt Plugin
+                                    <?php _e( 'Plugin Not Installed', 'ultimate-wp-booster' ); ?>
                                 </button>
                             <?php endif; ?>
                         </div>
@@ -2317,8 +2315,8 @@ if ( ! function_exists( 'ultimate_wp_render_dashboard' ) ) {
 
             <!-- Ecosystem Info -->
             <div class="uwp-info-box">
-                <h3>Về hệ sinh thái Ultimate WP Plugins</h3>
-                <p>Hệ sinh thái Ultimate WP được xây dựng với mục tiêu mang lại hiệu năng cao nhất, giao diện trực quan thân thiện và khả năng tương thích tuyệt vời cho các website chạy mã nguồn WordPress và Flatsome. Toàn bộ các plugin đều được tối ưu hóa sâu ở mức mã nguồn để đảm bảo tốc độ tải trang nhanh nhất.</p>
+                <h3><?php _e( 'About the Ultimate WP Plugins Ecosystem', 'ultimate-wp-booster' ); ?></h3>
+                <p><?php _e( 'The Ultimate WP ecosystem is built with the goal of bringing the highest performance, friendly intuitive interface and excellent compatibility for websites running WordPress and Flatsome. All plugins are deeply optimized at the source code level to ensure the fastest page load speeds.', 'ultimate-wp-booster' ); ?></p>
             </div>
         </div>
         <?php

@@ -210,11 +210,17 @@ class GeneralOptimizationSubscriber implements Subscriber_Interface {
             } );
         }
 
-        // 19. Add Blank Favicon
+        // 19. Add Blank Favicon (Only if site has no site icon or favicon configured)
         if ( (int) get_option( 'uwb_general_add_blank_favicon', 0 ) === 1 ) {
             add_action( 'wp_head', function() {
-                echo '<link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">';
-            }, 1 );
+                if ( function_exists( 'has_site_icon' ) && has_site_icon() ) {
+                    return;
+                }
+                if ( ! empty( get_option( 'site_icon' ) ) ) {
+                    return;
+                }
+                echo '<link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">' . "\n";
+            }, 999 );
         }
 
         // 20. Remove Global Styles

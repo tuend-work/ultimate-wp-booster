@@ -939,14 +939,14 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                     success: function(res) {
                         btn.prop('disabled', false).text('Clear Critical CSS Cache');
                         if (res.success) {
-                            alert(res.data.message || '⚡ Đã xóa Critical CSS Cache thành công!');
+                            alert(res.data.message || '<?php echo esc_js( __( 'Critical CSS Cache cleared successfully!', 'ultimate-wp-booster' ) ); ?>');
                         } else {
-                            alert('Có lỗi xảy ra: ' + (res.data ? res.data.message : 'Unknown error'));
+                            alert('<?php echo esc_js( __( 'An error occurred:', 'ultimate-wp-booster' ) ); ?> ' + (res.data ? res.data.message : 'Unknown error'));
                         }
                     },
                     error: function() {
                         btn.prop('disabled', false).text('Clear Critical CSS Cache');
-                        alert('Lỗi kết nối máy chủ!');
+                        alert('<?php echo esc_js( __( 'Server connection error!', 'ultimate-wp-booster' ) ); ?>');
                     }
                 });
             });
@@ -1106,11 +1106,11 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                 var $btn = $(this);
                 var oldHtml = $btn.html();
                 
-                if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ Cache CDN R2/S3 và tập tin vết CDN?')) {
+                if (!confirm('<?php echo esc_js( __( 'Are you sure you want to clear the entire CDN R2/S3 Cache and CDN trace files?', 'ultimate-wp-booster' ) ); ?>')) {
                     return;
                 }
 
-                $btn.prop('disabled', true).html('☁️ Đang xóa...');
+                $btn.prop('disabled', true).html('☁️ ' + '<?php echo esc_js( __( 'Clearing...', 'ultimate-wp-booster' ) ); ?>');
 
                 $.post(ajaxurl, {
                     action: 'uwb_clear_cdn_cache',
@@ -1118,14 +1118,14 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                 }, function(res) {
                     $btn.prop('disabled', false).html(oldHtml);
                     if (res.success) {
-                        alert(res.data.message || '☁️ Đã xóa CDN Cache thành công!');
+                        alert(res.data.message || '<?php echo esc_js( __( 'CDN Cache cleared successfully!', 'ultimate-wp-booster' ) ); ?>');
                         location.reload();
                     } else {
-                        alert('Lỗi: ' + (res.data ? res.data.message : 'Xóa CDN Cache thất bại'));
+                        alert('<?php echo esc_js( __( 'Error:', 'ultimate-wp-booster' ) ); ?> ' + (res.data ? res.data.message : '<?php echo esc_js( __( 'Failed to clear CDN cache.', 'ultimate-wp-booster' ) ); ?>'));
                     }
                 }).fail(function() {
                     $btn.prop('disabled', false).html(oldHtml);
-                    alert('Có lỗi AJAX xảy ra.');
+                    alert('<?php echo esc_js( __( 'An AJAX error occurred.', 'ultimate-wp-booster' ) ); ?>');
                 });
             });
 

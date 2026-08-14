@@ -17,6 +17,17 @@ class ViewportScreen {
      * Handle AJAX endpoint to receive Client-Side Extractor viewport payload, update Static HTML cache directly
      */
     public static function ajax_save_viewport_data() {
+        // 0. Simple Rate Limiting: Max 20 requests per minute per IP
+        $ip = preg_replace( '/[^0-9a-fA-F:.]/', '', isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1' );
+        $transient_key = 'uwb_rate_limit_' . md5( $ip );
+        $request_count = (int) get_transient( $transient_key );
+
+        if ( $request_count > 20 ) {
+            wp_send_json_error( array( 'message' => 'Too many requests. Please try again later.' ) );
+        }
+
+        set_transient( $transient_key, $request_count + 1, MINUTE_IN_SECONDS );
+
         $url_hash = isset( $_POST['url_hash'] ) ? (string) $_POST['url_hash'] : '';
         $token    = isset( $_POST['token'] ) ? (string) $_POST['token'] : '';
         $url      = isset( $_POST['url'] ) ? esc_url_raw( (string) $_POST['url'] ) : '';

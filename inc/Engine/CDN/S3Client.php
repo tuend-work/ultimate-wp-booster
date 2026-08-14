@@ -271,7 +271,7 @@ class S3Client {
             'headers'   => $wp_headers,
             'body'      => $body,
             'timeout'   => 15,
-            'sslverify' => false,
+            'sslverify' => true,
         );
 
         $response = wp_remote_request( $request_url, $args );

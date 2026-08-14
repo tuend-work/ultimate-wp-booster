@@ -114,12 +114,31 @@ class Optimizer {
             $html = preg_replace( '/<link[^>]+rel=[\'"]https:\/\/api\.w\.org\/[\'"][^>]*>/i', '', $html );
         }
         if ( ! empty( $config['general_add_blank_favicon'] ) ) {
-            if ( strpos( $html, 'rel="icon"' ) === false && strpos( $html, "rel='icon'" ) === false && strpos( $html, 'rel="shortcut icon"' ) === false ) {
-                $blank_favicon = '<link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">';
-                if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
-                    $html = str_replace( $matches[0], $matches[0] . "\n" . $blank_favicon, $html );
+            $has_wp_icon = ( function_exists( 'has_site_icon' ) && has_site_icon() ) || ( function_exists( 'get_option' ) && ! empty( get_option( 'site_icon' ) ) );
+            if ( ! $has_wp_icon ) {
+                if ( ! preg_match( '/<link\b[^>]*\brel=[\'"][^\'"]*icon[^\'"]*[\'"]/i', $html ) &&
+                     strpos( $html, 'rel="icon"' ) === false &&
+                     strpos( $html, "rel='icon'" ) === false &&
+                     strpos( $html, 'rel="shortcut icon"' ) === false &&
+                     strpos( $html, "rel='shortcut icon'" ) === false &&
+                     strpos( $html, 'rel="apple-touch-icon"' ) === false &&
+                     strpos( $html, "rel='apple-touch-icon'" ) === false &&
+                     ! preg_match( '/<link\b[^>]*\bhref=[\'"][^\'"]*favicon\.[a-z0-9]+[\'"]/i', $html ) ) {
+                    $blank_favicon = '<link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">';
+                    if ( preg_match( '/<head[^>]*>/i', $html, $matches ) ) {
+                        $html = str_replace( $matches[0], $matches[0] . "\n" . $blank_favicon, $html );
+                    }
                 }
             }
+        }
+
+        // Safety: If site has a real icon configured or real icon tag in HTML, remove any duplicate/stray blank favicon
+        $has_real_icon = ( function_exists( 'has_site_icon' ) && has_site_icon() ) ||
+                         ( function_exists( 'get_option' ) && ! empty( get_option( 'site_icon' ) ) ) ||
+                         preg_match( '/<link\b[^>]*\brel=[\'"][^\'"]*icon[^\'"]*[\'"][^>]*\bhref=[\'"](?!data:)[^\'"]+[\'"]/i', $html );
+        if ( $has_real_icon ) {
+            $html = preg_replace( '/<link\b[^>]*\brel=[\'"][^\'"]*icon[^\'"]*[\'"][^>]*\bhref=[\'"]data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk\+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==[\'"][^>]*>\s*/i', '', $html );
+            $html = preg_replace( '/<link\b[^>]*\bhref=[\'"]data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk\+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==[\'"][^>]*\brel=[\'"][^\'"]*icon[^\'"]*[\'"][^>]*>\s*/i', '', $html );
         }
         if ( ! empty( $config['general_remove_global_styles'] ) ) {
             $html = preg_replace( '/<style\b[^>]*?id=[\'"]global-styles-inline-css[\'"][^>]*?>.*?<\/style>/is', '', $html );

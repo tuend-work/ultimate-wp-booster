@@ -2,3 +2,11 @@
 object-cache-other-plugin.php
 rocket-nginx-default.conf
 /EXAMPLE
+/scratch
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+*.bak
+node_modules/
+vendor/

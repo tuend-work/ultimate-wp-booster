@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 // Ultimate WP Booster Object Cache Drop-in
 
 // Stub class to prevent fatal error if PHP Memcached extension is not installed

@@ -112,10 +112,10 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                         </div>
 
                                         <div class="uwb-form-group" id="uwb-collected-params-group" style="margin-top: 16px; <?php echo get_option( 'uwb_auto_collect_params', 0 ) ? '' : 'display:none;'; ?>">
-                                            <label for="uwb_collected_params">Danh sách Parameter đã thu thập (Discovered GET Parameters)</label>
-                                            <textarea name="uwb_collected_params" id="uwb_collected_params" rows="5" placeholder="Các parameter thu thập tự động sẽ hiển thị ở đây (mỗi tham số 1 dòng)..."><?php echo esc_textarea( get_option( 'uwb_collected_params', '' ) ); ?></textarea>
+                                            <label for="uwb_collected_params"><?php _e( 'List of collected parameters (Discovered GET Parameters)', 'ultimate-wp-booster' ); ?></label>
+                                            <textarea name="uwb_collected_params" id="uwb_collected_params" rows="5" placeholder="<?php echo esc_attr( __( 'Automatically collected parameters will appear here (one per line)...', 'ultimate-wp-booster' ) ); ?>"><?php echo esc_textarea( get_option( 'uwb_collected_params', '' ) ); ?></textarea>
                                             <p class="description">
-                                                Toàn bộ tham số URL (GET parameters) đã tìm thấy trên trang web (mỗi tham số 1 dòng). Bạn có thể thêm, sửa hoặc xóa các tham số tại đây.
+                                                <?php _e( 'All URL parameters (GET parameters) found on the website (one per line). You can add, edit, or delete parameters here.', 'ultimate-wp-booster' ); ?>
                                             </p>
                                         </div>
 

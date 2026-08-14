@@ -11,7 +11,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                     $this->render_toggle_switch( 'uwb_css_combine_ext_inline', 'CSS Combine External and Inline', 'Include external CSS files and inline CSS code in the combined CSS bundle.' );
                                     $this->render_textarea_setting( 'uwb_tuning_css_excludes', 'CSS Minify & Combine Excludes', '', 'CSS files or inline keywords to exclude from minification/combination (one per line).' );
                                     $this->render_toggle_switch( 'uwb_css_load_async', 'Load CSS Asynchronously', 'Load CSS files asynchronously to eliminate render-blocking CSS and speed up page rendering.' );
-                                    $this->render_toggle_switch( 'uwb_auto_critical_css', 'Automatic Server-Side Critical CSS Generation', 'Tự động trích xuất các quy tắc CSS hiển thị ở màn hình đầu tiên (Above-The-Fold) ngay khi tạo Cache trang lần đầu tiên và nhúng trực tiếp vào &lt;head&gt;.' );
+                                    $this->render_toggle_switch( 'uwb_auto_critical_css', 'Automatic Server-Side Critical CSS Generation', __( 'Automatically extract above-the-fold CSS rules during first cache generation and inject them directly into the <head>.', 'ultimate-wp-booster' ) );
                                     ?>
 
                                     <!-- Critical CSS Management Card -->
@@ -25,7 +25,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                             </button>
                                         </div>
                                         <?php
-                                        $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Custom Above-The-Fold CSS (Manual Addition)', '', 'Nhập các quy tắc CSS tùy chỉnh để xuất ra thẻ &lt;style id="uwb-manual-critical-css"&gt; riêng biệt trong &lt;head&gt; (chèn song song với Critical CSS tự động và có độ ưu tiên cao nhất).' );
+                                        $this->render_textarea_setting( 'uwb_tuning_critical_css', 'Custom Above-The-Fold CSS (Manual Addition)', '', __( 'Enter custom CSS rules to output in a separate <style id="uwb-manual-critical-css"> tag in the <head> (injected in parallel with automatic Critical CSS with highest priority).', 'ultimate-wp-booster' ) );
                                         ?>
                                     </div>
 
@@ -34,15 +34,15 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                     $this->render_cdn_distribution_card(
                                         'Cloudflare R2 / S3 CDN Distribution for CSS',
                                         'uwb_cdn_distribute_css',
-                                        'Phân phối CSS qua S3 CDN?',
-                                        'Tải các tập tin CSS đã được nén (minify) hoặc gộp (combine) lên S3/R2 CDN để tối ưu hóa tốc độ tải trang.',
+                                        __( 'Distribute CSS via S3 CDN?', 'ultimate-wp-booster' ),
+                                        __( 'Upload minified or combined CSS files to S3/R2 CDN to optimize page load speed.', 'ultimate-wp-booster' ),
                                         array(
                                             'Upload to S3 when:' => array(
-                                                'uwb_cdn_auto_upload_combined_css' => 'upload (gộp file CSS)',
-                                                'uwb_cdn_auto_upload_minified_css' => 'edit (nén file CSS)',
+                                                'uwb_cdn_auto_upload_combined_css' => __( 'Combined CSS file creation', 'ultimate-wp-booster' ),
+                                                'uwb_cdn_auto_upload_minified_css' => __( 'Minified CSS file creation', 'ultimate-wp-booster' ),
                                             ),
                                             'Delete From S3 when:' => array(
-                                                'uwb_cdn_auto_purge_css_cdn' => 'Delete file (xả cache CSS)',
+                                                'uwb_cdn_auto_purge_css_cdn' => __( 'Purge CSS cache', 'ultimate-wp-booster' ),
                                             ),
                                         )
                                      );
@@ -51,4 +51,3 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                     <?php $this->render_module_banner_end(); ?>
                                 </div>
                             </div>
-

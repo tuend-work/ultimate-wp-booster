@@ -288,6 +288,8 @@ class CacheManager {
             @mkdir( $wp_rocket_dir, 0755, true );
         }
 
+        \Ultimate_WP_Booster\Engine\Activation\Activation::write_htaccess_protection();
+
         $config_path = $cache_dir . '/ultimate-wp-booster-config.php';
         
         $lifespan_minutes = intval( get_option( 'uwb_cache_lifespan', 0 ) );

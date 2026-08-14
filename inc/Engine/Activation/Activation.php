@@ -136,7 +136,10 @@ class Activation {
         // 5. Write valid post IDs whitelist JSON
         \Ultimate_WP_Booster\Engine\Cache\CacheManager::write_valid_post_ids_json();
 
-        // 6. Check for WP Rocket settings import
+        // 6. Write directory protection files (.htaccess and web.config)
+        self::write_htaccess_protection();
+
+        // 7. Check for WP Rocket settings import
         if ( get_option( 'wp_rocket_settings' ) !== false ) {
             return; //temp disable
             update_option( 'uwb_show_rocket_import_prompt', 1 );
@@ -298,6 +301,50 @@ class Activation {
             if ( $content && strpos( $content, 'Ultimate WP Booster Object Cache Drop-in' ) !== false ) {
                 @unlink( $destination );
             }
+        }
+    }
+
+    public static function write_htaccess_protection() {
+        $cache_dir = WP_CONTENT_DIR . '/cache';
+        if ( ! file_exists( $cache_dir ) ) {
+            @mkdir( $cache_dir, 0755, true );
+        }
+
+        // 1. .htaccess protection for Apache/LiteSpeed
+        $htaccess_file = $cache_dir . '/.htaccess';
+        if ( ! file_exists( $htaccess_file ) ) {
+            $content = "# BEGIN Ultimate WP Booster Protection\n" .
+                       "<FilesMatch \"\\.(php|json|log)$\">\n" .
+                       "    <IfModule mod_authz_core.c>\n" .
+                       "        Require all denied\n" .
+                       "    </IfModule>\n" .
+                       "    <IfModule !mod_authz_core.c>\n" .
+                       "        Order deny,allow\n" .
+                       "        Deny from all\n" .
+                       "    </IfModule>\n" .
+                       "</FilesMatch>\n" .
+                       "# END Ultimate WP Booster Protection\n";
+            @file_put_contents( $htaccess_file, $content );
+        }
+
+        // 2. web.config protection for IIS
+        $web_config_file = $cache_dir . '/web.config';
+        if ( ! file_exists( $web_config_file ) ) {
+            $content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" .
+                       "<configuration>\n" .
+                       "  <system.webServer>\n" .
+                       "    <security>\n" .
+                       "      <requestFiltering>\n" .
+                       "        <fileExtensions>\n" .
+                       "          <add fileExtension=\".php\" allowed=\"false\" />\n" .
+                       "          <add fileExtension=\".json\" allowed=\"false\" />\n" .
+                       "          <add fileExtension=\".log\" allowed=\"false\" />\n" .
+                       "        </fileExtensions>\n" .
+                       "      </requestFiltering>\n" .
+                       "    </security>\n" .
+                       "  </system.webServer>\n" .
+                       "</configuration>\n";
+            @file_put_contents( $web_config_file, $content );
         }
     }
 }
