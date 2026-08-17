@@ -31,8 +31,6 @@ class CacheManager {
         $uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'CLI/Cron';
         $log_line = "[{$timestamp}] [UWB Cache Purge] Action: {$action} | Details: {$details} | Called by: {$caller} | URI: {$uri}";
 
-        error_log( $log_line );
-
         $log_dir = WP_CONTENT_DIR . '/cache';
         if ( ! file_exists( $log_dir ) ) {
             @mkdir( $log_dir, 0755, true );
