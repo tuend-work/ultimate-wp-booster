@@ -4,7 +4,7 @@ Tags: cache, speed, optimization, database, cdn, preload, static cache, page cac
 Requires at least: 5.8
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: 5.4.17
+Stable tag: 5.4.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ Ultimate WP Booster is a comprehensive WordPress performance plugin designed to 
 3. Configure the settings under the 'WP Booster' menu in your WordPress dashboard.
 
 == Changelog ==
+
+= 5.4.18 =
+* Fix: Add missing log() method to Preloader to prevent fatal errors during server load throttling.
 
 = 5.4.17 =
 * Fix: Replace error_log calls in advanced-cache.php with dedicated log file when debug mode is enabled.

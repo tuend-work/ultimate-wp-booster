@@ -850,6 +850,32 @@ class Preloader {
         return $processed_urls;
     }
 
+    /**
+     * Write log entry to preload-debug.log
+     *
+     * @param string $message Log message.
+     */
+    public function log( $message ) {
+        $log_dir = WP_CONTENT_DIR . '/cache/ultimate-wp-booster';
+        if ( ! file_exists( $log_dir ) ) {
+            @mkdir( $log_dir, 0755, true );
+        }
+
+        $log_file = $log_dir . '/preload-debug.log';
+        $timestamp = current_time( 'mysql' );
+        $log_entry = "[{$timestamp}] {$message}\n";
+
+        @file_put_contents( $log_file, $log_entry, FILE_APPEND | LOCK_EX );
+
+        if ( file_exists( $log_file ) && filesize( $log_file ) > 200000 ) {
+            $lines = @file( $log_file );
+            if ( is_array( $lines ) && count( $lines ) > 500 ) {
+                $trimmed = array_slice( $lines, -500 );
+                @file_put_contents( $log_file, implode( '', $trimmed ), LOCK_EX );
+            }
+        }
+    }
+
     // --- AJAX HANDLERS ---
 
     public function ajax_start_preload() {
