@@ -604,11 +604,11 @@ function uwb_advanced_cache_ob_callback( $buffer, $phase = 0 ) {
             uwb_advanced_cache_log( "UWB: Callback empty clean phase. Resetting accumulated buffer." );
         }
         $GLOBALS['uwb_accumulated_html'] = '';
-        return $buffer;
+        return '';
     }
 
     $GLOBALS['uwb_accumulated_html'] .= $buffer;
-    return $buffer;
+    return '';
 }
 
 function uwb_advanced_cache_shutdown() {
