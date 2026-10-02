@@ -21,6 +21,7 @@ class Deactivation {
         }
 
         Activation::toggle_wp_cache( false );
+        Activation::remove_litespeed_htaccess();
 
         wp_clear_scheduled_hook( 'uwb_preload_cron_job' );
         wp_clear_scheduled_hook( 'uwb_clean_expired_cache' );

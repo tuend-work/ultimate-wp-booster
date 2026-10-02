@@ -206,9 +206,19 @@ class Admin {
         add_action( 'update_option_gmt_offset', array( $this, 'write_config_file_and_purge' ) );
         add_action( 'add_option_gmt_offset', array( $this, 'write_config_file_and_purge' ) );
 
-        // Auto-update .htaccess when Preload Engine mode changes (LiteSpeed Native Crawler support)
-        add_action( 'update_option_uwb_preload_enabled', array( '\Ultimate_WP_Booster\Engine\Activation\Activation', 'update_litespeed_htaccess' ) );
-        add_action( 'add_option_uwb_preload_enabled', array( '\Ultimate_WP_Booster\Engine\Activation\Activation', 'update_litespeed_htaccess' ) );
+        // Auto-update .htaccess when relevant LiteSpeed cache / preload options change
+        $htaccess_options = array(
+            'uwb_preload_enabled',
+            'uwb_cache_logged_in',
+            'uwb_module_cache_enabled',
+            'uwb_preload_usleep',
+            'uwb_preload_server_load_limit',
+            'uwb_preload_threads',
+        );
+        foreach ( $htaccess_options as $h_opt ) {
+            add_action( "update_option_{$h_opt}", array( '\Ultimate_WP_Booster\Engine\Activation\Activation', 'update_litespeed_htaccess' ) );
+            add_action( "add_option_{$h_opt}", array( '\Ultimate_WP_Booster\Engine\Activation\Activation', 'update_litespeed_htaccess' ) );
+        }
 
         // Redis AJAX hooks
         add_action( 'wp_ajax_uwb_test_redis_connection', array( $this, 'ajax_test_redis_connection' ) );
@@ -803,11 +813,7 @@ class Admin {
             update_option( 'uwb_hours_to_minutes_migrated_v2', 1 );
         }
 
-        Activation::copy_advanced_cache_dropin();
-        Activation::copy_object_cache_dropin();
         $this->migrate_default_important_sitemap();
-        // Sync config JSON file to keep core options (like timezone) up to date
-        CacheManager::write_config_file();
 
         if ( isset( $_GET['uwb_opcache_flushed'] ) ) {
             add_action( 'admin_notices', function() {

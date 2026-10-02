@@ -4,7 +4,7 @@ Tags: cache, speed, optimization, database, cdn, preload, static cache, page cac
 Requires at least: 5.8
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: 5.4.19
+Stable tag: 5.4.20
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 

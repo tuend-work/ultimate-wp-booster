@@ -139,7 +139,10 @@ class Activation {
         // 6. Write directory protection files (.htaccess and web.config)
         self::write_htaccess_protection();
 
-        // 7. Check for WP Rocket settings import
+        // 7. Update LiteSpeed .htaccess if applicable
+        self::update_litespeed_htaccess();
+
+        // 8. Check for WP Rocket settings import
         if ( get_option( 'wp_rocket_settings' ) !== false ) {
             return; //temp disable
             update_option( 'uwb_show_rocket_import_prompt', 1 );
@@ -158,8 +161,6 @@ class Activation {
                 }
             }
         }
-
-        self::update_litespeed_htaccess();
     }
 
     public static function update_litespeed_htaccess() {
@@ -167,77 +168,196 @@ class Activation {
             return;
         }
 
-        $htaccess_path = ABSPATH . '.htaccess';
-        
-        // Ensure WordPress admin functions are loaded
-        if ( ! function_exists( 'insert_with_markers' ) ) {
-            require_once ABSPATH . 'wp-admin/includes/misc.php';
+        // Get true home path for .htaccess
+        if ( ! function_exists( 'get_home_path' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        $home_path     = function_exists( 'get_home_path' ) ? get_home_path() : ABSPATH;
+        $htaccess_path = $home_path . '.htaccess';
+
+        // If Cache module is disabled, ensure our rules are cleanly removed
+        $module_cache_enabled = (int) get_option( 'uwb_module_cache_enabled', 1 );
+        if ( ! $module_cache_enabled ) {
+            self::remove_litespeed_htaccess();
+            return;
         }
 
-        $cache_logged_in  = (int) get_option( 'uwb_cache_logged_in', 0 );
+        // Directory or file writable check
+        if ( ! file_exists( $htaccess_path ) && ! is_writable( dirname( $htaccess_path ) ) ) {
+            return;
+        }
+        if ( file_exists( $htaccess_path ) && ! is_writable( $htaccess_path ) ) {
+            return;
+        }
+
+        // Open with 'c+' (read/write, does NOT truncate file on open)
+        $fp = @fopen( $htaccess_path, 'c+' );
+        if ( ! $fp ) {
+            return;
+        }
+
+        // Acquire exclusive lock before reading or modifying to eliminate race conditions
+        if ( ! flock( $fp, LOCK_EX ) ) {
+            fclose( $fp );
+            return;
+        }
+
+        $current_content = '';
+        while ( ! feof( $fp ) ) {
+            $current_content .= fread( $fp, 8192 );
+        }
+
+        // Safeguard WordPress core rewrite rules:
+        // If permalinks are enabled and # BEGIN WordPress is missing, automatically restore core rules
+        if ( get_option( 'permalink_structure' ) && strpos( $current_content, '# BEGIN WordPress' ) === false ) {
+            if ( ! function_exists( 'save_mod_rewrite_rules' ) ) {
+                require_once ABSPATH . 'wp-admin/includes/misc.php';
+            }
+            if ( function_exists( 'save_mod_rewrite_rules' ) ) {
+                flock( $fp, LOCK_UN );
+                fclose( $fp );
+
+                save_mod_rewrite_rules();
+
+                $fp = @fopen( $htaccess_path, 'c+' );
+                if ( ! $fp || ! flock( $fp, LOCK_EX ) ) {
+                    if ( $fp ) {
+                        fclose( $fp );
+                    }
+                    return;
+                }
+                $current_content = '';
+                while ( ! feof( $fp ) ) {
+                    $current_content .= fread( $fp, 8192 );
+                }
+            } else {
+                $wp_rules = "# BEGIN WordPress\n" .
+                            "<IfModule mod_rewrite.c>\n" .
+                            "RewriteEngine On\n" .
+                            "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]\n" .
+                            "RewriteBase /\n" .
+                            "RewriteRule ^index\\.php$ - [L]\n" .
+                            "RewriteCond %{REQUEST_FILENAME} !-f\n" .
+                            "RewriteCond %{REQUEST_FILENAME} !-d\n" .
+                            "RewriteRule . /index.php [L]\n" .
+                            "</IfModule>\n" .
+                            "# END WordPress\n";
+                $current_content = $current_content !== '' ? rtrim( $current_content ) . "\n\n" . $wp_rules : $wp_rules;
+            }
+        }
+
+        $cache_logged_in = (int) get_option( 'uwb_cache_logged_in', 0 );
         $preload_enabled = (int) get_option( 'uwb_preload_enabled', 0 );
 
-        if ( function_exists( 'insert_with_markers' ) ) {
-            $rules = array(
-                '<IfModule LiteSpeed>',
-                '    CacheLookup on',
-            );
+        $rules = array(
+            '<IfModule LiteSpeed>',
+            '    CacheLookup on',
+        );
 
-            if ( $preload_enabled === 3 ) {
-                $usleep = (int) get_option( 'uwb_preload_usleep', 500 );
-                $load_limit = (float) get_option( 'uwb_preload_server_load_limit', 1.0 );
-                $threads = (int) get_option( 'uwb_preload_threads', 3 );
-                $rules[] = '    # Enable LiteSpeed Server Native Crawler Engine & Directives';
-                $rules[] = '    CacheEngine on crawler';
-                $rules[] = '    SetEnv CRAWLER_USLEEP ' . $usleep;
-                $rules[] = '    SetEnv CRAWLER_LOAD_LIMIT ' . $load_limit;
-                $rules[] = '    SetEnv CRAWLER_THREADS ' . $threads;
-            }
-
-            $rules[] = '    RewriteEngine On';
-
-            if ( $cache_logged_in !== 2 ) {
-                $rules[] = '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions';
-                $rules[] = '    RewriteCond %{HTTP_COOKIE} (uwb_logged_in|wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
-                $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
-            } else {
-                $rules[] = '    # Bypass LiteSpeed cache for commenters & WooCommerce sessions (Per-user Vary lookup enabled for uwb_logged_in)';
-                $rules[] = '    RewriteCond %{HTTP_COOKIE} (comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
-                $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
-            }
-
-            $rules[] = '    # Bypass LiteSpeed cache for POST requests, admin, page builders & API endpoints';
-            $rules[] = '    RewriteCond %{REQUEST_METHOD} ^POST$ [OR]';
-            $rules[] = '    RewriteCond %{QUERY_STRING} (app=uxbuilder|uxbuilder|uxb_iframe|elementor-preview|et_fb|vc_editable|ct_builder|bricks|fl_builder) [NC,OR]';
-            $rules[] = '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\.php|uxbuilder) [NC]';
-            $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
-            $rules[] = '</IfModule>';
-
-            insert_with_markers( $htaccess_path, 'Ultimate WP Booster LiteSpeed', $rules );
-
-            // Ensure the rules are at the very top of .htaccess to execute before WordPress rules
-            $new_content = @file_get_contents( $htaccess_path );
-            if ( $new_content ) {
-                $marker_start = '# BEGIN Ultimate WP Booster LiteSpeed';
-                $marker_end   = '# END Ultimate WP Booster LiteSpeed';
-                $start_pos    = strpos( $new_content, $marker_start );
-                $end_pos      = strpos( $new_content, $marker_end );
-                
-                if ( $start_pos !== false && $end_pos !== false && $end_pos > $start_pos ) {
-                    $block_len = ($end_pos + strlen( $marker_end )) - $start_pos;
-                    $block = substr( $new_content, $start_pos, $block_len );
-                    
-                    // Remove the block from its current position
-                    $cleaned = str_replace( $block, '', $new_content );
-                    $cleaned = trim( $cleaned );
-                    
-                    // Prepend it to the top
-                    $final_content = $block . "\n\n" . $cleaned;
-                    @file_put_contents( $htaccess_path, $final_content );
-                }
-            }
+        if ( $preload_enabled === 3 ) {
+            $usleep     = (int) get_option( 'uwb_preload_usleep', 500 );
+            $load_limit = (float) get_option( 'uwb_preload_server_load_limit', 1.0 );
+            $threads    = (int) get_option( 'uwb_preload_threads', 3 );
+            $rules[] = '    # Enable LiteSpeed Server Native Crawler Engine & Directives';
+            $rules[] = '    CacheEngine on crawler';
+            $rules[] = '    SetEnv CRAWLER_USLEEP ' . $usleep;
+            $rules[] = '    SetEnv CRAWLER_LOAD_LIMIT ' . $load_limit;
+            $rules[] = '    SetEnv CRAWLER_THREADS ' . $threads;
         }
-        
+
+        $rules[] = '    RewriteEngine On';
+
+        if ( $cache_logged_in !== 2 ) {
+            $rules[] = '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions';
+            $rules[] = '    RewriteCond %{HTTP_COOKIE} (uwb_logged_in|wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
+            $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+        } else {
+            $rules[] = '    # Bypass LiteSpeed cache for commenters & WooCommerce sessions (Per-user Vary lookup enabled for uwb_logged_in)';
+            $rules[] = '    RewriteCond %{HTTP_COOKIE} (comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
+            $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+        }
+
+        $rules[] = '    # Bypass LiteSpeed cache for POST requests, admin, page builders & API endpoints';
+        $rules[] = '    RewriteCond %{REQUEST_METHOD} ^POST$ [OR]';
+        $rules[] = '    RewriteCond %{QUERY_STRING} (app=uxbuilder|uxbuilder|uxb_iframe|elementor-preview|et_fb|vc_editable|ct_builder|bricks|fl_builder) [NC,OR]';
+        $rules[] = '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\\.php|uxbuilder) [NC]';
+        $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+        $rules[] = '</IfModule>';
+
+        $marker_start = '# BEGIN Ultimate WP Booster LiteSpeed';
+        $marker_end   = '# END Ultimate WP Booster LiteSpeed';
+        $new_block    = $marker_start . "\n" . implode( "\n", $rules ) . "\n" . $marker_end;
+
+        // Clean out any old/existing Ultimate WP Booster LiteSpeed block safely
+        $pattern         = '/# BEGIN Ultimate WP Booster LiteSpeed.*?# END Ultimate WP Booster LiteSpeed\s*/s';
+        $cleaned_content = preg_replace( $pattern, '', $current_content );
+        $cleaned_content = ltrim( (string) $cleaned_content );
+
+        $final_content = ! empty( $cleaned_content ) ? $new_block . "\n\n" . $cleaned_content : $new_block . "\n";
+
+        // Compare normalized versions to avoid redundant disk writes and server restarts
+        $norm_current = trim( str_replace( "\r\n", "\n", $current_content ) );
+        $norm_final   = trim( str_replace( "\r\n", "\n", $final_content ) );
+
+        if ( $norm_current === $norm_final ) {
+            flock( $fp, LOCK_UN );
+            fclose( $fp );
+            return;
+        }
+
+        ftruncate( $fp, 0 );
+        rewind( $fp );
+        fwrite( $fp, $final_content );
+        fflush( $fp );
+        flock( $fp, LOCK_UN );
+        fclose( $fp );
+
+        \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::touch_htaccess();
+    }
+
+    public static function remove_litespeed_htaccess() {
+        if ( ! function_exists( 'get_home_path' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        $home_path     = function_exists( 'get_home_path' ) ? get_home_path() : ABSPATH;
+        $htaccess_path = $home_path . '.htaccess';
+
+        if ( ! file_exists( $htaccess_path ) || ! is_writable( $htaccess_path ) ) {
+            return;
+        }
+
+        $fp = @fopen( $htaccess_path, 'c+' );
+        if ( ! $fp ) {
+            return;
+        }
+
+        if ( ! flock( $fp, LOCK_EX ) ) {
+            fclose( $fp );
+            return;
+        }
+
+        $current_content = '';
+        while ( ! feof( $fp ) ) {
+            $current_content .= fread( $fp, 8192 );
+        }
+
+        if ( strpos( $current_content, '# BEGIN Ultimate WP Booster LiteSpeed' ) === false ) {
+            flock( $fp, LOCK_UN );
+            fclose( $fp );
+            return;
+        }
+
+        $pattern         = '/# BEGIN Ultimate WP Booster LiteSpeed.*?# END Ultimate WP Booster LiteSpeed\s*/s';
+        $cleaned_content = preg_replace( $pattern, '', $current_content );
+        $cleaned_content = ltrim( (string) $cleaned_content );
+
+        ftruncate( $fp, 0 );
+        rewind( $fp );
+        fwrite( $fp, $cleaned_content );
+        fflush( $fp );
+        flock( $fp, LOCK_UN );
+        fclose( $fp );
+
         \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::touch_htaccess();
     }
 

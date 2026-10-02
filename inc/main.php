@@ -21,6 +21,7 @@ if ( ! function_exists( 'uwb_check_upgrade' ) ) {
             Activation::copy_object_cache_dropin();
             Activation::toggle_wp_cache( true );
             \Ultimate_WP_Booster\Engine\Cache\CacheManager::write_config_file();
+            Activation::update_litespeed_htaccess();
 
             // Sync URO MU plugin if installed
             $mu_manager = new \Ultimate_WP_Booster\Engine\RuntimeOptimizer\Runtime\RuntimeManager();

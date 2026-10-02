@@ -135,6 +135,29 @@ $wpdb->query(
 );
 
 // =========================================================================
+// 8. Clean up .htaccess rules
+// =========================================================================
+$htaccess_path = ( function_exists( 'get_home_path' ) ? get_home_path() : ABSPATH ) . '.htaccess';
+if ( file_exists( $htaccess_path ) && is_writable( $htaccess_path ) ) {
+    $fp = @fopen( $htaccess_path, 'c+' );
+    if ( $fp && flock( $fp, LOCK_EX ) ) {
+        $content = '';
+        while ( ! feof( $fp ) ) {
+            $content .= fread( $fp, 8192 );
+        }
+        if ( strpos( $content, '# BEGIN Ultimate WP Booster LiteSpeed' ) !== false ) {
+            $cleaned = preg_replace( '/# BEGIN Ultimate WP Booster LiteSpeed.*?# END Ultimate WP Booster LiteSpeed\s*/s', '', $content );
+            ftruncate( $fp, 0 );
+            rewind( $fp );
+            fwrite( $fp, ltrim( (string) $cleaned ) );
+            fflush( $fp );
+        }
+        flock( $fp, LOCK_UN );
+        fclose( $fp );
+    }
+}
+
+// =========================================================================
 // Helper: recursively delete a directory
 // =========================================================================
 function uwb_recursive_delete( $dir ) {
