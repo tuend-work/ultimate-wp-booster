@@ -207,97 +207,22 @@ class Activation {
             $current_content .= fread( $fp, 8192 );
         }
 
-        // Safeguard WordPress core rewrite rules:
-        // If permalinks are enabled and # BEGIN WordPress is missing, automatically restore core rules
-        if ( get_option( 'permalink_structure' ) && strpos( $current_content, '# BEGIN WordPress' ) === false ) {
-            if ( ! function_exists( 'save_mod_rewrite_rules' ) ) {
-                require_once ABSPATH . 'wp-admin/includes/misc.php';
-            }
-            if ( function_exists( 'save_mod_rewrite_rules' ) ) {
-                flock( $fp, LOCK_UN );
-                fclose( $fp );
+        // Strictly modify ONLY the Ultimate WP Booster LiteSpeed block:
+        // Case 1: If our block already exists in .htaccess, replace ONLY that block in-place.
+        // Case 2: If our block does not exist, prepend it to the top without touching any existing content below.
+        $has_existing_block = ( strpos( $current_content, $marker_start ) !== false && strpos( $current_content, $marker_end ) !== false );
 
-                save_mod_rewrite_rules();
-
-                $fp = @fopen( $htaccess_path, 'c+' );
-                if ( ! $fp || ! flock( $fp, LOCK_EX ) ) {
-                    if ( $fp ) {
-                        fclose( $fp );
-                    }
-                    return;
-                }
-                $current_content = '';
-                while ( ! feof( $fp ) ) {
-                    $current_content .= fread( $fp, 8192 );
-                }
-            } else {
-                $wp_rules = "# BEGIN WordPress\n" .
-                            "<IfModule mod_rewrite.c>\n" .
-                            "RewriteEngine On\n" .
-                            "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]\n" .
-                            "RewriteBase /\n" .
-                            "RewriteRule ^index\\.php$ - [L]\n" .
-                            "RewriteCond %{REQUEST_FILENAME} !-f\n" .
-                            "RewriteCond %{REQUEST_FILENAME} !-d\n" .
-                            "RewriteRule . /index.php [L]\n" .
-                            "</IfModule>\n" .
-                            "# END WordPress\n";
-                $current_content = $current_content !== '' ? rtrim( $current_content ) . "\n\n" . $wp_rules : $wp_rules;
-            }
-        }
-
-        $cache_logged_in = (int) get_option( 'uwb_cache_logged_in', 0 );
-        $preload_enabled = (int) get_option( 'uwb_preload_enabled', 0 );
-
-        $rules = array(
-            '<IfModule LiteSpeed>',
-            '    CacheLookup on',
-        );
-
-        if ( $preload_enabled === 3 ) {
-            $usleep     = (int) get_option( 'uwb_preload_usleep', 500 );
-            $load_limit = (float) get_option( 'uwb_preload_server_load_limit', 1.0 );
-            $threads    = (int) get_option( 'uwb_preload_threads', 3 );
-            $rules[] = '    # Enable LiteSpeed Server Native Crawler Engine & Directives';
-            $rules[] = '    CacheEngine on crawler';
-            $rules[] = '    SetEnv CRAWLER_USLEEP ' . $usleep;
-            $rules[] = '    SetEnv CRAWLER_LOAD_LIMIT ' . $load_limit;
-            $rules[] = '    SetEnv CRAWLER_THREADS ' . $threads;
-        }
-
-        $rules[] = '    RewriteEngine On';
-
-        if ( $cache_logged_in !== 2 ) {
-            $rules[] = '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions';
-            $rules[] = '    RewriteCond %{HTTP_COOKIE} (uwb_logged_in|wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
-            $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+        if ( $has_existing_block ) {
+            $pattern       = '/# BEGIN Ultimate WP Booster LiteSpeed\b.*?# END Ultimate WP Booster LiteSpeed/s';
+            $final_content = preg_replace( $pattern, $new_block, $current_content );
         } else {
-            $rules[] = '    # Bypass LiteSpeed cache for commenters & WooCommerce sessions (Per-user Vary lookup enabled for uwb_logged_in)';
-            $rules[] = '    RewriteCond %{HTTP_COOKIE} (comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
-            $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+            $trimmed_current = ltrim( $current_content );
+            $final_content   = ! empty( $trimmed_current ) ? $new_block . "\n\n" . $trimmed_current : $new_block . "\n";
         }
-
-        $rules[] = '    # Bypass LiteSpeed cache for POST requests, admin, page builders & API endpoints';
-        $rules[] = '    RewriteCond %{REQUEST_METHOD} ^POST$ [OR]';
-        $rules[] = '    RewriteCond %{QUERY_STRING} (app=uxbuilder|uxbuilder|uxb_iframe|elementor-preview|et_fb|vc_editable|ct_builder|bricks|fl_builder) [NC,OR]';
-        $rules[] = '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\\.php|uxbuilder) [NC]';
-        $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
-        $rules[] = '</IfModule>';
-
-        $marker_start = '# BEGIN Ultimate WP Booster LiteSpeed';
-        $marker_end   = '# END Ultimate WP Booster LiteSpeed';
-        $new_block    = $marker_start . "\n" . implode( "\n", $rules ) . "\n" . $marker_end;
-
-        // Clean out any old/existing Ultimate WP Booster LiteSpeed block safely
-        $pattern         = '/# BEGIN Ultimate WP Booster LiteSpeed.*?# END Ultimate WP Booster LiteSpeed\s*/s';
-        $cleaned_content = preg_replace( $pattern, '', $current_content );
-        $cleaned_content = ltrim( (string) $cleaned_content );
-
-        $final_content = ! empty( $cleaned_content ) ? $new_block . "\n\n" . $cleaned_content : $new_block . "\n";
 
         // Compare normalized versions to avoid redundant disk writes and server restarts
         $norm_current = trim( str_replace( "\r\n", "\n", $current_content ) );
-        $norm_final   = trim( str_replace( "\r\n", "\n", $final_content ) );
+        $norm_final   = trim( str_replace( "\r\n", "\n", (string) $final_content ) );
 
         if ( $norm_current === $norm_final ) {
             flock( $fp, LOCK_UN );
@@ -307,7 +232,7 @@ class Activation {
 
         ftruncate( $fp, 0 );
         rewind( $fp );
-        fwrite( $fp, $final_content );
+        fwrite( $fp, (string) $final_content );
         fflush( $fp );
         flock( $fp, LOCK_UN );
         fclose( $fp );
@@ -347,13 +272,13 @@ class Activation {
             return;
         }
 
-        $pattern         = '/# BEGIN Ultimate WP Booster LiteSpeed.*?# END Ultimate WP Booster LiteSpeed\s*/s';
+        // Strictly remove ONLY our block, leaving all other blocks (WordPress, Wordfence, etc.) completely intact
+        $pattern         = '/# BEGIN Ultimate WP Booster LiteSpeed\b.*?# END Ultimate WP Booster LiteSpeed\s*/s';
         $cleaned_content = preg_replace( $pattern, '', $current_content );
-        $cleaned_content = ltrim( (string) $cleaned_content );
 
         ftruncate( $fp, 0 );
         rewind( $fp );
-        fwrite( $fp, $cleaned_content );
+        fwrite( $fp, (string) $cleaned_content );
         fflush( $fp );
         flock( $fp, LOCK_UN );
         fclose( $fp );
