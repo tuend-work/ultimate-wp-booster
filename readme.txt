@@ -4,7 +4,7 @@ Tags: cache, speed, optimization, database, cdn, preload, static cache, page cac
 Requires at least: 5.8
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: 5.4.21
+Stable tag: 5.4.22
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,17 @@ Ultimate WP Booster is a comprehensive WordPress performance plugin designed to 
 3. Configure the settings under the 'WP Booster' menu in your WordPress dashboard.
 
 == Changelog ==
+
+= 5.4.22 =
+* Feature: LiteSpeed Server-Only Cache Storage mode — bypasses writing static HTML cache files to wp-content/cache/ on LiteSpeed/OpenLiteSpeed web servers, eliminating disk space and inode consumption while delivering sub-5ms cached responses directly from LiteSpeed server RAM/swap.
+* Fix: Restore missing rules and marker definitions in update_litespeed_htaccess.
+* Fix: Ensure unlimited cache lifespan (0) sends long-duration max-age instead of no-cache to LiteSpeed.
+
+= 5.4.21 =
+* Fix: Strictly isolate .htaccess edits to plugin block and preserve other rewrite blocks.
+
+= 5.4.20 =
+* Fix: Prevent wiping out .htaccess rewrite rules and eliminate race condition during file writes.
 
 = 5.4.19 =
 * Fix: Prevent duplicate HTML output on bypassed pages by silencing early buffer flush in advanced-cache.php callback.

@@ -55,8 +55,15 @@ class Preloader {
             $cache_dir      = $normalized_uri !== '' ? $cache_base . '/' . $normalized_uri : $cache_base;
             $cache_file     = $cache_dir . '/' . ( $is_https ? 'index-https.html' : 'index.html' );
 
-            if ( ! file_exists( $cache_file ) ) {
-                return;
+            $is_litespeed_server_only = \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_server_only_cache_enabled();
+            if ( ! $is_litespeed_server_only ) {
+                if ( ! file_exists( $cache_file ) ) {
+                    return;
+                }
+            } else {
+                if ( ( function_exists( 'http_response_code' ) && http_response_code() !== 200 ) || is_404() || is_admin() ) {
+                    return;
+                }
             }
         }
 

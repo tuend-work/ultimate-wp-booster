@@ -333,6 +333,7 @@ class CacheManager {
         $config = array(
             'plugin_dir'               => defined( 'UWB_PLUGIN_DIR' ) ? UWB_PLUGIN_DIR : '',
             'cache_page_enabled'       => intval( get_option( 'uwb_cache_page_enabled', 1 ) ),
+            'litespeed_server_only_cache' => intval( get_option( 'uwb_litespeed_server_only_cache', 1 ) ),
             'cache_lifespan'           => $lifespan_seconds,
             'cache_logged_in'          => intval( get_option( 'uwb_cache_logged_in', 0 ) ),
             'cache_logged_in_lifespan' => intval( get_option( 'uwb_cache_logged_in_lifespan', 10 ) ) * 60,

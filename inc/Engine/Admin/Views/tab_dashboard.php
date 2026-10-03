@@ -99,7 +99,11 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                 }
 
                                 $opts_str = ! empty( $active_opts ) ? implode( ', ', $active_opts ) : 'No extra optimizations enabled';
-                                $page_cache_details = "Active ({$file_count} files) — {$opts_str}";
+                                if ( \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_server_only_cache_enabled() ) {
+                                    $page_cache_details = "Active (LiteSpeed Server-Only Storage — 0 Disk Files) — {$opts_str}";
+                                } else {
+                                    $page_cache_details = "Active ({$file_count} files) — {$opts_str}";
+                                }
                             }
 
                             // 4. CDN Cache

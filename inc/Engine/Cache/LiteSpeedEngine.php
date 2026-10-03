@@ -97,7 +97,9 @@ class LiteSpeedEngine {
             }
         }
 
-        if ( $is_no_cache || $lifespan <= 0 || self::is_page_builder_request() || ( $is_logged_in && $cache_logged_in !== 2 ) ) {
+        $effective_lifespan = ( $lifespan === 0 ) ? 2592000 : intval( $lifespan );
+
+        if ( $is_no_cache || $effective_lifespan <= 0 || self::is_page_builder_request() || ( $is_logged_in && $cache_logged_in !== 2 ) ) {
             header( 'X-LiteSpeed-Cache-Control: no-cache' );
             header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
         } else {
@@ -106,10 +108,23 @@ class LiteSpeedEngine {
                 header( 'X-LiteSpeed-Cache-Control: private, max-age=' . intval( $user_lifespan ) );
                 header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
             } else {
-                header( 'X-LiteSpeed-Cache-Control: public, max-age=' . intval( $lifespan ) );
+                header( 'X-LiteSpeed-Cache-Control: public, max-age=' . intval( $effective_lifespan ) );
                 header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
             }
         }
+    }
+
+    /**
+     * Check if LiteSpeed server-level only cache storage is active (no static HTML files written to disk).
+     *
+     * @return bool
+     */
+    public static function is_server_only_cache_enabled() {
+        if ( ! self::is_litespeed_server() ) {
+            return false;
+        }
+
+        return (bool) get_option( 'uwb_litespeed_server_only_cache', 1 );
     }
 
     /**

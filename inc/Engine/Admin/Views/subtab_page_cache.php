@@ -15,6 +15,25 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                             </p>
                                         </div>
 
+                                        <?php if ( \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_litespeed_server() ) : ?>
+                                        <div class="uwb-form-group" style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:10px; padding:16px; margin-bottom:20px;">
+                                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                                <label for="uwb_litespeed_server_only_cache" style="font-weight:700; color:#065f46; font-size:14px; margin:0; display:flex; align-items:center; gap:8px;">
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                                    LiteSpeed Server-Only Cache Storage (Tiết kiệm Disk &amp; Inode)
+                                                </label>
+                                                <span style="font-size:11px; font-weight:700; background:#10b981; color:#fff; padding:3px 8px; border-radius:6px;">LSCache Detected</span>
+                                            </div>
+                                            <select name="uwb_litespeed_server_only_cache" id="uwb_litespeed_server_only_cache" style="width:100%; border:1px solid #10b981; border-radius:8px; padding:10px; background:#fff; font-weight:600; color:#065f46;">
+                                                <option value="1" <?php selected( get_option( 'uwb_litespeed_server_only_cache', 1 ), 1 ); ?>>Bật - Chỉ lưu cache trên LiteSpeed Server (Khuyên dùng - 0% tốn dung lượng đĩa &amp; Inode)</option>
+                                                <option value="0" <?php selected( get_option( 'uwb_litespeed_server_only_cache', 1 ), 0 ); ?>>Tắt - Lưu cả trên Server và tạo file tĩnh HTML trong wp-content/cache</option>
+                                            </select>
+                                            <p class="description" style="color:#047857; margin-top:8px; font-size:12.5px; line-height:1.5;">
+                                                Khi <strong>Bật</strong>: LiteSpeed Web Server lưu trữ và phục vụ toàn bộ HTML cache trực tiếp từ bộ nhớ RAM/swap của máy chủ. Plugin sẽ <strong>không ghi hàng nghìn file tĩnh HTML vào wp-content/cache/</strong>, giúp giải phóng hoàn toàn dung lượng ổ cứng, giảm 100% inode tiêu thụ và loại bỏ disk I/O ghi đĩa thừa thãi.
+                                            </p>
+                                        </div>
+                                        <?php endif; ?>
+
                                         <div class="uwb-form-group" style="max-width: 700px; margin-bottom: 20px;">
                                             <label style="font-weight: 600; margin-bottom: 8px; color: var(--uwb-text); font-size: 14px;">Cache for Logged-in Users</label>
                                             <div style="display: flex; align-items: stretch; border: 1px solid var(--uwb-border); border-radius: 8px; overflow: hidden; background: #fff;">

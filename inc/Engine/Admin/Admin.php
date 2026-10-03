@@ -48,6 +48,7 @@ class Admin {
             'uwb_module_database_enabled',
             // Cache settings
             'uwb_cache_page_enabled',
+            'uwb_litespeed_server_only_cache',
             'uwb_cache_lifespan',
             'uwb_excluded_urls',
             'uwb_cache_logged_in',
@@ -286,6 +287,7 @@ class Admin {
 
     public function register_settings() {
         register_setting( 'uwb_settings_group', 'uwb_cache_page_enabled', 'intval' );
+        register_setting( 'uwb_settings_group', 'uwb_litespeed_server_only_cache', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_lifespan', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_logged_in', 'intval' );
         register_setting( 'uwb_settings_group', 'uwb_cache_logged_in_lifespan', 'intval' );

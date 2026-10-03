@@ -414,10 +414,21 @@ function uwb_advanced_cache_run() {
         uwb_advanced_cache_log( "UWB: Preload request detected (HTTP_X_ULTIMATE_WP_BOOSTER_PRELOAD or uwb_preload_key). Bypassing cache serve to force regeneration." );
     }
 
+    // Detect LiteSpeed server and LiteSpeed server-only mode
+    $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
+    $is_litespeed    = ( defined( 'LITESPEED_SERVER' ) && LITESPEED_SERVER ) ||
+                       function_exists( 'litespeed_finish_request' ) ||
+                       ( ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) );
+    $is_litespeed_server_only = $is_litespeed && ( ! isset( $config['litespeed_server_only_cache'] ) || ! empty( $config['litespeed_server_only_cache'] ) );
+
     // Check normal cache first, then 404 cache
     $target_cache_file = '';
     $is_serving_404 = false;
-    if ( ! $is_preload_request ) {
+    if ( $is_litespeed_server_only ) {
+        // Under LiteSpeed Server-Only mode, HTML cache is stored and served directly by the LiteSpeed Web Server engine (RAM/SSD swap).
+        // If execution reaches PHP, it is a cache miss, bypass, or generation request. Do not read disk cache.
+        $target_cache_file = '';
+    } elseif ( ! $is_preload_request ) {
         if ( file_exists( $cache_file ) ) {
             $target_cache_file = $cache_file;
         } elseif ( file_exists( $cache_file_404 ) ) {
@@ -945,8 +956,18 @@ function uwb_advanced_cache_shutdown() {
             }
         }
 
+        $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
+        $is_litespeed    = ( defined( 'LITESPEED_SERVER' ) && LITESPEED_SERVER ) ||
+                           function_exists( 'litespeed_finish_request' ) ||
+                           ( ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) );
+        $is_litespeed_server_only = $is_litespeed && ( ! isset( $config['litespeed_server_only_cache'] ) || ! empty( $config['litespeed_server_only_cache'] ) );
+
         if ( $should_cache ) {
-            $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} | Status: Cache Valid / Serviced -->\n";
+            if ( $is_litespeed_server_only ) {
+                $comment_to_append = "<!-- Cached by LiteSpeed Web Server (Zero-Disk Storage) & Optimized by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} | Status: LiteSpeed Cache Handled -->\n";
+            } else {
+                $comment_to_append = "<!-- Cached by WP Booster at {$time_str} ({$utc_label}){$refresh_comment}{$oc_comment}{$box_comment} | Status: Cache Valid / Serviced -->\n";
+            }
             $html = $comment_to_append . $html;
         } else {
             $early_reason    = isset( $GLOBALS['uwb_bypass_reason'] ) ? $GLOBALS['uwb_bypass_reason'] : '';
@@ -958,6 +979,29 @@ function uwb_advanced_cache_shutdown() {
     }
 
     if ( ! $should_cache ) {
+        echo $html;
+        return;
+    }
+
+    // LiteSpeed Server-Only Cache: Skip disk file creation completely!
+    if ( $is_litespeed_server_only ) {
+        if ( ! headers_sent() ) {
+            $effective_lifespan = ( $lifespan === 0 ) ? 2592000 : intval( $lifespan );
+            $cache_logged_in_num = isset( $config['cache_logged_in'] ) ? intval( $config['cache_logged_in'] ) : 0;
+            $logged_in_hash_val  = isset( $GLOBALS['uwb_logged_in_hash'] ) ? $GLOBALS['uwb_logged_in_hash'] : '';
+
+            if ( $logged_in_hash_val !== '' && $cache_logged_in_num === 2 ) {
+                $user_lifespan = isset( $config['cache_logged_in_lifespan'] ) ? intval( $config['cache_logged_in_lifespan'] ) : 600;
+                header( 'X-LiteSpeed-Cache-Control: private, max-age=' . intval( $user_lifespan ) );
+                header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
+            } else {
+                header( 'X-LiteSpeed-Cache-Control: public, max-age=' . intval( $effective_lifespan ) );
+                header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
+            }
+        }
+        if ( $debug ) {
+            uwb_advanced_cache_log( "UWB: LiteSpeed Server-Only Cache active — Output delivered to LiteSpeed Server (bypassed disk write to save disk space & inodes)." );
+        }
         echo $html;
         return;
     }

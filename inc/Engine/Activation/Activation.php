@@ -207,6 +207,48 @@ class Activation {
             $current_content .= fread( $fp, 8192 );
         }
 
+        $cache_logged_in = (int) get_option( 'uwb_cache_logged_in', 0 );
+        $preload_enabled = (int) get_option( 'uwb_preload_enabled', 0 );
+
+        $rules = array(
+            '<IfModule LiteSpeed>',
+            '    CacheLookup on',
+        );
+
+        if ( $preload_enabled === 3 ) {
+            $usleep     = (int) get_option( 'uwb_preload_usleep', 500 );
+            $load_limit = (float) get_option( 'uwb_preload_server_load_limit', 1.0 );
+            $threads    = (int) get_option( 'uwb_preload_threads', 3 );
+            $rules[] = '    # Enable LiteSpeed Server Native Crawler Engine & Directives';
+            $rules[] = '    CacheEngine on crawler';
+            $rules[] = '    SetEnv CRAWLER_USLEEP ' . $usleep;
+            $rules[] = '    SetEnv CRAWLER_LOAD_LIMIT ' . $load_limit;
+            $rules[] = '    SetEnv CRAWLER_THREADS ' . $threads;
+        }
+
+        $rules[] = '    RewriteEngine On';
+
+        if ( $cache_logged_in !== 2 ) {
+            $rules[] = '    # Bypass LiteSpeed cache for logged-in users, commenters & WooCommerce sessions';
+            $rules[] = '    RewriteCond %{HTTP_COOKIE} (uwb_logged_in|wordpress_logged_in_|comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
+            $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+        } else {
+            $rules[] = '    # Bypass LiteSpeed cache for commenters & WooCommerce sessions (Per-user Vary lookup enabled for uwb_logged_in)';
+            $rules[] = '    RewriteCond %{HTTP_COOKIE} (comment_author_|woocommerce_items_in_cart|wp_woocommerce_session_) [NC]';
+            $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+        }
+
+        $rules[] = '    # Bypass LiteSpeed cache for POST requests, admin, page builders & API endpoints';
+        $rules[] = '    RewriteCond %{REQUEST_METHOD} ^POST$ [OR]';
+        $rules[] = '    RewriteCond %{QUERY_STRING} (app=uxbuilder|uxbuilder|uxb_iframe|elementor-preview|et_fb|vc_editable|ct_builder|bricks|fl_builder) [NC,OR]';
+        $rules[] = '    RewriteCond %{REQUEST_URI} ^/(wp-admin|wp-json|xmlrpc\\.php|uxbuilder) [NC]';
+        $rules[] = '    RewriteRule .* - [E=Cache-Control:no-cache]';
+        $rules[] = '</IfModule>';
+
+        $marker_start = '# BEGIN Ultimate WP Booster LiteSpeed';
+        $marker_end   = '# END Ultimate WP Booster LiteSpeed';
+        $new_block    = $marker_start . "\n" . implode( "\n", $rules ) . "\n" . $marker_end;
+
         // Strictly modify ONLY the Ultimate WP Booster LiteSpeed block:
         // Case 1: If our block already exists in .htaccess, replace ONLY that block in-place.
         // Case 2: If our block does not exist, prepend it to the top without touching any existing content below.
