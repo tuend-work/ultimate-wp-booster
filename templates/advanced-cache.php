@@ -518,7 +518,8 @@ function uwb_advanced_cache_run() {
                     
                     $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
                     if ( ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) ) {
-                        header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $bc_lifespan );
+                        $effective_xml_lifespan = ( $lifespan === 0 ) ? 2592000 : intval( $lifespan );
+                        header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $effective_xml_lifespan );
                         header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
                     }
                 } else {
@@ -528,9 +529,9 @@ function uwb_advanced_cache_run() {
                     
                     $server_software = isset( $_SERVER['SERVER_SOFTWARE'] ) ? $_SERVER['SERVER_SOFTWARE'] : '';
                     if ( ! $is_serving_404 && ! empty( $server_software ) && ( stripos( $server_software, 'litespeed' ) !== false || stripos( $server_software, 'openlitespeed' ) !== false ) ) {
-                        // Still allow LiteSpeed server cache for guest HTML pages
-                        $bc_lifespan = isset( $config['browser_cache_lifespan'] ) ? intval( $config['browser_cache_lifespan'] ) : 3600;
-                        header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $bc_lifespan );
+                        // Strictly adhere to the configured Page Cache Lifespan for LiteSpeed Server Cache
+                        $effective_page_lifespan = ( $lifespan === 0 ) ? 2592000 : intval( $lifespan );
+                        header( 'X-LiteSpeed-Cache-Control: public, max-age=' . $effective_page_lifespan );
                         header( 'X-LiteSpeed-Vary: cookie=uwb_logged_in' );
                     } else {
                         header( 'X-LiteSpeed-Cache-Control: no-cache' );

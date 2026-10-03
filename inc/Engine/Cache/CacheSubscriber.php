@@ -34,11 +34,22 @@ class CacheSubscriber implements Subscriber_Interface {
 
     public function send_litespeed_headers( $headers ) {
         if ( LiteSpeedEngine::is_litespeed_server() ) {
-            $lifespan           = intval( get_option( 'uwb_cache_lifespan', 36000 ) );
+            $lifespan_mins      = intval( get_option( 'uwb_cache_lifespan', 0 ) );
             $cache_page_enabled = intval( get_option( 'uwb_cache_page_enabled', 1 ) );
             $is_no_cache        = ( $cache_page_enabled === 0 );
 
-            LiteSpeedEngine::send_cache_control_headers( $lifespan, $is_no_cache );
+            $uri  = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+            $path = parse_url( $uri, PHP_URL_PATH );
+            if ( is_string( $path ) && substr( $path, -4 ) === '.xml' ) {
+                $lifespan_mins = intval( get_option( 'uwb_cache_xml_sitemaps_lifespan', 10 ) );
+            } elseif ( is_string( $path ) && substr( $path, -4 ) === '.php' && substr( $path, -9 ) !== 'index.php' ) {
+                $lifespan_mins = intval( get_option( 'uwb_cache_php_lifespan', 10 ) );
+            }
+
+            // Strictly adhere to configured Cache Lifespan (convert minutes to seconds for HTTP max-age; 0 = unlimited -> 2592000s / 30 days)
+            $lifespan_seconds = ( $lifespan_mins > 0 ) ? ( $lifespan_mins * 60 ) : ( $lifespan_mins === 0 ? 2592000 : 0 );
+
+            LiteSpeedEngine::send_cache_control_headers( $lifespan_seconds, $is_no_cache );
             if ( ! $is_no_cache ) {
                 LiteSpeedEngine::send_tag_headers();
             }

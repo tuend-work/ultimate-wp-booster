@@ -4,7 +4,7 @@ Tags: cache, speed, optimization, database, cdn, preload, static cache, page cac
 Requires at least: 5.8
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: 5.4.22
+Stable tag: 5.4.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,11 @@ Ultimate WP Booster is a comprehensive WordPress performance plugin designed to 
 3. Configure the settings under the 'WP Booster' menu in your WordPress dashboard.
 
 == Changelog ==
+
+= 5.4.23 =
+* Fix: Strictly adhere to configured Cache Lifespan (minutes to seconds conversion) in LiteSpeed Cache-Control headers across CacheSubscriber and advanced-cache.php.
+* Fix: Support dedicated XML sitemaps and PHP page lifespans for LiteSpeed Web Server.
+* UI: Display exact active Page Cache Lifespan on Admin Dashboard cache pipeline card.
 
 = 5.4.22 =
 * Feature: LiteSpeed Server-Only Cache Storage mode — bypasses writing static HTML cache files to wp-content/cache/ on LiteSpeed/OpenLiteSpeed web servers, eliminating disk space and inode consumption while delivering sub-5ms cached responses directly from LiteSpeed server RAM/swap.

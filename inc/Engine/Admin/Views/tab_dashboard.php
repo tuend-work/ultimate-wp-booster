@@ -98,11 +98,22 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
                                     set_transient( 'uwb_dashboard_cache_file_count', $file_count, MINUTE_IN_SECONDS );
                                 }
 
+                                $cache_lifespan = intval( get_option( 'uwb_cache_lifespan', 0 ) );
+                                if ( $cache_lifespan === 0 ) {
+                                    $lifespan_display = 'Unlimited Lifespan';
+                                } elseif ( $cache_lifespan >= 1440 ) {
+                                    $lifespan_display = round( $cache_lifespan / 1440, 1 ) . ' day(s) lifespan';
+                                } elseif ( $cache_lifespan >= 60 ) {
+                                    $lifespan_display = round( $cache_lifespan / 60, 1 ) . ' hour(s) lifespan';
+                                } else {
+                                    $lifespan_display = $cache_lifespan . ' min(s) lifespan';
+                                }
+
                                 $opts_str = ! empty( $active_opts ) ? implode( ', ', $active_opts ) : 'No extra optimizations enabled';
                                 if ( \Ultimate_WP_Booster\Engine\Cache\LiteSpeedEngine::is_server_only_cache_enabled() ) {
-                                    $page_cache_details = "Active (LiteSpeed Server-Only Storage — 0 Disk Files) — {$opts_str}";
+                                    $page_cache_details = "Active (LiteSpeed Server Storage — {$lifespan_display} — 0 Disk Files) — {$opts_str}";
                                 } else {
-                                    $page_cache_details = "Active ({$file_count} files) — {$opts_str}";
+                                    $page_cache_details = "Active ({$file_count} files — {$lifespan_display}) — {$opts_str}";
                                 }
                             }
 
